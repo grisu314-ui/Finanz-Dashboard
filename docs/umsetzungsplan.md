@@ -42,6 +42,8 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 25.09.2026 | E-5 | Farbschema | Automatisch hell/dunkel nach Systemeinstellung | CSS-Variablen, zwei Plotly-Templates, Umschaltung per Clientside-Callback |
 | 25.09.2026 | E-6 | Ort des Langtexts | Eigene Erklärseite je Kennzahl (`/kennzahl/<id>`) | Verlinkbar, Zurück-Taste funktioniert |
 | 25.09.2026 | E-7 | Aktualisierung offener Seiten | Alle 5 Minuten automatisch | Zoom bleibt erhalten (`uirevision`); neue Worker-Daten nach höchstens rund 20 Minuten sichtbar |
+| 25.09.2026 | E-8 | Aufbewahrung der Backups | 14 tägliche, 5 vor Migrationen | Zwei Wochen zurück; geringer Platzbedarf |
+| 25.09.2026 | E-9 | Fehlerstatus im Datenstand (W-5) | Letzter Fehler je Quelle in `source_status`, wird überschrieben | Fehlerhafte Werte werden nie gespeichert; keine Fehlerhistorie. `CLAUDE.md` entsprechend präzisiert |
 
 ---
 
@@ -140,10 +142,10 @@ Für jeden Meilenstein gilt die Definition of Done:
 3. Rohantworten gzip-komprimiert unter `raw/`, nur bei geändertem Inhalt (Hash-Vergleich).
 4. Backup:
    - täglich und vor jeder Migration per `VACUUM INTO` nach `backup/`
-   - Aufbewahrung begrenzt (Entscheidung bei M1, Vorschlag: 14 tägliche, 5 Migrations-Backups)
+   - Aufbewahrung: 14 tägliche, 5 vor Migrationen (E-8)
    - Fehlt die Datenbank noch (Ersteinrichtung), bricht `fever.backup` mit klarer Meldung und Exit-Code ≠ 0 ab
 
-**Entscheidungen bei M1 (per Auswahlfrage):** Schema, Aufbewahrung der Backups, Auslegung von W-5.
+**Entscheidungen bei M1:** Aufbewahrung (E-8) und W-5 (E-9) entschieden; Schema-Freigabe offen.
 
 **Tests:**
 - append-only (identisch, geändert, neue Vintage)
@@ -320,7 +322,7 @@ Nichts davon wird geraten. Die Vorschläge sind begründete Startpunkte, keine E
 | W-2 | VX-COT-Fenster 3 Jahre (6.3) vs. 10 Jahre (4.3) | L-9 |
 | W-3 | Bericht 4.3, Schritt 4 nennt Fallhöhe-Komponenten, die in Phase 1 größtenteils fehlen | L-11 |
 | W-4 | Die Rot-Regel „HY-OAS-Anstieg über 20 Tage ≥ 95. Perzentil“ braucht HY-OAS im Score; O-5 schließt das bis zur Entscheidung aus | Regel ist inaktiv und in der Oberfläche als inaktiv markiert, bis O-5 entschieden ist |
-| W-5 | `CLAUDE.md`: Fehler „werden geloggt, nicht gespeichert, und erscheinen im Datenstand“. Die Web-Oberfläche kann Worker-Logs nicht lesen | Auslegung zur Freigabe in M1: Fehlerhafte Werte werden nie gespeichert. Der letzte Fehler je Quelle (Zeit und Meldung) steht in `source_status`, ohne Historie |
+| W-5 | `CLAUDE.md`: Fehler „werden geloggt, nicht gespeichert, und erscheinen im Datenstand“. Die Web-Oberfläche kann Worker-Logs nicht lesen | Entschieden (E-9): Fehlerhafte Werte werden nie gespeichert. Der letzte Fehler je Quelle (Zeit und Meldung) steht in `source_status`, ohne Historie |
 | W-6 | Bericht 6.3, Ansicht 2 nennt MOVE (ICE-Lizenz, nicht in Phase 1) und VIX6M (nicht in Tabelle 6.1) | MOVE entfällt in Phase 1; VIX6M unter L-10 |
 | W-7 | Der Migrationsablauf in `CLAUDE.md` (stop → Backup → upgrade → up) gilt „auch bei der Ersteinrichtung“; dann gibt es aber nichts zu stoppen oder zu sichern | Die Einrichtungsanleitung lässt Stop und Backup bei der Ersteinrichtung aus; `fever.backup` meldet eine fehlende Datenbank klar |
 
@@ -399,7 +401,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 ## 9. Übergabe an die nächste Sitzung
 
 - **Stand (25.09.2026):** Planung und Doku angelegt, M0 erledigt: Gerüst, Image (arm64 geprüft), Compose, Laden der Konfiguration, 11 Tests grün. Kein Speicher, keine Quellen, kein Worker, keine Oberfläche.
-- **Nächster Schritt:** M1. Vorher per Auswahlfrage klären: Schema-Entwurf, Aufbewahrung der Backups und Auslegung von W-5. Dann den Plan für M1 vorlegen (`CLAUDE.md`, Arbeitsweise 1–2).
+- **Nächster Schritt:** M1-Plan liegt dem Nutzer zur Freigabe vor (Schema). E-8 und E-9 sind entschieden. Nach Freigabe umsetzen.
 - **Offene Entscheidungen des Nutzers:** O-1, O-2, O-4, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 (Abschnitt 5), dazu die Entscheidungen bei M1, M2 und M3 (Betriebs-Branch).
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), arm64-Probe siehe Abschnitt 10; Betriebsbefehle in `CLAUDE.md` gelten ab M3.
 

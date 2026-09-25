@@ -145,7 +145,7 @@ Ein falscher Score fällt nicht auf, bis die Ampel eine falsche Lage zeigt.
 - Jeder Wert zeigt Quelle, Beobachtungsdatum und Abrufzeitpunkt (Europe/Berlin, mit Zeitzone).
 - **Ein veralteter Wert, der wie ein aktueller aussieht, ist der gravierendste Fehler dieser Anwendung.** Werte älter als Frequenz plus Toleranz sind sichtbar als veraltet markiert.
 - Ansicht „Datenstand": je Quelle letzter Erfolg, letzter Versuch, letzter Fehler.
-- Abruf- und Plausibilitätsfehler werden geloggt, nicht gespeichert, und erscheinen im Datenstand. Kein leeres `except`, kein stiller Fehler.
+- Abruf- und Plausibilitätsfehler werden geloggt; fehlerhafte Werte nie speichern. Der letzte Fehler je Quelle steht in `source_status` und erscheint im Datenstand (entschieden 25.09.2026). Kein leeres `except`, kein stiller Fehler.
 - Oberfläche auf Deutsch mit Dezimalkomma und Datum TT.MM.JJJJ; Fachbegriffe wie VIX, OAS, Contango bleiben. Die Übersicht ist auf Smartphone-Breite lesbar.
 - Daten werden nie als HTML gerendert (kein `dangerously_allow_html`).
 
