@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 25.09.2026 · Status: **Planung, noch kein Code** · Nächster Schritt: Freigabe von M0 durch den Nutzer
+Stand: 25.09.2026 · Status: **M0 erledigt** · Nächster Schritt: M1 (vorher Entscheidungen zu Schema, Backup-Aufbewahrung und W-5)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -12,11 +12,11 @@ Verwandte Dokumente: `docs/einrichtung.md` (Aufsetzen und Betrieb), `docs/bedien
 
 ## 1. Stand der Meilensteine
 
-Legende: ☐ offen · ◐ in Arbeit · ☑ abgenommen
+Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Belege im Meilenstein)
 
 | Nr. | Meilenstein | Status | Voraussetzung | Freigabe nötig |
 |---|---|---|---|---|
-| M0 | Projektgerüst, Image, Compose | ☐ | – | ja |
+| M0 | Projektgerüst, Image, Compose | ☑ 25.09.2026 | – | erteilt 25.09.2026 |
 | M1 | Speicher, Migrationen, Backup | ☐ | M0, Schema-Freigabe, W-5 | ja (Schema) |
 | M2 | HTTP-Client, Serienkatalog, Quellen Cboe und FRED/ALFRED | ☐ | M1, L-5, L-10 (betroffene Reihen) | ja |
 | M3 | Worker und erste Inbetriebnahme auf dem Pi (ICE-Archiv startet) | ☐ | M2 | ja |
@@ -101,6 +101,25 @@ Für jeden Meilenstein gilt die Definition of Done:
 - `CLAUDE.md` → Befehle
 - `docs/einrichtung.md` → Abschnitt `.env` von ⏳ auf die echten Variablennamen
 
+**Ergebnis (25.09.2026, erledigt):**
+- **Python 3.14**, Basis-Image `python:3.14-slim-trixie` (enthält 3.14.7). Python 3.15 ist erst `3.15.0rc2`. Die Zeitzonendaten sind im Image vorhanden (`ZoneInfo("Europe/Berlin")` getestet), deshalb kein Paket `tzdata`.
+- **Abhängigkeiten:** Alle 36 Laufzeitpakete wurden im arm64-Container mit `pip install --only-binary=:all:` aufgelöst und installiert; es sind ausschließlich Wheels, nichts wird kompiliert. Direkte und transitive Pakete sind gepinnt.
+- **Abweichungen vom Plan:**
+  - SQLAlchemy **2.0.49** statt 2.1.x: 2.1.0 erschien am 24.09.2026, 2.1.1 am 25.09.2026. Für den Pi ist die gereifte 2.0-Linie gewählt.
+  - Die Netzwerksperre für Tests (`tests/conftest.py`) ist schon in M0 statt M2 umgesetzt.
+- **Befund Compose 5.1.1:** Auch mit Langform-Bind-Mount legte Compose einen fehlenden Datenordner stillschweigend an. Erst `bind.create_host_path: false` macht daraus einen Fehler (getestet).
+- **Compose-Details:**
+  - Nur `worker` baut, `web` nutzt dasselbe Image (`pull_policy: never`).
+  - `web` hat bewusst kein `depends_on`, damit es bei stehendem Worker weiterläuft und warnen kann.
+  - Die Startbefehle von `worker` (M3) und `web` (M6) verweisen auf noch nicht existierende Module; `docker compose up` ist deshalb erst ab M3 sinnvoll.
+- **Belege:**
+  - `pytest -q`: 11 passed (Python 3.14, amd64)
+  - arm64-Build: erfolgreich in 4:55 min unter QEMU
+  - Image: `arch=arm64`, Benutzer `fever` (1000:1000), alle Importe laden, `/app` nicht beschreibbar, keine `.env` und keine Tests im Image
+  - Compose: `config` gültig, deutsche Fehlermeldung bei fehlendem `FEVER_DATA_DIR` bzw. `FRED_API_KEY`, Schreiben in einen Datenordner mit Eigentümer 1000:1000 funktioniert
+- **Einschränkung der Probe:** Die Cloud-Entwicklungsumgebung läuft hinter einem Proxy mit eigenem Zertifikat. Die Build-Probe nutzte deshalb eine per `sed` erzeugte Kopie des Dockerfiles mit zwei zusätzlichen Zeilen für dieses Zertifikat (Abschnitt 10). Auf dem Pi ist das nicht nötig.
+- **Nicht geprüft:** Build und Start auf einem echten Pi (erst M3).
+
 ### M1 – Speicher, Migrationen, Backup
 
 **Ziel:** Append-only-Speicher mit Vintages, Alembic-Erstmigration, Backup per `VACUUM INTO`.
@@ -146,7 +165,7 @@ Für jeden Meilenstein gilt die Definition of Done:
 - `fever/http.py`: Host-Allowlist, Timeouts, Backoff, eigener User-Agent, Ratenlimit je Host
 - `fever/sources/cboe.py`, `fever/sources/fred.py`
 - `config/series.toml` (Cboe- und FRED-Reihen)
-- `tests/fixtures/…`, `tests/test_sources_*.py`, `tests/conftest.py` (blockiert Netzwerkzugriffe)
+- `tests/fixtures/…`, `tests/test_sources_*.py` (die Netzwerksperre in `tests/conftest.py` besteht seit M0)
 
 **Schritte:**
 1. Serien-IDs mit (*) aus Bericht 6.1 per FRED-Metadatenabruf prüfen; Ergebnis mit Datum hier protokollieren.
@@ -379,7 +398,48 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 ## 9. Übergabe an die nächste Sitzung
 
-- **Stand:** Planung und Dokumentation angelegt (25.09.2026). Kein Code, keine Tests, kein Image.
-- **Nächster Schritt:** M0 nach Freigabe. Vorher kurz den Plan für M0 vorlegen (`CLAUDE.md`, Arbeitsweise 1–2).
-- **Offene Entscheidungen des Nutzers:** O-1, O-2, O-4, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 (oben), dazu die Entscheidungen bei M1 und M2.
-- **Befehle:** noch keine lauffähigen; geplante stehen in `CLAUDE.md`.
+- **Stand (25.09.2026):** Planung und Doku angelegt, M0 erledigt: Gerüst, Image (arm64 geprüft), Compose, Laden der Konfiguration, 11 Tests grün. Kein Speicher, keine Quellen, kein Worker, keine Oberfläche.
+- **Nächster Schritt:** M1. Vorher per Auswahlfrage klären: Schema-Entwurf, Aufbewahrung der Backups und Auslegung von W-5. Dann den Plan für M1 vorlegen (`CLAUDE.md`, Arbeitsweise 1–2).
+- **Offene Entscheidungen des Nutzers:** O-1, O-2, O-4, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 (Abschnitt 5), dazu die Entscheidungen bei M1, M2 und M3 (Betriebs-Branch).
+- **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), arm64-Probe siehe Abschnitt 10; Betriebsbefehle in `CLAUDE.md` gelten ab M3.
+
+---
+
+## 10. Entwicklungsumgebung (für KI-Sitzungen in der Cloud)
+
+Stand 25.09.2026, erprobt in der Claude-Code-Cloud-Umgebung. Die Umgebung ist ein flüchtiger Container: Docker-Daemon, QEMU-Registrierung und Hilfs-Images sind nach einem Neustart weg.
+
+1. **Docker-Daemon starten** (CLI und `dockerd` sind installiert, laufen aber nicht):
+   ```bash
+   nohup dockerd > /tmp/dockerd.log 2>&1 &
+   ```
+2. **arm64-Emulation registrieren** (für Build-Probe und arm64-Container):
+   ```bash
+   sudo mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
+   docker run --privileged --rm tonistiigi/binfmt --install arm64
+   ```
+3. **Proxy-Zertifikat:** Ausgehender Verkehr läuft über einen Proxy (`$HTTPS_PROXY` auf 127.0.0.1) mit eigener CA (`/root/.ccr/ca-bundle.crt`). `pip` in Containern braucht deshalb `--network host`, die Proxy-Variablen und `PIP_CERT`. Die CA kommt nie ins Projekt-Dockerfile.
+4. **Tests mit Python 3.14** (lokal gibt es nur 3.10–3.13): ein Hilfs-Image außerhalb des Repos, z. B. im Scratchpad:
+   ```dockerfile
+   FROM python:3.14-slim-trixie
+   COPY --from=proxyca ca-bundle.crt /tmp/proxy-ca.crt
+   ENV PIP_CERT=/tmp/proxy-ca.crt PYTHONDONTWRITEBYTECODE=1
+   COPY requirements.txt requirements-dev.txt /tmp/req/
+   RUN pip install -q --only-binary=:all: -r /tmp/req/requirements-dev.txt
+   WORKDIR /src
+   ```
+   ```bash
+   docker build -f <scratch>/Dockerfile.devtest --build-context proxyca=/root/.ccr \
+     --network host --build-arg HTTPS_PROXY --build-arg HTTP_PROXY -t fever-devtest .
+   docker run --rm -v "$PWD":/src fever-devtest pytest -q -p no:cacheprovider
+   ```
+5. **arm64-Build-Probe:** Kopie des Dockerfiles mit den zwei Zertifikatszeilen nach `FROM`, sonst unverändert:
+   ```bash
+   sed '/^FROM /a COPY --from=proxyca ca-bundle.crt /tmp/proxy-ca.crt\nENV PIP_CERT=/tmp/proxy-ca.crt' \
+     Dockerfile > <scratch>/Dockerfile.probe
+   docker buildx build --platform linux/arm64 -f <scratch>/Dockerfile.probe \
+     --build-context proxyca=/root/.ccr --network host \
+     --build-arg HTTPS_PROXY --build-arg HTTP_PROXY --load -t fever:probe-arm64 .
+   ```
+6. **Compose prüfen ohne `.env`** (die echte `.env` wird nie gelesen): eine Testdatei mit Platzhaltern im Scratchpad anlegen und `docker compose --env-file <scratch>/probe.env config` aufrufen.
+7. **Abhängigkeiten ändern:** im arm64-Container mit `pip install --only-binary=:all: -r <direkte Pakete>` auflösen, `pip freeze` übernehmen, direkte Pakete mit Zweckkommentar oben in `requirements.txt`, transitive darunter.

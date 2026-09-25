@@ -6,7 +6,7 @@ Zweck ist Regime- und Risikoanzeige, **keine Crash-Prognose, keine Handelssignal
 
 ## Status
 
-Stand 25.09.2026: **Planung abgeschlossen, noch kein Code.** Nächster Schritt ist Meilenstein M0 (Projektgerüst) nach Freigabe. Fortschritt: `docs/umsetzungsplan.md`, Abschnitt 1.
+Stand 25.09.2026: **Planung abgeschlossen, M0 erledigt** (Projektgerüst, Docker-Image für den Pi, Compose, Laden der Konfiguration, Tests). Noch nicht lauffähig: Datenabruf (ab M3) und Oberfläche (ab M6). Fortschritt: `docs/umsetzungsplan.md`, Abschnitt 1.
 
 ## Dokumentation
 

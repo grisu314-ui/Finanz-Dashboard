@@ -1,0 +1,5 @@
+# Series catalogue: raw series as [series.<id>], derived indicators as [indicator.<id>].
+# Filled from milestone M2 on (docs/umsetzungsplan.md); starting point are report
+# sections 2 and 6.1. Per series: source, ID, frequency, release time (America/New_York),
+# lag, tolerance, plausibility bounds. Per indicator: transformation, orientation,
+# block or vulnerability. Decide the open domain gaps L-5 and L-10 before the first entry.

@@ -57,7 +57,7 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
 
 ## Befehle (einrichten und hier aktuell halten)
 
-- `pytest -q`: alle Tests
+- `pytest -q`: alle Tests (Python 3.14 mit `requirements-dev.txt`; Cloud-Umgebung: `docs/umsetzungsplan.md`, Abschn. 10)
 - `docker buildx build --platform linux/arm64 .`: Build-Probe auf dem Entwicklungsrechner (unter x86 mit QEMU/binfmt)
 - `docker compose up -d --build`: Start und Update auf dem Pi
 - `docker compose run --rm worker python -m fever.backup`: sofortiges Backup

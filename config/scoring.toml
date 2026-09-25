@@ -1,0 +1,4 @@
+# Scoring parameters: windows, minimum history, thresholds, half-lives, matrix rules.
+# Start values come from report section 4.3. They are added in milestone M5, after the
+# open domain gaps L-1 to L-13 are decided (docs/umsetzungsplan.md, section 5).
+# Parameters live only in this file and change only on explicit instruction.

@@ -1,0 +1,45 @@
+# Runtime dependencies, every package pinned.
+# Resolved on 25.09.2026 inside python:3.14-slim-trixie on linux/arm64 with
+# `pip install --only-binary=:all:`: every package installs from an aarch64 wheel,
+# nothing is compiled. Re-check the same way before changing any version.
+
+# --- direct dependencies ---
+numpy==2.5.3        # vectorised numerics for percentiles and scores
+pandas==3.0.6       # time series handling: alignment, rolling windows, resampling
+SQLAlchemy==2.0.49  # SQLite access via SQLAlchemy Core (mature 2.0 line; 2.1.0 appeared 24.09.2026)
+alembic==1.20.0     # schema migrations
+requests==2.34.2    # synchronous HTTP client for all data sources
+dash==4.4.1         # web UI: layout and callbacks
+plotly==7.1.0       # charts, used directly via plotly.graph_objects
+gunicorn==26.2.0    # WSGI server for the Dash app
+
+# --- transitive dependencies (pinned for reproducible builds) ---
+annotated-types==0.8.0
+blinker==1.9.0
+certifi==2026.7.22
+charset-normalizer==3.5.1
+click==8.5.0
+comm==0.2.3
+Flask==3.1.3
+greenlet==3.5.6
+idna==3.20
+importlib_metadata==9.0.1
+itsdangerous==2.2.0
+janus==2.0.0
+Jinja2==3.1.6
+Mako==1.4.3
+MarkupSafe==3.0.3
+narwhals==2.26.0
+nest-asyncio==1.6.0
+packaging==26.3
+pydantic==2.13.5
+pydantic_core==2.46.5
+python-dateutil==2.9.0.post0
+retrying==1.4.2
+setuptools==84.0.0
+six==1.17.0
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+urllib3==2.8.0
+Werkzeug==3.1.8
+zipp==4.1.0

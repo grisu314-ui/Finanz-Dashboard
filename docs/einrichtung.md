@@ -1,6 +1,6 @@
 # Einrichtung und Betrieb auf dem Raspberry Pi
 
-Stand: 25.09.2026 · Für: dich als Anwender · Status: **Der Code existiert noch nicht.** Die Schritte 1–5 kannst du schon heute ausführen; alles ab Schritt 6 wird mit den Meilensteinen M0–M3 lauffähig (siehe `docs/umsetzungsplan.md`).
+Stand: 25.09.2026 · Für: dich als Anwender · Status: **M0 erledigt.** Image, Compose und `.env`-Vorlage existieren. Die Schritte 1–6 kannst du schon ausführen; ab Schritt 7 wird es mit Meilenstein M3 lauffähig (siehe `docs/umsetzungsplan.md`).
 
 Markierungen:
 - ✅ geprüft: ausgeführt, mit Datum und Ort
@@ -73,6 +73,8 @@ id -u; id -g                 # deine Benutzer- und Gruppen-ID, meist 1000 und 10
 ```
 
 Ist die SSD z. B. unter `/mnt/ssd` eingehängt, nimm stattdessen `/mnt/ssd/fever/data`.
+
+Der Ordner muss **vor** dem ersten Start existieren. Compose legt ihn bewusst nicht an, damit bei einem Tippfehler im Pfad keine Daten in einem falschen, neu angelegten Ordner landen.
 
 ### 2.5 IP-Adresse des Pi
 
@@ -162,7 +164,7 @@ cd Finanz-Dashboard
 git config core.sshCommand "ssh -i ~/.ssh/fever_deploy"    # damit spätere "git pull" den Schlüssel nutzen
 ```
 
-## 6. Konfiguration `.env` anlegen ⏳ (Variablennamen werden in M0 festgelegt)
+## 6. Konfiguration `.env` anlegen ⏳ (Vorlage `.env.example` existiert seit M0)
 
 ```bash
 cd ~/Finanz-Dashboard
@@ -171,15 +173,32 @@ chmod 600 .env    # nur du darfst die Datei lesen
 nano .env         # speichern: Strg+O, Enter; beenden: Strg+X
 ```
 
-Geplanter Inhalt:
+Inhalt (Beispiel; `<…>` durch deinen Wert ersetzen, keine Leerzeichen um `=`):
 
 ```ini
-FRED_API_KEY=            # dein Schlüssel aus Schritt 4
+FRED_API_KEY=<dein Schlüssel aus Schritt 4>
 FEVER_DATA_DIR=/srv/fever/data
-FEVER_UID=1000           # Ausgabe von "id -u" aus Schritt 2.4
-FEVER_GID=1000           # Ausgabe von "id -g"
+FEVER_UID=1000
+FEVER_GID=1000
 FEVER_WEB_PORT=8050
 ```
+
+| Variable | Bedeutung | Pflicht | leer bedeutet |
+|---|---|---|---|
+| `FRED_API_KEY` | FRED-API-Schlüssel (Schritt 4) | ja | Abbruch mit Fehlermeldung |
+| `FEVER_DATA_DIR` | absoluter Pfad des Datenordners (Schritt 2.4) | ja | Abbruch mit Fehlermeldung |
+| `FEVER_UID`, `FEVER_GID` | Ausgabe von `id -u` bzw. `id -g` (Schritt 2.4) | nein | 1000 |
+| `FEVER_WEB_PORT` | Port des Dashboards im Heimnetz | nein | 8050 |
+
+Prüfen, ohne dass der Schlüssel auf dem Bildschirm erscheint (`-q` gibt bei Erfolg nichts aus):
+
+```bash
+docker compose config -q && echo "Konfiguration ok"
+```
+
+Mögliche Fehlermeldungen (Verhalten ✅ geprüft am 25.09.2026 in der Entwicklungsumgebung, noch nicht auf dem Pi):
+- `required variable FEVER_DATA_DIR is missing a value: FEVER_DATA_DIR fehlt in .env …` bzw. dasselbe für `FRED_API_KEY`: Wert in `.env` eintragen.
+- Beim Start `bind source path does not exist: …`: Der Datenordner aus Schritt 2.4 fehlt oder der Pfad in `.env` ist falsch.
 
 ## 7. Ersteinrichtung und Start ⏳ (ab M3)
 
