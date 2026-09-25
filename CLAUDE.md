@@ -16,6 +16,7 @@ Zweck ist Regime- und Risikoanzeige, keine Crash-Prognose. Ziel ist genau die hi
 
 - `docs/recherche.md`: Recherchebericht, Stand 25.09.2026 – Indikatorbewertung (Abschn. 1–3), Methodik (4.3), Datenquellen (6.1), Ansichten (6.3). Lies nur den Abschnitt, den die Aufgabe betrifft.
 - Diese Datei entscheidet. Sie ersetzt die Berichtsabschnitte 6.2 (Architektur) und 6.4 (Ausbaustufen).
+- `docs/umsetzungsplan.md`: Meilensteine, Stand, Entscheidungsprotokoll, Übergabe. Regeln für Oberfläche (pfadgebunden) und Dokumentation: `.claude/rules/`.
 - Abschnitt 5 des Berichts ist eine Momentaufnahme: keine Werte daraus in Code, Konfiguration oder Tests.
 - Endpoints und Serien-IDs im Bericht sind teils unverifiziert (markiert mit (*) oder „prüfen").
 - Widersprüche zwischen Bericht und dieser Datei oder innerhalb eines der beiden benennst du, statt still eine Variante umzusetzen.
@@ -29,6 +30,7 @@ Zweck ist Regime- und Risikoanzeige, keine Crash-Prognose. Ziel ist genau die hi
    - Quellen nur über offizielle APIs, CSVs und Datei-Downloads ohne Login: Cboe, FRED/ALFRED, CFTC, EZB, OFR, Fed-Board (EBP), Shiller-CAPE, FINRA Margin Debt.
    - Scoring nach Bericht 4.3, Schritte 1–6, Aggregation nur Stufe 1.
    - Ansichten 1–7 aus Bericht 6.3, soweit Daten vorhanden, dazu „Datenstand".
+   - Kurzinfo und Erklärseite je Kennzahl, Chart-Bedienung (Zoom, Zeitraum, Bildexport, Vollbild, Druck), Auto-Aktualisierung; Doku für KI und Anwender.
 2. Validierungsansicht (Schritt 7: Walk-forward, ROC, Vorlauf, Vergleich mit reinem VIX-Filter), Alerts, AAII, Aggregation Stufe 2 (korrelationsgewichtet), revisionsgenaue Rückrechnung.
 3. Optionsdaten (ThetaData/IBKR: Termstruktur, Skew, GEX), Logit-Modell (Stufe 3).
 
@@ -87,6 +89,7 @@ migrations/  tests/  tests/fixtures/  docs/
 Ein Assistent ergänzt diese Dinge erfahrungsgemäß ungefragt. Hier nicht. Bei zwingendem Grund: erst fragen, nicht bauen.
 
 - Kein Login, keine Benutzerverwaltung, keine Sessions. Zugangsschutz ist Infrastruktur (O-3), nie Anwendungscode.
+- Kein CSV-Export von Chartdaten, keine eigene Ampel und keine absoluten Schwellen je Einzelkennzahl (entschieden 25.09.2026).
 - Keine Konto-, Positions- oder Orderfunktionen, auch nicht über IBKR. Nur Marktdaten.
 - Keine Handelssignale, keine Renditeprognosen, keine „Crash-Wahrscheinlichkeit" ohne validiertes Modell.
 - Kein Machine Learning. Im Backtest optimierte Gewichte oder Schwellen gehen nie automatisch in den Produktivscore; bei so wenigen Krisen wäre das Overfitting. Einziges geschätztes Modell ist das Logit in Phase 3.
@@ -184,13 +187,13 @@ Ein falscher Score fällt nicht auf, bis die Ampel eine falsche Lage zeigt.
 
 ## Offene Punkte
 
-Vor der Umsetzung des betroffenen Teils klären; Entschiedenes hier mit Antwort eintragen.
+Vor der Umsetzung des betroffenen Teils klären; Entschiedenes hier mit Antwort eintragen. Fachliche Lücken L-1 bis L-13 (Scoring, `series.toml`): `docs/umsetzungsplan.md`, Abschnitt 5.
 
 | Nr. | Frage | Bis zur Entscheidung |
 |---|---|---|
 | O-1 | Kursquelle für ETFs und Indexmitglieder (RSP/SPY, Sektor- und Größenverhältnisse, Breite). FRED `SP500` reicht nur 10 Jahre zurück, genügt aber für VRP und Aktien-Anleihen-Korrelation | VRP und Korrelation aus FRED `SP500`; übrige Indikatoren weglassen, keine Quelle selbst wählen |
 | O-2 | Pi-Modell, RAM, Speichermedium, Pfad des Datenordners (SSD statt SD-Karte empfohlen) | Pfad nur über `.env` |
-| O-3 | Zugang: nur Heimnetz oder Tailscale, ggf. mit Basic-Auth-Pforte | Port nur an `127.0.0.1` |
+| O-3 | Zugang: nur Heimnetz oder Tailscale, ggf. mit Basic-Auth-Pforte | **Entschieden 25.09.2026:** nur Heimnetz, kein Passwort; Port an `0.0.0.0`; keine Portweiterleitung im Router |
 | O-4 | Backup-Ziel außerhalb des Pi | nur lokale Backups |
 | O-5 | ICE-Spreads: drei Jahre Historie bei fünf Jahren Mindesthistorie; betrifft Kreditblock und Rot-Regel. Optionen: BAA10Y (FRED, täglich ab 1986, Moody's-Lizenz) als langer Ersatz, Lizenz direkt bei ICE, befristete Ausnahme mit Kennzeichnung | archivieren und anzeigen, nicht in den Score |
 | O-6 | Alert-Kanal (ntfy, Telegram, E-Mail), Phase 2 | – |
