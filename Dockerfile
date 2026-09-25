@@ -22,9 +22,11 @@ RUN groupadd --gid "${GID}" fever \
  && useradd --uid "${UID}" --gid "${GID}" --no-create-home --home-dir /nonexistent \
             --shell /usr/sbin/nologin fever
 
+COPY alembic.ini ./
+COPY migrations/ migrations/
 COPY fever/ fever/
 COPY config/ config/
-RUN python -m compileall -q fever
+RUN python -m compileall -q fever migrations
 
 # No VOLUME instruction on purpose: a forgotten bind mount must fail loudly
 # instead of silently writing to an anonymous volume. Data lives in /data (compose).

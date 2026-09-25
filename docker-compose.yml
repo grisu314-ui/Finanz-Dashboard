@@ -32,11 +32,14 @@ services:
         GID: ${FEVER_GID:-1000}
     command: ["python", "-m", "fever.worker"]
     environment:
+      FEVER_DATA: /data
       FRED_API_KEY: ${FRED_API_KEY:?FRED_API_KEY fehlt in .env (siehe docs/einrichtung.md)}
 
   web:
     <<: *service
     pull_policy: never
+    environment:
+      FEVER_DATA: /data
     # No depends_on: web must keep running (and show a banner) when the worker is down.
     # Worker count (1-2) is revisited in M6 once the Pi model is known (O-2).
     command: ["gunicorn", "--bind", "0.0.0.0:8050", "--workers", "2", "fever.web.app:server"]

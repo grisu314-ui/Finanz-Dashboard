@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 25.09.2026 · Status: **M0 erledigt** · Nächster Schritt: M1 (vorher Entscheidungen zu Schema, Backup-Aufbewahrung und W-5)
+Stand: 25.09.2026 · Status: **M0 und M1 erledigt** · Nächster Schritt: M2 (Voraussetzungen in Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -17,7 +17,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | Nr. | Meilenstein | Status | Voraussetzung | Freigabe nötig |
 |---|---|---|---|---|
 | M0 | Projektgerüst, Image, Compose | ☑ 25.09.2026 | – | erteilt 25.09.2026 |
-| M1 | Speicher, Migrationen, Backup | ☐ | M0, Schema-Freigabe, W-5 | ja (Schema) |
+| M1 | Speicher, Migrationen, Backup | ☑ 25.09.2026 | M0, Schema-Freigabe, W-5 | erteilt 25.09.2026 |
 | M2 | HTTP-Client, Serienkatalog, Quellen Cboe und FRED/ALFRED | ☐ | M1, L-5, L-10 (betroffene Reihen) | ja |
 | M3 | Worker und erste Inbetriebnahme auf dem Pi (ICE-Archiv startet) | ☐ | M2 | ja |
 | M4 | Weitere Quellen: CFTC, EZB, OFR, EBP, Shiller-CAPE, FINRA | ☐ | M3, L-10 | ja |
@@ -158,6 +158,41 @@ Für jeden Meilenstein gilt die Definition of Done:
 **Risiko:** Das ICE-Archiv ist unwiederbringlich. Kein Code darf Beobachtungen löschen; ein Test prüft, dass `fever/store` kein `DELETE`/`UPDATE` auf `observation` ausführt.
 
 **Doku:** `docs/einrichtung.md` → Backup, Wiederherstellung (echte Dateinamen inkl. `-wal`/`-shm`), Migration.
+
+**Ergebnis (25.09.2026, erledigt):**
+- **Umgesetzt wie freigegeben:**
+  - Tabellen `observation`, `source_status`, `heartbeat` (Migration `0001`)
+  - Trigger gegen UPDATE und DELETE auf `observation`; Downgrade verweigert
+  - UTC-Spaltentyp, der naive Zeiten ablehnt
+  - Anfügen nur bei neuem oder geändertem Wert
+  - Rohdatenarchiv nur bei geändertem Inhalt
+  - Backup per `VACUUM INTO` mit `integrity_check`, Aufbewahrung 14 `daily` / 5 `manual` (E-8)
+  - `source_status` nach E-9
+- **Details, die im Plan offen waren:**
+  - Datenordner über die Variable `FEVER_DATA` (Container `/data`, von Compose gesetzt), ohne Standardwert
+  - Engines legen nie eine Datenbank an; das macht nur `alembic upgrade head`
+  - `busy_timeout` 5000 ms
+  - Fehlermeldungen in `source_status` werden auf 2000 Zeichen gekürzt
+  - Logging über `fever/log.py`, nur stdout
+- **Geprüfte Annahmen (SQLite 3.46.1 im Image):**
+  - `VACUUM INTO` liefert auch bei offener Schreibtransaktion eine konsistente Kopie
+  - auf einer `query_only`-Verbindung ist `VACUUM INTO` gesperrt, deshalb läuft das Backup über eine normale Verbindung im Autocommit
+- **Befund im Selbst-Review, behoben:** Die SQLAlchemy-URL wurde als Text zusammengesetzt; ein `?` im Pfad des Datenordners schnitt ihn ab, und die Migration legte die Datenbank an einem anderen Ort an. Jetzt `URL.create(...)` mit Test (Pfad `daten #1?`).
+- **Belege:**
+  - `pytest -q`: 49 passed
+  - Gegenprobe mit absichtlich eingebauten Fehlern in einer Kopie; jeder wurde von mindestens einem Test erkannt:
+    - Trigger entfernt: 2 Tests rot
+    - Schema weicht von der Migration ab: 1 rot
+    - identische Werte werden erneut gespeichert: 2 rot
+    - `query_only` fehlt: 1 rot
+    - Aufbewahrung wirkungslos: 1 rot
+  - arm64-Image über Compose:
+    - `alembic upgrade head` legt die Datenbank an
+    - `alembic current` zeigt `0001 (head)`
+    - `python -m fever.backup` meldet „Backup erstellt und geprüft“
+    - ohne Datenbank: Exit-Code 2, im leeren Datenordner wird nichts angelegt
+    - Wert geschrieben, gesichert, in einen neuen Ordner zurückgespielt: Wert identisch
+- **Nicht geprüft:** auf einem echten Pi; das tägliche Backup durch den Worker (M3).
 
 ### M2 – HTTP-Client, Serienkatalog, Cboe und FRED/ALFRED
 
@@ -400,10 +435,15 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 ## 9. Übergabe an die nächste Sitzung
 
-- **Stand (25.09.2026):** Planung und Doku angelegt, M0 erledigt: Gerüst, Image (arm64 geprüft), Compose, Laden der Konfiguration, 11 Tests grün. Kein Speicher, keine Quellen, kein Worker, keine Oberfläche.
-- **Nächster Schritt:** M1-Plan liegt dem Nutzer zur Freigabe vor (Schema). E-8 und E-9 sind entschieden. Nach Freigabe umsetzen.
-- **Offene Entscheidungen des Nutzers:** O-1, O-2, O-4, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 (Abschnitt 5), dazu die Entscheidungen bei M1, M2 und M3 (Betriebs-Branch).
-- **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), arm64-Probe siehe Abschnitt 10; Betriebsbefehle in `CLAUDE.md` gelten ab M3.
+- **Stand (25.09.2026):** M0 und M1 erledigt: Image (arm64 geprüft), Compose, Konfiguration, Speicher mit Migration, Schutz des Archivs, Backup und Wiederherstellung, 49 Tests grün. Noch keine Quellen, kein Worker, keine Oberfläche.
+- **Nächster Schritt:** M2. Voraussetzungen:
+  1. **Netzwerk der Cloud-Entwicklungsumgebung** (nur für KI-Sitzungen; der Pi ist nicht betroffen): Die Quellen-Hosts stehen nicht auf der Allowlist („Host not in allowlist“, geprüft 25.09.2026). Der Nutzer ergänzt sie in den Umgebungseinstellungen unter Network access. Für M2: `cdn.cboe.com`, `api.stlouisfed.org`. Für M4 später: `publicreporting.cftc.gov`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `www.finra.org` und der Host des Shiller-Datensatzes (in M4 prüfen).
+  2. **FRED-Schlüssel für Testabrufe:** als Umgebungsvariable `FRED_API_KEY` in den Einstellungen der Cloud-Umgebung. Nie im Chat und nie im Repo. Die `.env` wird nie gelesen.
+  3. **Fachliche Entscheidungen:** L-5 (Toleranzen) und L-10 für die ersten Reihen, per Auswahlfrage.
+  4. Plan für M2 vorlegen (`CLAUDE.md`, Arbeitsweise 1–2).
+- **Ohne Netz möglich:** HTTP-Client (Allowlist, Timeouts, Backoff, Maskierung des Schlüssels) mit Tests gegen einen Fake-Transport.
+- **Offene Entscheidungen des Nutzers:** O-1, O-2, O-4, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 (Abschnitt 5), Betriebs-Branch (M3).
+- **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), arm64-Probe und Compose-Tests siehe Abschnitt 10; Betriebsbefehle in `docs/einrichtung.md`, Abschnitt 12.
 
 ---
 

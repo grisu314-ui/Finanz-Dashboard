@@ -1,6 +1,6 @@
 # Einrichtung und Betrieb auf dem Raspberry Pi
 
-Stand: 25.09.2026 · Für: dich als Anwender · Status: **M0 erledigt.** Image, Compose und `.env`-Vorlage existieren. Die Schritte 1–6 kannst du schon ausführen; ab Schritt 7 wird es mit Meilenstein M3 lauffähig (siehe `docs/umsetzungsplan.md`).
+Stand: 25.09.2026 · Für: dich als Anwender · Status: **M1 erledigt.** Image, `.env`-Vorlage, Datenbank anlegen, Backup und Wiederherstellung funktionieren; das ist in der Entwicklungsumgebung mit dem arm64-Image geprüft, auf einem Pi noch nicht. Datenabruf und Dauerbetrieb folgen mit Meilenstein M3 (siehe `docs/umsetzungsplan.md`).
 
 Markierungen:
 - ✅ geprüft: ausgeführt, mit Datum und Ort
@@ -200,17 +200,30 @@ Mögliche Fehlermeldungen (Verhalten ✅ geprüft am 25.09.2026 in der Entwicklu
 - `required variable FEVER_DATA_DIR is missing a value: FEVER_DATA_DIR fehlt in .env …` bzw. dasselbe für `FRED_API_KEY`: Wert in `.env` eintragen.
 - Beim Start `bind source path does not exist: …`: Der Datenordner aus Schritt 2.4 fehlt oder der Pfad in `.env` ist falsch.
 
-## 7. Ersteinrichtung und Start ⏳ (ab M3)
+## 7. Ersteinrichtung und Start
+
+### 7.1 Image bauen und Datenbank anlegen ✅ (25.09.2026, Entwicklungsumgebung mit arm64-Image; auf dem Pi noch nicht)
 
 ```bash
 cd ~/Finanz-Dashboard
 docker compose build                                   # dauert auf dem Pi einige Minuten
 docker compose run --rm worker alembic upgrade head    # legt die Datenbank an
+```
+
+Erwartete letzte Zeile:
+
+```text
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001, Initial schema: observation (append-only), source_status, heartbeat.
+```
+
+Danach liegt im Datenordner die Datei `fever.sqlite3` (Eigentümer: deine UID/GID). Bei der Ersteinrichtung entfallen „stoppen“ und „Backup“ aus dem Migrationsablauf, weil es noch keine Datenbank gibt (Umsetzungsplan W-7). Ein Backup vorher würde mit „Keine Datenbank vorhanden“ abbrechen.
+
+### 7.2 Dienste starten ⏳ (ab M3)
+
+```bash
 docker compose up -d
 docker compose ps                                      # nach etwa 1–2 Minuten: beide Dienste "(healthy)"
 ```
-
-Bei der Ersteinrichtung entfallen „stoppen“ und „Backup“ aus dem Migrationsablauf, weil es noch keine Datenbank gibt (Umsetzungsplan W-7).
 
 Der Worker beginnt sofort mit dem Abruf. Die erste Rückfüllung der Historien kann dauern; den Fortschritt siehst du mit:
 
@@ -229,7 +242,7 @@ Sicherheit (Entscheidungen E-3/E-4 vom 25.09.2026):
 
 ## 9. Update auf eine neue Version ⏳
 
-Standardablauf. Er schadet nie; gibt es keine neue Migration, ist `alembic upgrade head` wirkungslos.
+Standardablauf. Er schadet nie; gibt es keine neue Migration, ist `alembic upgrade head` wirkungslos. Stand der Datenbank prüfen: `docker compose run --rm worker alembic current` zeigt z. B. `0001 (head)`; steht dort `(head)`, ist sie aktuell.
 
 ```bash
 cd ~/Finanz-Dashboard
@@ -250,15 +263,30 @@ cd ~/Finanz-Dashboard && git pull && docker compose up -d --build
 
 ## 10. Backup, Kopie außerhalb des Pi, Wiederherstellung
 
-### 10.1 Backup ⏳ (ab M1)
+### 10.1 Backup ✅ (25.09.2026, Entwicklungsumgebung mit arm64-Image; auf dem Pi noch nicht)
 
-Der Worker sichert täglich automatisch nach `/srv/fever/data/backup/` und hält eine begrenzte Anzahl Sicherungen (Anzahl wird bei M1 entschieden). Sofortiges Backup:
+Backups liegen in `/srv/fever/data/backup/` und werden vor dem Ablegen auf Fehlerfreiheit geprüft (`integrity_check`).
+
+| Art | Dateiname (Zeit in UTC) | entsteht | aufbewahrt (E-8) |
+|---|---|---|---|
+| täglich | `fever-20260925T031500Z-daily.sqlite3` | automatisch durch den Worker (ab M3) | die neuesten 14 |
+| manuell | `fever-20260925T203329Z-manual.sqlite3` | mit dem Befehl unten, auch vor jeder Migration | die neuesten 5 |
+
+Andere Dateien in `backup/` werden nie gelöscht. Sofortiges Backup:
 
 ```bash
 cd ~/Finanz-Dashboard
 docker compose run --rm worker python -m fever.backup
 ls -lh /srv/fever/data/backup/
 ```
+
+Erwartete Ausgabe (der Pfad `/data` ist dein Datenordner, von innen gesehen):
+
+```text
+… INFO __main__: Backup erstellt und geprüft: /data/backup/fever-20260925T203329Z-manual.sqlite3
+```
+
+Bei einem Fehler endet der Befehl mit Exit-Code 2 und einer Meldung, z. B. `Keine Datenbank vorhanden: /data/fever.sqlite3`.
 
 ### 10.2 Kopie außerhalb des Pi ⏳
 
@@ -270,23 +298,25 @@ scp <dein-benutzer>@<IP-des-Pi>:/srv/fever/data/backup/<backup-datei> .
 
 Die Daten nur für dich selbst verwenden, nicht weitergeben (ICE-Lizenz).
 
-### 10.3 Wiederherstellung ⏳ (exakte Dateinamen folgen in M1)
+### 10.3 Wiederherstellung ✅ (25.09.2026, Entwicklungsumgebung: Backup in neuen Ordner zurückgespielt, Werte identisch; auf dem Pi noch nicht)
 
-Nie eine laufende Datenbank überschreiben. Ablauf:
+Nie eine laufende Datenbank überschreiben. Die Datenbank heißt `fever.sqlite3`. Nach einem Absturz können daneben `fever.sqlite3-wal` und `fever.sqlite3-shm` liegen; sie gehören zur alten Datei und müssen mit weg. Nach sauberem Stoppen fehlen sie normalerweise.
 
 ```bash
 cd ~/Finanz-Dashboard
 docker compose stop
-ls /srv/fever/data/                   # Datenbankdatei und ggf. zugehörige -wal/-shm-Dateien ansehen
-mkdir -p /srv/fever/data/alt-$(date +%F)
-mv /srv/fever/data/<db-datei> /srv/fever/data/alt-$(date +%F)/
-# vorhandene <db-datei>-wal und <db-datei>-shm ebenfalls dorthin verschieben; sie gehören zur alten Datei
-cp /srv/fever/data/backup/<backup-datei> /srv/fever/data/<db-datei>
+ls -l /srv/fever/data/                                  # was liegt da?
+ls /srv/fever/data/backup/                              # gewünschtes Backup aussuchen
+ALT=/srv/fever/data/alt-$(date +%F)
+mkdir -p "$ALT"
+mv /srv/fever/data/fever.sqlite3 "$ALT"/
+ls /srv/fever/data/fever.sqlite3-* 2>/dev/null && mv /srv/fever/data/fever.sqlite3-* "$ALT"/
+cp /srv/fever/data/backup/<backup-datei> /srv/fever/data/fever.sqlite3
+docker compose run --rm worker alembic current          # erwartet: "0001 (head)" oder neuer
 docker compose up -d
-docker compose ps
 ```
 
-Den Ordner `alt-…` erst löschen, wenn das Dashboard wieder korrekt läuft.
+Den Ordner `alt-…` erst löschen, wenn das Dashboard wieder korrekt läuft. Zeigt `alembic current` kein `(head)`, stammt das Backup von vor einer Migration: dann `docker compose run --rm worker alembic upgrade head` ausführen.
 
 ## 11. Fehlersuche ⏳
 
@@ -306,9 +336,11 @@ Logs werden in der Größe begrenzt (Compose-Einstellung), damit sie die SSD nic
 
 | Zweck | Befehl | Status |
 |---|---|---|
-| Start / Update ohne Migration | `docker compose up -d --build` | ⏳ |
-| Status | `docker compose ps` | ⏳ |
-| Worker-Log live | `docker compose logs -f worker` | ⏳ |
-| Sofort-Backup | `docker compose run --rm worker python -m fever.backup` | ⏳ |
-| Migration | `docker compose stop` → Backup → `docker compose run --rm worker alembic upgrade head` → `docker compose up -d` | ⏳ |
-| Stoppen | `docker compose stop` | ⏳ |
+| Start / Update ohne Migration | `docker compose up -d --build` | ⏳ ab M3 |
+| Status | `docker compose ps` | ⏳ ab M3 |
+| Worker-Log live | `docker compose logs -f worker` | ⏳ ab M3 |
+| Datenbank anlegen / migrieren | `docker compose run --rm worker alembic upgrade head` | ✅ Entwicklungsumgebung 25.09.2026 |
+| Stand der Datenbank | `docker compose run --rm worker alembic current` | ✅ Entwicklungsumgebung 25.09.2026 |
+| Sofort-Backup | `docker compose run --rm worker python -m fever.backup` | ✅ Entwicklungsumgebung 25.09.2026 |
+| Migration (Ablauf) | `docker compose stop` → Backup → `docker compose run --rm worker alembic upgrade head` → `docker compose up -d` | ⏳ `up -d` ab M3 |
+| Stoppen | `docker compose stop` | ⏳ ab M3 |

@@ -61,7 +61,7 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
 - `docker buildx build --platform linux/arm64 .`: Build-Probe auf dem Entwicklungsrechner (unter x86 mit QEMU/binfmt)
 - `docker compose up -d --build`: Start und Update auf dem Pi
 - `docker compose run --rm worker python -m fever.backup`: sofortiges Backup
-- Migration, auch bei der Ersteinrichtung: `docker compose stop` → Backup → `docker compose run --rm worker alembic upgrade head` → `docker compose up -d`
+- Migration, auch bei der Ersteinrichtung: `docker compose stop` → Backup → `docker compose run --rm worker alembic upgrade head` → `docker compose up -d`; Stand: `… alembic current`
 - `docker compose logs -f worker`
 
 ## Architektur
