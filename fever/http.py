@@ -19,11 +19,17 @@ import requests
 from fever import __version__
 from fever.log import mask
 
-# Host -> minimum seconds between two requests to it. Further hosts come with milestone M4.
+# Host -> minimum seconds between two requests to it.
 ALLOWED_HOSTS = {
     "cdn.cboe.com": 1.0,
     "cdn-api.cboe.com": 1.0,  # cdn.cboe.com redirects the daily price CSVs here (checked 26.09.2026)
     "api.stlouisfed.org": 1.0,  # FRED allows 120 requests/minute per key (secondary sources)
+    "data-api.ecb.europa.eu": 1.0,  # ECB Data Portal (CISS, reference rates), from M4a
+    "www.financialresearch.gov": 1.0,  # OFR Financial Stress Index, from M4a
+    "www.federalreserve.gov": 1.0,  # Excess Bond Premium, from M4a
+    "publicreporting.cftc.gov": 1.0,  # CFTC Commitments of Traders (Socrata), from M4b
+    "shillerdata.com": 1.0,  # download page of Shiller's ie_data.xls, from M4c
+    "img1.wsimg.com": 1.0,  # file host behind shillerdata.com (the link carries changing ids), from M4c
 }
 USER_AGENT = f"Fieberthermometer/{__version__} (private, non-commercial)"
 TIMEOUT = (10, 60)  # seconds: connect, read

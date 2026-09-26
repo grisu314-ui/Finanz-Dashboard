@@ -1,0 +1,30 @@
+[
+ {
+  "report_date_as_yyyy_mm_dd": "2004-07-27T00:00:00.000",
+  "open_interest_all": "6450",
+  "noncomm_positions_long_all": "2547",
+  "noncomm_positions_short_all": "255",
+  "noncomm_postions_spread_all": "283"
+ },
+ {
+  "report_date_as_yyyy_mm_dd": "2004-08-03T00:00:00.000",
+  "open_interest_all": "6850",
+  "noncomm_positions_long_all": "2476",
+  "noncomm_positions_short_all": "685",
+  "noncomm_postions_spread_all": "493"
+ },
+ {
+  "report_date_as_yyyy_mm_dd": "2026-09-15T00:00:00.000",
+  "open_interest_all": "446060",
+  "noncomm_positions_long_all": "93750",
+  "noncomm_positions_short_all": "180335",
+  "noncomm_postions_spread_all": "92117"
+ },
+ {
+  "report_date_as_yyyy_mm_dd": "2026-09-22T00:00:00.000",
+  "open_interest_all": "412323",
+  "noncomm_positions_long_all": "82776",
+  "noncomm_positions_short_all": "162056",
+  "noncomm_postions_spread_all": "90361"
+ }
+]

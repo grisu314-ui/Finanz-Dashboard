@@ -8,5 +8,6 @@ keine Weitergabe lizenzierter Daten; Cboe-Nutzungsbedingungen). Deshalb sind die
 
 - `cboe/VIX_History.csv`, `cboe/VVIX_History.csv` (Cboe)
 - `fred/BAMLH0A0HYM2.json` (ICE Data Indices)
+- `shiller/ie_data.xls` (enthält S&P-Daten); erzeugt mit `shiller/make_ie_data.py`, Aufbau und Kopfzeilen wie das Original vom 02.09.2026
 
-Unverändert echt ist nur `fred/IORB.json` (Zinssatz der Federal Reserve, gemeinfrei).
+Unverändert echt sind `fred/IORB.json` (Zinssatz der Federal Reserve), `fred/BOGZ1FL663067003Q.json` (Fed Z.1, gemeinfrei), `ecb/` (Weiterverwendung frei mit Quellenangabe „Source: ECB statistics.“), `ofr/`, `fed/` und `cftc/` (US-Bundesbehörden).

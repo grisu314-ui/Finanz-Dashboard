@@ -27,7 +27,7 @@ Zweck ist Regime- und Risikoanzeige, keine Crash-Prognose. Ziel ist genau die hi
 
 1. MVP:
    - Worker, Speicher, Serienkatalog, Backups, Healthchecks.
-   - Quellen nur über offizielle APIs, CSVs und Datei-Downloads ohne Login: Cboe, FRED/ALFRED, CFTC, EZB, OFR, Fed-Board (EBP), Shiller-CAPE, FINRA Margin Debt.
+   - Quellen nur über offizielle APIs, CSVs und Datei-Downloads ohne Login: Cboe, FRED/ALFRED, CFTC, EZB, OFR, Fed-Board (EBP, Z.1 über FRED), Shiller-CAPE; Margin Debt aus Fed Z.1 statt FINRA (E-42).
    - Scoring nach Bericht 4.3, Schritte 1–6, Aggregation nur Stufe 1.
    - Ansichten 1–7 aus Bericht 6.3, soweit Daten vorhanden, dazu „Datenstand".
    - Kurzinfo und Erklärseite je Kennzahl, Chart-Bedienung (Zoom, Zeitraum, Bildexport, Vollbild, Druck), Auto-Aktualisierung; Doku für KI und Anwender.
@@ -51,7 +51,7 @@ Zweck ist Regime- und Risikoanzeige, keine Crash-Prognose. Ziel ist genau die hi
 Bewusste Abweichungen vom Bericht:
 - SQLite statt DuckDB: `web` und `worker` sind getrennte Prozesse, DuckDB erlaubt aber nur einen schreibenden Prozess oder mehrere nur lesende, nicht beides zugleich.
 - Kein Prefect, Grafana oder Streamlit: zu schwer oder doppelt.
-- Shiller-CAPE und FINRA Margin Debt schon in Phase 1, sonst bleibt die Fallhöhe-Achse leer.
+- Shiller-CAPE und Margin Debt schon in Phase 1, sonst bleibt die Fallhöhe-Achse leer. Margin Debt kommt aus der Fed-Statistik Z.1 (FRED `BOGZ1FL663067003Q`, quartalsweise), nicht von FINRA (E-42).
 
 Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `assets/`. Alternative Stacks schlägst du nicht vor.
 
@@ -66,12 +66,12 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
   - Migration, auch bei der Ersteinrichtung: Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten; Stand: `$RUN alembic current`
   - Sofort-Backup bei laufendem Stack: `sudo docker exec finanz-dashboard-worker-1 python -m fever.backup`
   - Log: `sudo docker logs -f finanz-dashboard-worker-1`
-  - Sofort-Abruf aller Reihen (unabhängig vom Abrufplan): `docs/einrichtung.md`, Schritt 7
+  - Sofort-Abruf aller Reihen (unabhängig vom Abrufplan): `sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update`
 
 ## Architektur
 
 ```
-fever/sources/     je Quelle ein Modul (fetch, parse); update.py prüft, datiert (Vintage) und speichert
+fever/sources/     je Quelle ein Modul (fetch, parse); update.py lädt je Abrufgruppe einmal, prüft, datiert (Vintage) und speichert
 fever/store/       Tabellen (SQLAlchemy Core), Lese- und Schreibfunktionen
 fever/scoring/     reine Berechnung, importiert nichts aus web/ oder store/
 fever/worker.py    Abrufschleife, Scoring-Lauf, Heartbeat
@@ -94,6 +94,7 @@ Ein Assistent ergänzt diese Dinge erfahrungsgemäß ungefragt. Hier nicht. Bei 
 
 - Kein Login, keine Benutzerverwaltung, keine Sessions. Zugangsschutz ist Infrastruktur (O-3), nie Anwendungscode.
 - Kein CSV-Export von Chartdaten, keine eigene Ampel und keine absoluten Schwellen je Einzelkennzahl (entschieden 25.09.2026).
+- Kein Abruf, Import oder Speichern der FINRA-Margin-Statistik, auch nicht per manuellem Download: Die Nutzungsbedingungen untersagen Speichern und Datenbanken ohne schriftliche Zustimmung (entschieden 26.09.2026, E-42).
 - Keine Konto-, Positions- oder Orderfunktionen, auch nicht über IBKR. Nur Marktdaten.
 - Keine Handelssignale, keine Renditeprognosen, keine „Crash-Wahrscheinlichkeit" ohne validiertes Modell.
 - Kein Machine Learning. Im Backtest optimierte Gewichte oder Schwellen gehen nie automatisch in den Produktivscore; bei so wenigen Krisen wäre das Overfitting. Einziges geschätztes Modell ist das Logit in Phase 3.

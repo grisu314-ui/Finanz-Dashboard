@@ -108,6 +108,8 @@ git status    # erwartet: "On branch claude-testing", "Your branch is up to date
 
 ### 3.3 Kind-Dataset `data` anlegen (E-28)
 
+✅ 26.09.2026, TrueNAS: Worker schreibt als 568:568 in `/mnt/Daten-Z1/apps/feewer/data` (per `docker inspect` und `ls -ln` geprüft).
+
 In der TrueNAS-Oberfläche:
 1. Datasets → `Daten-Z1/apps/feewer` auswählen → „Add Dataset“.
 2. Name `data`, als Preset „Apps“ oder „Generic“ → Speichern.
@@ -191,7 +193,7 @@ Prüfen:
 
 ```bash
 sudo docker logs --tail 20 finanz-dashboard-worker-1
-#   erwartet u. a.: INFO __main__: Worker gestartet: 23 Reihen, Takt 15 Minuten
+#   erwartet u. a.: INFO __main__: Worker gestartet: 44 Reihen in 31 Abrufgruppen, Takt 15 Minuten
 #                   INFO __main__: Tägliches Backup erstellt und geprüft: fever-…-daily.sqlite3
 sudo docker exec finanz-dashboard-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"
 #   erwartet: gesund: letzter Heartbeat vor 0 Minuten
@@ -201,13 +203,16 @@ Dockge zeigt den Worker nach spätestens rund 5 Minuten als „healthy“; vorhe
 
 **Wann die ersten Daten kommen:** Der Worker ruft jede Reihe an New-Yorker Werktagen ab ihrer Veröffentlichungszeit ab (E-31); an Wochenenden ruft er nichts ab. Als Erstes kommt SOFR um 08:15 New York (derzeit 14:15 Uhr deutscher Zeit). Im Log steht dann z. B. `INFO fever.sources.update: sofr: 2118 neue Zeilen (Erstabruf)`. Das lokale ICE-Archiv beginnt mit dem ersten Abruf der ICE-Reihen um 10:15 New York (derzeit 16:15 Uhr).
 
-**Sofort-Abruf** (✅ 26.09.2026, Entwicklungsumgebung: 23 Reihen in 23 s): ruft alle Reihen einmal sofort ab, unabhängig vom Abrufplan. Sinnvoll nach der Einrichtung an einem Wochenende: FRED liefert die ICE-Spreads nur für drei Jahre rückwirkend, jeder Tag Warten kostet den ältesten Tag. Doppelte Abrufe schaden nicht; unveränderte Werte werden nicht erneut gespeichert.
+**Sofort-Abruf:** ruft alle Reihen einmal sofort ab, unabhängig vom Abrufplan. Sinnvoll nach der Einrichtung an einem Wochenende und nach einem Update mit neuen Reihen: FRED liefert die ICE-Spreads nur für drei Jahre rückwirkend, jeder Tag Warten kostet den ältesten Tag. Doppelte Abrufe schaden nicht; unveränderte Werte werden nicht erneut gespeichert.
 
 ```bash
-sudo docker exec finanz-dashboard-worker-1 python -c "from fever import log; log.setup(); from fever.config import series_catalog; from fever.http import HttpClient; from fever.sources.update import update_series; from fever.store.db import data_dir, make_engine; d = data_dir(); e = make_engine(d); c = HttpClient(); [update_series(e, d, c, s) for s in series_catalog().values()]"
-#   erwartet je Reihe eine Zeile, z. B.: INFO fever.sources.update: bamlh0a0hym2: 787 neue Zeilen (Erstabruf)
-#   ein zweiter Lauf meldet "0 neue Zeilen"
+sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
+#   erwartet je Reihe eine Zeile, z. B.: INFO __main__: ecb_ciss: 12199 neue Zeilen (Erstabruf)
+#   am Ende: INFO __main__: Sofort-Abruf beendet: 44 Reihen, 0 mit Problemen   (Exit-Code 0)
+#   ein zweiter Lauf meldet je Reihe "0 neue Zeilen"
 ```
+
+✅ 26.09.2026, TrueNAS nach dem Update auf M4b (41 Reihen, 0 mit Problemen). Mit M4c (44 Reihen): ✅ Entwicklungsumgebung 26.09.2026, Worker-Startzeile ebenfalls; ⏳ TrueNAS. Meldet es „mit Problemen“ (Exit-Code 1), nennen die `ERROR`-Zeilen darüber Reihe und Grund.
 
 ## 8. Dashboard aufrufen ⏳ (ab M6)
 
@@ -216,20 +221,31 @@ Im Browser eines Geräts im Heimnetz: `http://<IP-von-TrueNAS>:8003`.
 - Es gibt **kein Passwort**. Jedes Gerät in deinem Heimnetz kann das Dashboard öffnen. Es zeigt nur öffentliche Marktdaten, keine Kontodaten.
 - **Keine Portweiterleitung** im Router einrichten; sonst wäre das Dashboard aus dem Internet erreichbar.
 
-## 9. Update auf eine neue Version ⏳
+## 9. Update auf eine neue Version
 
-Standardablauf. Er schadet nie; gibt es keine neue Migration, ist `alembic upgrade head` wirkungslos. `$RUN` wie in Schritt 6.
+✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). ⏳ Ablauf mit Sicherung und Migration.
+
+Standardablauf, alles in der SSH-Shell auf TrueNAS; nur Stopp und Start des Stacks in Dockge. Er schadet nie: Gibt es keine neue Migration, ändert `alembic upgrade head` nichts, und die Sicherung davor ist nur eine zusätzliche Kopie. Ob eine neue Migration dabei ist, zeigt die Zeile mit `migrations/`.
 
 ```bash
 cd /mnt/Daten-Z1/apps/feewer
 git pull
 git diff --stat HEAD@{1} -- compose.dockge.yaml .env.example    # Ausgabe? Dann Schritt 7.2/7.3 wiederholen
+git diff --stat HEAD@{1} -- migrations/                          # Ausgabe = neue Migration
 sudo docker compose build
 # in Dockge: Stack "finanz-dashboard" stoppen
+RUN='sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v /mnt/Daten-Z1/apps/feewer/data:/data fever:local'    # wie Schritt 6, gilt bis zum Abmelden
 $RUN python -m fever.backup        # Sicherung vor der Migration
+#   erwartet: INFO __main__: Backup erstellt und geprüft: /data/backup/fever-…-manual.sqlite3
 $RUN alembic upgrade head
+#   erwartet ohne neue Migration nur zwei Zeilen "INFO [alembic.runtime.migration] …", kein "Running upgrade"
+$RUN alembic current
+#   erwartet: die neueste Nummer mit "(head)", derzeit 0001 (head)
 # in Dockge: Stack "finanz-dashboard" starten
+sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update    # nur wenn neue Reihen dazukamen (Schritt 7)
 ```
+
+Neue Reihen holt der Worker sonst selbst, am nächsten New-Yorker Werktag ab ihrer Veröffentlichungszeit.
 
 ## 10. Backup und Wiederherstellung
 
@@ -302,6 +318,7 @@ Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
 | Start, Stopp | Dockge, Stack `finanz-dashboard` | ✅ TrueNAS 26.09.2026 (Start) |
 | Worker-Log | `sudo docker logs -f finanz-dashboard-worker-1` | ⏳ |
 | Healthcheck von Hand | `sudo docker exec finanz-dashboard-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"` | ✅ TrueNAS 26.09.2026 |
-| Sofort-Abruf aller Reihen | siehe Schritt 7, „Sofort-Abruf“ | ✅ Entwicklungsumgebung 26.09.2026 |
+| Sofort-Abruf aller Reihen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update` | ✅ TrueNAS und Entwicklungsumgebung 26.09.2026 |
+| Mountpunkt und Benutzer prüfen | `sudo docker inspect finanz-dashboard-worker-1 --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{end}} user={{.Config.User}}'` (erwartet: `/mnt/Daten-Z1/apps/feewer/data -> /data user=568:568`) | ✅ TrueNAS 26.09.2026 |
 | Sofort-Backup | `sudo docker exec finanz-dashboard-worker-1 python -m fever.backup` (Stack gestoppt: `$RUN python -m fever.backup`) | ✅ Entwicklungsumgebung 25.09.2026 |
 | Migration (Ablauf) | Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten | ⏳ |

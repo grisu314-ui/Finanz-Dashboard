@@ -9,7 +9,7 @@ import requests
 from requests.adapters import BaseAdapter
 from sqlalchemy import select
 
-from fever.config import series_catalog
+from fever.config import group_members, series_catalog
 from fever.http import FetchError, Fetched, HttpClient
 from fever.sources.update import UpdateResult, estimated_release, update_series
 from fever.store.db import make_engine
@@ -241,3 +241,95 @@ def test_api_key_appears_neither_in_logs_nor_in_the_status(engine, migrated_dir,
     assert KEY not in result.error
     assert KEY not in caplog.text
     assert KEY not in status(engine, "fred")["last_error_message"]
+
+
+# --- download groups (E-36) ----------------------------------------------------------------
+
+
+class CountingClient(FakeClient):
+    def __init__(self, *items):
+        super().__init__(*items)
+        self.calls = 0
+
+    def get(self, url, params=None):
+        self.calls += 1
+        return super().get(url, params)
+
+
+def test_group_is_fetched_and_archived_once_and_every_member_stored(engine, migrated_dir):
+    from fever.config import group_members
+    from fever.sources.update import update_group
+
+    members = group_members(CATALOG)["ofr_fsi"]
+    at = datetime(2026, 9, 26, 12, 0, tzinfo=UTC)
+    client = CountingClient(Fetched((FIXTURES / "ofr" / "fsi.csv").read_bytes(), at, 200))
+    results = update_group(engine, migrated_dir, client, members, clock=lambda: at)
+    assert client.calls == 1
+    assert [result.added for result in results] == [4] * 9
+    assert len(raw_files(migrated_dir, "ofr", "ofr_fsi")) == 1
+    assert [row.value for row in stored(engine, "ofr_fsi_credit")][-1] == -1.148
+
+
+def test_a_missing_column_fails_only_its_member(engine, migrated_dir):
+    from fever.sources.update import update_group
+
+    good = CATALOG["ofr_fsi"]
+    broken = replace(CATALOG["ofr_fsi_credit"], source_id="Kredit")
+    at = datetime(2026, 9, 26, 12, 0, tzinfo=UTC)
+    client = FakeClient(Fetched((FIXTURES / "ofr" / "fsi.csv").read_bytes(), at, 200))
+    results = update_group(engine, migrated_dir, client, [good, broken], clock=lambda: at)
+    assert results[0] == UpdateResult(added=4, rejected=0, error=None)
+    assert results[1].fetched is False and results[1].error == "ofr_fsi_credit: Spalte 'Kredit' fehlt in der Kopfzeile"
+    record = status(engine, "ofr")
+    assert record["last_success_at"] == at
+    assert record["last_error_message"] == results[1].error
+
+
+def test_fetch_error_fails_every_member_of_the_group(engine, migrated_dir):
+    from fever.config import group_members
+    from fever.sources.update import update_group
+
+    members = group_members(CATALOG)["fed_ebp"]
+    results = update_group(engine, migrated_dir, FakeClient(FetchError("…/ebp_csv.csv: HTTP 404")), members, clock=lambda: FIRST)
+    assert [result.fetched for result in results] == [False, False]
+    assert results[0].error == "fed_ebp: …/ebp_csv.csv: HTTP 404"
+    assert status(engine, "fed")["last_success_at"] is None
+
+
+def test_one_off_fetch_command(migrated_dir, monkeypatch):
+    import fever.sources.update as update
+
+    calls = []
+
+    def fake_group(engine, directory, client, members, *, clock=None):
+        calls.append(members[0].group)
+        failing = members[0].group == "sofr"
+        return [UpdateResult(0, 0, "sofr: HTTP 503" if failing else None, fetched=not failing) for _ in members]
+
+    monkeypatch.setattr(update.log, "setup", lambda: None)
+    monkeypatch.setattr(update, "update_group", fake_group)
+    assert update.main() == 1  # one group reported a problem
+    assert sorted(calls) == sorted(group_members(CATALOG))  # every download group exactly once
+    monkeypatch.setenv("FEVER_DATA", str(migrated_dir / "missing"))
+    assert update.main() == 2
+
+
+def test_raw_response_is_archived_under_the_group_name(engine, migrated_dir):
+    from fever.sources.update import update_group
+
+    members = [replace(CATALOG[sid], group="ofr_all") for sid in ("ofr_fsi", "ofr_fsi_credit")]
+    at = datetime(2026, 9, 26, 12, 0, tzinfo=UTC)
+    client = FakeClient(Fetched((FIXTURES / "ofr" / "fsi.csv").read_bytes(), at, 200))
+    update_group(engine, migrated_dir, client, members, clock=lambda: at)
+    assert [path.name for path in (migrated_dir / "raw" / "ofr").iterdir()] == ["ofr_all"]
+
+
+def test_no_success_is_recorded_when_no_member_is_readable(engine, migrated_dir):
+    from fever.config import group_members
+    from fever.sources.update import update_group
+
+    members = group_members(CATALOG)["fed_ebp"]
+    results = update_group(engine, migrated_dir, FakeClient(Fetched(b"<html>moved</html>", FIRST, 200)), members, clock=lambda: FIRST)
+    assert [result.fetched for result in results] == [False, False]
+    record = status(engine, "fed")
+    assert record["last_success_at"] is None and record["last_error_at"] == FIRST

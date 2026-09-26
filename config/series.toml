@@ -3,20 +3,26 @@
 # Parameters decided on 26.09.2026 (E-23); evidence per series in docs/umsetzungsplan.md, M2.
 #
 # Fields per raw series (checked by fever/config.py, series_catalog):
-#   source          "cboe" or "fred"
+#   source          one of fever.config.SOURCES ("cboe", "fred", "ecb", "ofr", "fed", "cftc", "shiller")
 #   source_id       identifier at the source; the table key is the same in lower case (E-16)
 #   name, unit      display texts
-#   frequency       "daily", "weekly" or "monthly"
+#   frequency       "daily", "weekly", "monthly" or "quarterly"
 #   release_time    "HH:MM" in America/New_York from which the value is usually available
 #   lag_days        calendar days from observation date to publication (regular maximum, E-23).
 #                   First fetch only: estimated publication = observation date + lag_days, moved
 #                   from Saturday/Sunday to Monday, at release_time, at most the retrieval time (E-14)
-#   tolerance_days  E-10 standard: daily 3, weekly 3, monthly 10; other values need tolerance_reason
+#   tolerance_days  E-10 standard: daily 3, weekly 3, monthly 10, quarterly 10 (E-44); other values
+#                   need tolerance_reason
 #   bounds          [lower, upper], inclusive. Catches unit and format errors only; a value outside
 #                   is dropped and reported (E-15), so historical extremes must lie well inside
 #   license         optional licence note
 #   start           optional: observations before this date are ignored (E-24)
 #   lead_days       optional: observations may be dated up to this many days after today (E-25)
+#   group           optional: series sharing one download (E-36); they must share source,
+#                   frequency, release_time and lag_days. Default: the series id.
+#
+# Series ids: FRED and Cboe use their own identifier in lower case (E-16); all other sources
+# use "<source>_<short name>" with the exact identifier in source_id (E-35).
 
 # --- Cboe daily index closes (CSV). Licence: personal, non-commercial use (E-26) ---
 
@@ -298,3 +304,275 @@ lag_days = 0
 tolerance_days = 3
 bounds = [100, 100000]
 license = "S&P Dow Jones Indices LLC (Copyright): nur private Nutzung, keine Weitergabe"
+
+# --- ECB Data Portal (M4a). Reuse free with the note "Source: ECB statistics." ---
+
+[series.ecb_ciss]
+source = "ecb"
+source_id = "CISS/D.U2.Z0Z.4F.EC.SS_CIN.IDX"
+name = "EZB CISS: Composite Indicator of Systemic Stress (Euroraum)"
+unit = "Index (0 bis 1)"
+frequency = "daily"
+release_time = "06:15"
+lag_days = 1
+tolerance_days = 3
+bounds = [0, 1]
+license = "Quelle: EZB-Statistik (Source: ECB statistics.)"
+
+[series.ecb_exr_usd]
+source = "ecb"
+source_id = "EXR/D.USD.EUR.SP00.A"
+name = "EZB-Referenzkurs US-Dollar je Euro"
+unit = "USD je EUR"
+frequency = "daily"
+release_time = "11:15"
+lag_days = 0
+tolerance_days = 3
+bounds = [0.3, 5]
+license = "Quelle: EZB-Statistik (Source: ECB statistics.)"
+
+[series.ecb_exr_jpy]
+source = "ecb"
+source_id = "EXR/D.JPY.EUR.SP00.A"
+name = "EZB-Referenzkurs Yen je Euro"
+unit = "JPY je EUR"
+frequency = "daily"
+release_time = "11:15"
+lag_days = 0
+tolerance_days = 3
+bounds = [20, 800]
+license = "Quelle: EZB-Statistik (Source: ECB statistics.)"
+
+# --- OFR Financial Stress Index (M4a): one CSV, group ofr_fsi ---
+
+[series.ofr_fsi]
+source = "ofr"
+source_id = "OFR FSI"
+group = "ofr_fsi"
+name = "OFR Financial Stress Index (gesamt)"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_credit]
+source = "ofr"
+source_id = "Credit"
+group = "ofr_fsi"
+name = "OFR FSI: Kategorie Kredit"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_equity_valuation]
+source = "ofr"
+source_id = "Equity valuation"
+group = "ofr_fsi"
+name = "OFR FSI: Kategorie Aktienbewertung"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_safe_assets]
+source = "ofr"
+source_id = "Safe assets"
+group = "ofr_fsi"
+name = "OFR FSI: Kategorie sichere Anlagen"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_funding]
+source = "ofr"
+source_id = "Funding"
+group = "ofr_fsi"
+name = "OFR FSI: Kategorie Refinanzierung"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_volatility]
+source = "ofr"
+source_id = "Volatility"
+group = "ofr_fsi"
+name = "OFR FSI: Kategorie Volatilität"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_united_states]
+source = "ofr"
+source_id = "United States"
+group = "ofr_fsi"
+name = "OFR FSI: Region USA"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_other_advanced]
+source = "ofr"
+source_id = "Other advanced economies"
+group = "ofr_fsi"
+name = "OFR FSI: Region andere Industrieländer"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_emerging_markets]
+source = "ofr"
+source_id = "Emerging markets"
+group = "ofr_fsi"
+name = "OFR FSI: Region Schwellenländer"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+# --- Federal Reserve Board: excess bond premium (M4a): one CSV, group fed_ebp ---
+
+[series.fed_ebp]
+source = "fed"
+source_id = "ebp"
+group = "fed_ebp"
+name = "Excess Bond Premium (Gilchrist/Zakrajšek)"
+unit = "Prozentpunkte"
+frequency = "monthly"
+release_time = "10:15"
+lag_days = 38
+tolerance_days = 10
+bounds = [-10, 30]
+
+[series.fed_gz_spread]
+source = "fed"
+source_id = "gz_spread"
+group = "fed_ebp"
+name = "GZ-Kreditspread (Gilchrist/Zakrajšek)"
+unit = "Prozentpunkte"
+frequency = "monthly"
+release_time = "10:15"
+lag_days = 38
+tolerance_days = 10
+bounds = [-10, 50]
+
+# --- CFTC Commitments of Traders, legacy futures only (M4b): VIX futures 1170E1, group cftc_vx.
+# --- Public domain; the CFTC asks for acknowledgement.
+
+[series.cftc_vx_open_interest]
+source = "cftc"
+source_id = "1170E1/open_interest_all"
+group = "cftc_vx"
+name = "VIX-Futures: Open Interest (CFTC COT, Legacy)"
+unit = "Kontrakte"
+frequency = "weekly"
+release_time = "15:45"
+lag_days = 3
+tolerance_days = 3
+bounds = [0, 10000000]
+license = "CFTC (US-Bundesbehörde): gemeinfrei, Quellenangabe erbeten"
+
+[series.cftc_vx_noncomm_long]
+source = "cftc"
+source_id = "1170E1/noncomm_positions_long_all"
+group = "cftc_vx"
+name = "VIX-Futures: Non-Commercials Long (CFTC COT, Legacy)"
+unit = "Kontrakte"
+frequency = "weekly"
+release_time = "15:45"
+lag_days = 3
+tolerance_days = 3
+bounds = [0, 10000000]
+license = "CFTC (US-Bundesbehörde): gemeinfrei, Quellenangabe erbeten"
+
+[series.cftc_vx_noncomm_short]
+source = "cftc"
+source_id = "1170E1/noncomm_positions_short_all"
+group = "cftc_vx"
+name = "VIX-Futures: Non-Commercials Short (CFTC COT, Legacy)"
+unit = "Kontrakte"
+frequency = "weekly"
+release_time = "15:45"
+lag_days = 3
+tolerance_days = 3
+bounds = [0, 10000000]
+license = "CFTC (US-Bundesbehörde): gemeinfrei, Quellenangabe erbeten"
+
+[series.cftc_vx_noncomm_spread]
+source = "cftc"
+source_id = "1170E1/noncomm_postions_spread_all"
+group = "cftc_vx"
+name = "VIX-Futures: Non-Commercials Spread (CFTC COT, Legacy)"
+unit = "Kontrakte"
+frequency = "weekly"
+release_time = "15:45"
+lag_days = 3
+tolerance_days = 3
+bounds = [0, 10000000]
+license = "CFTC (US-Bundesbehörde): gemeinfrei, Quellenangabe erbeten"
+
+# --- Fed Financial Accounts (Z.1) via FRED (M4c): margin debt instead of FINRA (E-42).
+# --- Quarterly, dated on the first day of the quarter; public domain, citation requested.
+
+[series.bogz1fl663067003q]
+source = "fred"
+source_id = "BOGZ1FL663067003Q"
+name = "Margin-Kredite der Broker-Dealer an Kunden (Fed Z.1)"
+unit = "Mio. USD"
+frequency = "quarterly"
+release_time = "13:15"
+lag_days = 175
+tolerance_days = 10
+bounds = [0, 10000000]
+license = "Federal Reserve Board, Financial Accounts (Z.1): gemeinfrei, Quellenangabe erbeten"
+
+# --- Robert J. Shiller, ie_data.xls (M4c), group shiller. Contains S&P data: no redistribution.
+
+[series.shiller_cape]
+source = "shiller"
+source_id = "Cyclically Adjusted Price Earnings Ratio P/E10 or CAPE"
+group = "shiller"
+name = "Shiller-CAPE (P/E10)"
+unit = "Verhältnis"
+frequency = "monthly"
+release_time = "16:00"
+lag_days = 45
+tolerance_days = 10
+bounds = [1, 100]
+license = "Robert J. Shiller, Online Data (enthält S&P-Daten): nur private Nutzung, keine Weitergabe"
+
+[series.shiller_ecy]
+source = "shiller"
+source_id = "Excess CAPE Yield"
+group = "shiller"
+name = "Excess CAPE Yield (Shiller)"
+unit = "Anteil (0,01 = 1 %)"
+frequency = "monthly"
+release_time = "16:00"
+lag_days = 45
+tolerance_days = 10
+bounds = [-0.5, 0.5]
+license = "Robert J. Shiller, Online Data (enthält S&P-Daten): nur private Nutzung, keine Weitergabe"
