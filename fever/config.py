@@ -56,7 +56,7 @@ def load(name: str, config_dir: Path = CONFIG_DIR) -> dict:
 STANDARD_TOLERANCE_DAYS = {"daily": 3, "weekly": 3, "monthly": 10}
 # Sources whose own identifiers are simple enough to be series ids (E-16); the others use
 # "<source>_<short name>" with the exact identifier in source_id (E-35).
-SOURCES = ("cboe", "fred", "ecb", "ofr", "fed")
+SOURCES = ("cboe", "fred", "ecb", "ofr", "fed", "cftc")
 _OWN_ID_SOURCES = ("cboe", "fred")
 
 _REQUIRED = {

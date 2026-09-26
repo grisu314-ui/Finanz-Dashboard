@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3: Worker läuft auf TrueNAS, M4a erledigt** · Nächster Schritt: M4b (CFTC) planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3: Worker läuft auf TrueNAS, M4a und M4b erledigt** · Nächster Schritt: M4a und M4b auf TrueNAS einspielen; M3 abschließen nach den ersten Werktags-Abrufen; M4c planen (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -20,7 +20,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M1 | Speicher, Migrationen, Backup | ☑ 25.09.2026 | M0, Schema-Freigabe, W-5 | erteilt 25.09.2026 |
 | M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ☑ 26.09.2026 | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B erteilt 26.09.2026 |
 | M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ◐ läuft auf TrueNAS seit 26.09.2026, ICE-Archiv ab Beobachtung 26.09.2023; offen: erste Werktags-Abrufe, Schritt 9 | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
-| M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, FINRA, VX-Futures | ◐ M4a ☑ 26.09.2026; M4b–M4d offen (E-37) | M3 | M4a erteilt 26.09.2026 |
+| M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, FINRA, VX-Futures | ◐ M4a ☑ 26.09.2026, M4b ☑ 26.09.2026; M4c–M4d offen (E-37) | M3 | M4a und M4b erteilt 26.09.2026 |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☐ | M4, L-1 bis L-12 | ja (Scoring) |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☐ | M1 (Lesen), M3 (Heartbeat) | ja |
 | M7 | Ansichten 1–7 | ☐ | M5, M6, L-13 | ja |
@@ -73,6 +73,8 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-36 | Mehrere Reihen aus einer Datei | Gemeinsamer Abruf: Katalogfeld `group`; eine Datei wird je Takt einmal geladen und einmal im Rohdatenarchiv abgelegt (`raw/<quelle>/<gruppe>/`) | Mitglieder einer Gruppe müssen Quelle, Frequenz, `release_time` und `lag_days` teilen. Der Worker plant je Gruppe; das älteste Mitglied entscheidet über das Nachfassen |
 | 26.09.2026 | E-37 | Zuschnitt von M4 | Vier Teile mit je eigener Freigabe: M4a EZB/OFR/EBP, M4b CFTC, M4c Shiller/FINRA, M4d VX-Futures | M4a enthält 14 Reihen; die Rezessionswahrscheinlichkeit `est_prob` der EBP-Datei wird nicht archiviert (ungenutzt) |
 | 26.09.2026 | E-38 | Parameter der M4a-Reihen | Wie vorgeschlagen (Tabelle unter M4, „Ergebnis M4a“) | OFR: Verzug 4 Kalendertage wegen „two business days“ über das Wochenende. EBP erscheint sofort als veraltet, weil das September-Update der Fed fehlt |
+| 26.09.2026 | E-39 | Zuschnitt von M4b | Nur VIX-Futures (`1170E1`) aus dem Legacy-Bericht „Futures Only“: Open Interest, Non-Commercials Long, Short und Spread. Keine E-mini-S&P-500-Positionen, kein TFF-Bericht | Genügt für das COT-Maß der Fallhöhe (L-10, L-11); weitere Märkte lassen sich später als eigene Gruppe ergänzen |
+| 26.09.2026 | E-40 | Parameter der M4b-Reihen | Wie vorgeschlagen (Tabelle unter M4, „Ergebnis M4b“) | Geschätzter Stand der Rückfüllung in Feiertagswochen bis zu 3 Tage zu früh (E-14 ohne Feiertage). Ein verspäteter Freitagsbericht kommt erst am Montag an (E-31 fasst wöchentliche Reihen nicht nach) |
 
 ---
 
@@ -470,6 +472,35 @@ Für jeden Meilenstein gilt die Definition of Done:
   - Gegenprobe mit 14 absichtlich eingebauten Fehlern, alle erkannt (drei erst nach drei zusätzlichen Tests): CSV-Leerzelle, CSV-Kopfzeile, fremde EZB-Reihe, leerer EZB-Wert, Monatserster, Rohdaten je Reihe statt je Gruppe, Erfolg ohne lesbare Reihe, Fehler einzelner Reihen nicht gemeldet, Gruppenplan, Präfixregel, doppelte Quellkennung, Worker je Reihe statt je Gruppe, jüngstes statt ältestes Gruppenmitglied, Allowlist ohne OFR
 - **Nicht geprüft:** Abruf auf TrueNAS (nach dem Update, `docs/einrichtung.md`, Schritt 9); Veröffentlichungszeiten von CISS nur einmal beobachtet (Prüfung wie M3, Schritt 9).
 
+**Ergebnis M4b (26.09.2026, erledigt):**
+- **Umgesetzt wie freigegeben (E-39):**
+  - `fever/sources/cftc.py`: Socrata-Abfrage mit festen Feldern (`$select`), Filter auf den Marktcode (`$where`), Sortierung und `$limit` 50 000. Eine Antwort mit 50 000 oder mehr Zeilen gilt als womöglich abgeschnitten und ist ein Fehler. Werte müssen ganze Zahlen sein; ein fehlendes Feld gilt als fehlender Wert
+  - `source_id` im Format `<Marktcode>/<Feld>`, z. B. `1170E1/noncomm_positions_long_all`; Marktcode und Feld werden geprüft
+  - Quelle `cftc` im Katalog, Allowlist um `publicreporting.cftc.gov`
+  - 4 Reihen in der Gruppe `cftc_vx` (ein Abruf, eine Rohdatei); Fixture aus der gekürzten echten Antwort (gemeinfrei)
+- **Befunde:**
+  - Stichtag ist der Dienstag, Veröffentlichung am Freitag um 15:30 ET; in Wochen mit US-Feiertag verschiebt sich die Veröffentlichung, 2026 auf die Montage 22.06., 16.11., 30.11. und 28.12. (CFTC-Veröffentlichungsplan)
+  - Historie ab 27.07.2004, 1114 Berichte. 10 Stichtage fallen auf Montag oder Mittwoch (Feiertagswochen). Lücken der Quelle: 2006 (98 Tage) und 12/2008 bis 06/2009 (168 Tage); Grund nicht geprüft
+  - Der Feldname `noncomm_postions_spread_all` enthält einen Tippfehler der CFTC und wird so abgefragt
+  - Nutzungsbedingungen: gemeinfrei, die CFTC bittet um Quellenangabe (Hinweis in M6)
+- **Parameter (E-40):**
+
+  | Reihe | CFTC-Feld | Historie (Kontrakte) |
+  |---|---|---|
+  | `cftc_vx_open_interest` | `open_interest_all` | 5 732 bis 704 831 |
+  | `cftc_vx_noncomm_long` | `noncomm_positions_long_all` | 426 bis 258 691 |
+  | `cftc_vx_noncomm_short` | `noncomm_positions_short_all` | 233 bis 353 649 |
+  | `cftc_vx_noncomm_spread` | `noncomm_postions_spread_all` | 0 bis 236 674 |
+
+  Alle wöchentlich, Verzug 3 (Dienstag → Freitag), Uhrzeit 15:45 ET (15 Minuten nach der Veröffentlichung), Toleranz nach E-10, Grenzen 0 bis 10 000 000 (fangen nur grobe Fehler wie Einheit oder Vorzeichen).
+- **Belege:**
+  - `pytest -q`: 231 passed (17 neu in `tests/test_sources_cftc.py`)
+  - Gruppe `cftc_vx` gegen `data-dev/` mit echter API: Lauf 1 mit 4 × 1114 neuen Zeilen, geschätzter Stand des Stichtags 22.09.2026 = Fr 25.09.2026 19:45 UTC; Lauf 2 ohne neue Zeilen und ohne zweite Rohdatei
+  - `python -m fever.sources.update` gegen `data-dev/`, zweimal: „Sofort-Abruf beendet: 41 Reihen, 0 mit Problemen“; Worker-Start meldet „41 Reihen in 29 Abrufgruppen“
+  - Gegenprobe gegen die CFTC-Jahresdatei `deacot2026.zip` (anderer Vertriebsweg): 38 Stichtage 2026, keine Abweichung
+  - Gegenprobe mit 11 absichtlich eingebauten Fehlern, alle erkannt: immer erstes Feld, Kürzungsschutz fehlt oder um eins zu spät, Marktcode oder Feld ungeprüft, fehlendes Feld nicht übersprungen, Dezimalwerte akzeptiert, ohne Datums- und Endlichkeitsprüfung, kein Marktfilter, Allowlist ohne CFTC, Quelle nicht registriert
+- **Nicht geprüft:** Abruf auf TrueNAS (nach dem Update, `docs/einrichtung.md`, Schritt 9); tatsächliche Ankunft des Freitagsberichts vor 15:45 ET (Rohdatenarchiv nach dem ersten Freitag prüfen, wie M3, Schritt 9).
+
 ### M5 – Scoring (Schritte 1–6, Stufe 1)
 
 **Voraussetzung:** L-1 bis L-12 entschieden (L-10 seit E-13 hier); `scoring.toml` mit Startwerten aus Bericht 4.3 und den Entscheidungen; Freigabe.
@@ -666,13 +697,13 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (26.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt (178 Tests grün): Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-38; M4a (EZB, OFR, EBP; 14 Reihen) umgesetzt, 214 Tests grün.
+  - Entscheidungen bis E-40; M4a (EZB, OFR, EBP; 14 Reihen) und M4b (CFTC COT, VIX-Futures; 4 Reihen) umgesetzt, 231 Tests grün, 41 Reihen im Katalog.
   - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“). Erstabruf aller 23 Reihen am 26.09.2026 per Sofort-Abruf; das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
-  1. Auf TrueNAS M4a einspielen: `git pull`, Build, Stack neu starten, Sofort-Abruf (`docs/einrichtung.md`, Schritt 9).
+  1. Auf TrueNAS M4a und M4b einspielen: `git pull`, Build, Stack neu starten, Sofort-Abruf (`docs/einrichtung.md`, Schritt 9); erwartet „41 Reihen, 0 mit Problemen“.
   2. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen (Nutzer schickt Ausgaben); dann M3 abschließen (geplant in der Woche ab 28.09.2026).
-  3. M4b (CFTC COT) planen: Frage, ob neben VIX-Futures auch E-mini S&P 500 archiviert wird.
-  4. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit.
+  3. M4c (Shiller-CAPE, FINRA) planen: Excel-Leser (`xlrd` für `.xls`) und FINRA-Nutzungsbedingungen (automatischer Abruf untersagt) zur Entscheidung vorlegen.
+  4. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit, CFTC nach dem ersten Freitag.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).

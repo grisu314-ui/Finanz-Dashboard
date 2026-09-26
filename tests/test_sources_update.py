@@ -9,7 +9,7 @@ import requests
 from requests.adapters import BaseAdapter
 from sqlalchemy import select
 
-from fever.config import series_catalog
+from fever.config import group_members, series_catalog
 from fever.http import FetchError, Fetched, HttpClient
 from fever.sources.update import UpdateResult, estimated_release, update_series
 from fever.store.db import make_engine
@@ -309,7 +309,7 @@ def test_one_off_fetch_command(migrated_dir, monkeypatch):
     monkeypatch.setattr(update.log, "setup", lambda: None)
     monkeypatch.setattr(update, "update_group", fake_group)
     assert update.main() == 1  # one group reported a problem
-    assert len(calls) == len(set(calls)) == 28  # every download group exactly once
+    assert sorted(calls) == sorted(group_members(CATALOG))  # every download group exactly once
     monkeypatch.setenv("FEVER_DATA", str(migrated_dir / "missing"))
     assert update.main() == 2
 

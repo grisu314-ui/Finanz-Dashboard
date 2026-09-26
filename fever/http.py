@@ -27,6 +27,7 @@ ALLOWED_HOSTS = {
     "data-api.ecb.europa.eu": 1.0,  # ECB Data Portal (CISS, reference rates), from M4a
     "www.financialresearch.gov": 1.0,  # OFR Financial Stress Index, from M4a
     "www.federalreserve.gov": 1.0,  # Excess Bond Premium, from M4a
+    "publicreporting.cftc.gov": 1.0,  # CFTC Commitments of Traders (Socrata), from M4b
 }
 USER_AGENT = f"Fieberthermometer/{__version__} (private, non-commercial)"
 TIMEOUT = (10, 60)  # seconds: connect, read

@@ -15,6 +15,8 @@ EXPECTED_IDS = {
     "ofr_fsi", "ofr_fsi_credit", "ofr_fsi_equity_valuation", "ofr_fsi_safe_assets", "ofr_fsi_funding",
     "ofr_fsi_volatility", "ofr_fsi_united_states", "ofr_fsi_other_advanced", "ofr_fsi_emerging_markets",
     "fed_ebp", "fed_gz_spread",
+    # M4b
+    "cftc_vx_open_interest", "cftc_vx_noncomm_long", "cftc_vx_noncomm_short", "cftc_vx_noncomm_spread",
 }
 
 VALID = """
@@ -143,8 +145,8 @@ def test_repository_groups():
     from fever.config import group_members
 
     groups = group_members(series_catalog())
-    assert len(groups["ofr_fsi"]) == 9 and len(groups["fed_ebp"]) == 2
-    assert all(len(members) == 1 for group, members in groups.items() if group not in ("ofr_fsi", "fed_ebp"))
+    assert len(groups["ofr_fsi"]) == 9 and len(groups["fed_ebp"]) == 2 and len(groups["cftc_vx"]) == 4
+    assert all(len(members) == 1 for group, members in groups.items() if group not in ("ofr_fsi", "fed_ebp", "cftc_vx"))
 
 
 def test_group_members_share_the_schedule(tmp_path):

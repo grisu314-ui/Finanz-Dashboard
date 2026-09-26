@@ -193,7 +193,7 @@ Prüfen:
 
 ```bash
 sudo docker logs --tail 20 finanz-dashboard-worker-1
-#   erwartet u. a.: INFO __main__: Worker gestartet: 23 Reihen, Takt 15 Minuten
+#   erwartet u. a.: INFO __main__: Worker gestartet: 41 Reihen in 29 Abrufgruppen, Takt 15 Minuten
 #                   INFO __main__: Tägliches Backup erstellt und geprüft: fever-…-daily.sqlite3
 sudo docker exec finanz-dashboard-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"
 #   erwartet: gesund: letzter Heartbeat vor 0 Minuten
@@ -208,11 +208,11 @@ Dockge zeigt den Worker nach spätestens rund 5 Minuten als „healthy“; vorhe
 ```bash
 sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
 #   erwartet je Reihe eine Zeile, z. B.: INFO __main__: ecb_ciss: 12199 neue Zeilen (Erstabruf)
-#   am Ende: INFO __main__: Sofort-Abruf beendet: 37 Reihen, 0 mit Problemen   (Exit-Code 0)
+#   am Ende: INFO __main__: Sofort-Abruf beendet: 41 Reihen, 0 mit Problemen   (Exit-Code 0)
 #   ein zweiter Lauf meldet je Reihe "0 neue Zeilen"
 ```
 
-✅ 26.09.2026, Entwicklungsumgebung (37 Reihen, zweimal). Auf TrueNAS lief am 26.09.2026 die frühere Einzeiler-Fassung (23 Reihen, 101 363 Zeilen); das Kommando ist dort ⏳. Meldet es „mit Problemen“ (Exit-Code 1), nennen die `ERROR`-Zeilen darüber Reihe und Grund.
+✅ 26.09.2026, Entwicklungsumgebung (41 Reihen, zweimal; Worker-Startzeile ebenfalls). Auf TrueNAS lief am 26.09.2026 die frühere Einzeiler-Fassung (23 Reihen, 101 363 Zeilen); das Kommando ist dort ⏳. Meldet es „mit Problemen“ (Exit-Code 1), nennen die `ERROR`-Zeilen darüber Reihe und Grund.
 
 ## 8. Dashboard aufrufen ⏳ (ab M6)
 
