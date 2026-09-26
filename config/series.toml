@@ -1,0 +1,300 @@
+# Series catalogue: raw series as [series.<id>], derived indicators as [indicator.<id>].
+# Raw series since M2 part B; indicators follow in M5 (decision E-13, docs/umsetzungsplan.md).
+# Parameters decided on 26.09.2026 (E-23); evidence per series in docs/umsetzungsplan.md, M2.
+#
+# Fields per raw series (checked by fever/config.py, series_catalog):
+#   source          "cboe" or "fred"
+#   source_id       identifier at the source; the table key is the same in lower case (E-16)
+#   name, unit      display texts
+#   frequency       "daily", "weekly" or "monthly"
+#   release_time    "HH:MM" in America/New_York from which the value is usually available
+#   lag_days        calendar days from observation date to publication (regular maximum, E-23).
+#                   First fetch only: estimated publication = observation date + lag_days, moved
+#                   from Saturday/Sunday to Monday, at release_time, at most the retrieval time (E-14)
+#   tolerance_days  E-10 standard: daily 3, weekly 3, monthly 10; other values need tolerance_reason
+#   bounds          [lower, upper], inclusive. Catches unit and format errors only; a value outside
+#                   is dropped and reported (E-15), so historical extremes must lie well inside
+#   license         optional licence note
+#   start           optional: observations before this date are ignored (E-24)
+#   lead_days       optional: observations may be dated up to this many days after today (E-25)
+
+# --- Cboe daily index closes (CSV). Licence: personal, non-commercial use (E-26) ---
+
+[series.vix]
+source = "cboe"
+source_id = "VIX"
+name = "Cboe Volatility Index (VIX)"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 300]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.vix9d]
+source = "cboe"
+source_id = "VIX9D"
+name = "Cboe 9-Day Volatility Index (VIX9D)"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 400]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.vix3m]
+source = "cboe"
+source_id = "VIX3M"
+name = "Cboe 3-Month Volatility Index (VIX3M)"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 300]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.vix6m]
+source = "cboe"
+source_id = "VIX6M"
+name = "Cboe 6-Month Volatility Index (VIX6M)"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 300]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.vvix]
+source = "cboe"
+source_id = "VVIX"
+name = "Cboe VIX of VIX Index (VVIX)"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 600]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+start = 2007-01-03  # documented start of the VVIX history; 2006 rows are sparse and implausible (E-24)
+
+[series.skew]
+source = "cboe"
+source_id = "SKEW"
+name = "Cboe SKEW Index"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [50, 400]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+# --- FRED: ICE BofA option-adjusted spreads. FRED keeps only three years: the local archive is
+# --- irreplaceable (CLAUDE.md). Display only until O-5 is decided.
+
+[series.bamlh0a0hym2]
+source = "fred"
+source_id = "BAMLH0A0HYM2"
+name = "ICE BofA US High Yield Index Option-Adjusted Spread"
+unit = "Prozent"
+frequency = "daily"
+release_time = "10:15"
+lag_days = 1
+tolerance_days = 3
+bounds = [0, 50]
+license = "ICE Data Indices, LLC (Copyright): nur private Nutzung, keine Weitergabe"
+
+[series.bamlh0a1hybb]
+source = "fred"
+source_id = "BAMLH0A1HYBB"
+name = "ICE BofA BB US High Yield Index Option-Adjusted Spread"
+unit = "Prozent"
+frequency = "daily"
+release_time = "10:15"
+lag_days = 1
+tolerance_days = 3
+bounds = [0, 40]
+license = "ICE Data Indices, LLC (Copyright): nur private Nutzung, keine Weitergabe"
+
+[series.bamlh0a3hyc]
+source = "fred"
+source_id = "BAMLH0A3HYC"
+name = "ICE BofA CCC & Lower US High Yield Index Option-Adjusted Spread"
+unit = "Prozent"
+frequency = "daily"
+release_time = "10:15"
+lag_days = 1
+tolerance_days = 3
+bounds = [0, 100]
+license = "ICE Data Indices, LLC (Copyright): nur private Nutzung, keine Weitergabe"
+
+[series.bamlc0a0cm]
+source = "fred"
+source_id = "BAMLC0A0CM"
+name = "ICE BofA US Corporate Index Option-Adjusted Spread"
+unit = "Prozent"
+frequency = "daily"
+release_time = "10:15"
+lag_days = 1
+tolerance_days = 3
+bounds = [0, 20]
+license = "ICE Data Indices, LLC (Copyright): nur private Nutzung, keine Weitergabe"
+
+[series.bamlc0a4cbbb]
+source = "fred"
+source_id = "BAMLC0A4CBBB"
+name = "ICE BofA BBB US Corporate Index Option-Adjusted Spread"
+unit = "Prozent"
+frequency = "daily"
+release_time = "10:15"
+lag_days = 1
+tolerance_days = 3
+bounds = [0, 25]
+license = "ICE Data Indices, LLC (Copyright): nur private Nutzung, keine Weitergabe"
+
+# --- FRED: financial conditions and stress indices ---
+
+[series.nfci]
+source = "fred"
+source_id = "NFCI"
+name = "Chicago Fed National Financial Conditions Index (NFCI)"
+unit = "Index"
+frequency = "weekly"
+release_time = "08:45"
+lag_days = 6
+tolerance_days = 3
+bounds = [-10, 20]
+license = "Federal Reserve Bank of Chicago: Quellenangabe erforderlich"
+
+[series.anfci]
+source = "fred"
+source_id = "ANFCI"
+name = "Chicago Fed Adjusted National Financial Conditions Index (ANFCI)"
+unit = "Index"
+frequency = "weekly"
+release_time = "08:45"
+lag_days = 6
+tolerance_days = 3
+bounds = [-10, 20]
+license = "Federal Reserve Bank of Chicago: Quellenangabe erforderlich"
+
+[series.stlfsi4]
+source = "fred"
+source_id = "STLFSI4"
+name = "St. Louis Fed Financial Stress Index (STLFSI4)"
+unit = "Index"
+frequency = "weekly"
+release_time = "14:00"
+lag_days = 6
+tolerance_days = 3
+bounds = [-10, 30]
+
+# --- FRED: yield curve, rates, labour market ---
+
+[series.t10y3m]
+source = "fred"
+source_id = "T10Y3M"
+name = "Zinskurve: 10 Jahre minus 3 Monate (US-Staatsanleihen)"
+unit = "Prozent"
+frequency = "daily"
+release_time = "17:15"
+lag_days = 0
+tolerance_days = 3
+bounds = [-10, 10]
+
+[series.t10y2y]
+source = "fred"
+source_id = "T10Y2Y"
+name = "Zinskurve: 10 Jahre minus 2 Jahre (US-Staatsanleihen)"
+unit = "Prozent"
+frequency = "daily"
+release_time = "17:15"
+lag_days = 0
+tolerance_days = 3
+bounds = [-10, 10]
+
+[series.dgs10]
+source = "fred"
+source_id = "DGS10"
+name = "Rendite 10-jähriger US-Staatsanleihen"
+unit = "Prozent"
+frequency = "daily"
+release_time = "16:30"
+lag_days = 1
+tolerance_days = 3
+bounds = [-5, 30]
+
+[series.sofr]
+source = "fred"
+source_id = "SOFR"
+name = "Secured Overnight Financing Rate (SOFR)"
+unit = "Prozent"
+frequency = "daily"
+release_time = "08:15"
+lag_days = 1
+tolerance_days = 3
+bounds = [-5, 30]
+
+[series.iorb]
+source = "fred"
+source_id = "IORB"
+name = "Zinssatz auf Reserveguthaben (IORB)"
+unit = "Prozent"
+frequency = "daily"
+release_time = "16:45"
+lag_days = 0
+tolerance_days = 3
+bounds = [-5, 30]
+lead_days = 7  # the rate is announced in advance; FRED lists it up to six days ahead (E-25)
+
+[series.sahmrealtime]
+source = "fred"
+source_id = "SAHMREALTIME"
+name = "Sahm-Regel in Echtzeit"
+unit = "Prozentpunkte"
+frequency = "monthly"
+release_time = "10:00"
+lag_days = 37
+tolerance_days = 10
+bounds = [-5, 30]
+
+[series.icsa]
+source = "fred"
+source_id = "ICSA"
+name = "Erstanträge auf Arbeitslosenhilfe (USA)"
+unit = "Anträge"
+frequency = "weekly"
+release_time = "08:45"
+lag_days = 5
+tolerance_days = 3
+bounds = [10000, 50000000]
+
+[series.ic4wsa]
+source = "fred"
+source_id = "IC4WSA"
+name = "Erstanträge auf Arbeitslosenhilfe, 4-Wochen-Durchschnitt (USA)"
+unit = "Anträge"
+frequency = "weekly"
+release_time = "08:45"
+lag_days = 5
+tolerance_days = 3
+bounds = [10000, 50000000]
+
+# --- FRED: equity index (only ten years on FRED, S&P licence). Used for VRP and the
+# --- stock-bond correlation until O-1 is decided.
+
+[series.sp500]
+source = "fred"
+source_id = "SP500"
+name = "S&P 500"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "20:15"
+lag_days = 0
+tolerance_days = 3
+bounds = [100, 100000]
+license = "S&P Dow Jones Indices LLC (Copyright): nur private Nutzung, keine Weitergabe"

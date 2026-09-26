@@ -1,0 +1,13 @@
+# Build file (decision E-32): builds the image fever:local in the project directory.
+#   sudo docker compose build
+# Operation runs as a Dockge stack from compose.dockge.yaml (docs/einrichtung.md).
+# This file starts nothing: `up` only prints a hint and exits.
+name: fever-build
+
+services:
+  fever:
+    image: fever:local
+    build:
+      context: .
+    restart: "no"
+    command: ["python", "-c", "print('Nur zum Bauen. Betrieb über den Dockge-Stack, siehe docs/einrichtung.md.')"]
