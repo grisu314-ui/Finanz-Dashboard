@@ -108,6 +108,8 @@ git status    # erwartet: "On branch claude-testing", "Your branch is up to date
 
 ### 3.3 Kind-Dataset `data` anlegen (E-28)
 
+✅ 26.09.2026, TrueNAS: Worker schreibt als 568:568 in `/mnt/Daten-Z1/apps/feewer/data` (per `docker inspect` und `ls -ln` geprüft).
+
 In der TrueNAS-Oberfläche:
 1. Datasets → `Daten-Z1/apps/feewer` auswählen → „Add Dataset“.
 2. Name `data`, als Preset „Apps“ oder „Generic“ → Speichern.
@@ -201,7 +203,7 @@ Dockge zeigt den Worker nach spätestens rund 5 Minuten als „healthy“; vorhe
 
 **Wann die ersten Daten kommen:** Der Worker ruft jede Reihe an New-Yorker Werktagen ab ihrer Veröffentlichungszeit ab (E-31); an Wochenenden ruft er nichts ab. Als Erstes kommt SOFR um 08:15 New York (derzeit 14:15 Uhr deutscher Zeit). Im Log steht dann z. B. `INFO fever.sources.update: sofr: 2118 neue Zeilen (Erstabruf)`. Das lokale ICE-Archiv beginnt mit dem ersten Abruf der ICE-Reihen um 10:15 New York (derzeit 16:15 Uhr).
 
-**Sofort-Abruf** (✅ 26.09.2026, Entwicklungsumgebung: 23 Reihen in 23 s): ruft alle Reihen einmal sofort ab, unabhängig vom Abrufplan. Sinnvoll nach der Einrichtung an einem Wochenende: FRED liefert die ICE-Spreads nur für drei Jahre rückwirkend, jeder Tag Warten kostet den ältesten Tag. Doppelte Abrufe schaden nicht; unveränderte Werte werden nicht erneut gespeichert.
+**Sofort-Abruf** (✅ 26.09.2026, TrueNAS: 23 Reihen, 101 363 Zeilen in 22 s): ruft alle Reihen einmal sofort ab, unabhängig vom Abrufplan. Sinnvoll nach der Einrichtung an einem Wochenende: FRED liefert die ICE-Spreads nur für drei Jahre rückwirkend, jeder Tag Warten kostet den ältesten Tag. Doppelte Abrufe schaden nicht; unveränderte Werte werden nicht erneut gespeichert.
 
 ```bash
 sudo docker exec finanz-dashboard-worker-1 python -c "from fever import log; log.setup(); from fever.config import series_catalog; from fever.http import HttpClient; from fever.sources.update import update_series; from fever.store.db import data_dir, make_engine; d = data_dir(); e = make_engine(d); c = HttpClient(); [update_series(e, d, c, s) for s in series_catalog().values()]"
@@ -302,6 +304,7 @@ Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
 | Start, Stopp | Dockge, Stack `finanz-dashboard` | ✅ TrueNAS 26.09.2026 (Start) |
 | Worker-Log | `sudo docker logs -f finanz-dashboard-worker-1` | ⏳ |
 | Healthcheck von Hand | `sudo docker exec finanz-dashboard-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"` | ✅ TrueNAS 26.09.2026 |
-| Sofort-Abruf aller Reihen | siehe Schritt 7, „Sofort-Abruf“ | ✅ Entwicklungsumgebung 26.09.2026 |
+| Sofort-Abruf aller Reihen | siehe Schritt 7, „Sofort-Abruf“ | ✅ TrueNAS 26.09.2026 |
+| Mountpunkt und Benutzer prüfen | `sudo docker inspect finanz-dashboard-worker-1 --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{end}} user={{.Config.User}}'` (erwartet: `/mnt/Daten-Z1/apps/feewer/data -> /data user=568:568`) | ✅ TrueNAS 26.09.2026 |
 | Sofort-Backup | `sudo docker exec finanz-dashboard-worker-1 python -m fever.backup` (Stack gestoppt: `$RUN python -m fever.backup`) | ✅ Entwicklungsumgebung 25.09.2026 |
 | Migration (Ablauf) | Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten | ⏳ |
