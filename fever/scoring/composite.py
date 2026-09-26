@@ -20,8 +20,8 @@ from datetime import date, datetime, time, timedelta, timezone
 
 import numpy as np
 
-from fever.config import FREQUENCY_DAYS, STRESS_BLOCKS, VULNERABILITY, Indicator, ScoringConfig
-from fever.release import NEW_YORK
+from fever.config import STRESS_BLOCKS, VULNERABILITY, Indicator, ScoringConfig
+from fever.release import NEW_YORK, is_stale
 
 OK, MISSING, STALE, HISTORY = "ok", "missing", "stale", "history"
 GREEN, YELLOW, ORANGE, RED = 0, 1, 2, 3
@@ -85,8 +85,7 @@ def indicator_score(history: IndicatorHistory, day: date) -> IndicatorScore:
     obs_date = history.dates[index]
     percentile = _number(history.percentiles[index])
     display = None if history.display_percentiles is None else _number(history.display_percentiles[index])
-    age = (day - (obs_date + timedelta(days=indicator.lag_days))).days
-    if age > FREQUENCY_DAYS[indicator.frequency] + indicator.tolerance_days:
+    if is_stale(obs_date, indicator.lag_days, indicator.frequency, indicator.tolerance_days, day):
         status = STALE
     elif percentile is None:
         status = HISTORY

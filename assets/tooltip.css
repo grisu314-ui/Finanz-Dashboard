@@ -1,0 +1,11 @@
+/* Short info as a pure CSS tooltip from data-tip (7.2): plain text, never HTML; shown on hover
+   and on focus, so tapping works on touch devices. */
+.tip { position: relative; cursor: help; color: var(--ink-2); outline-offset: 2px; }
+.tip:hover::after, .tip:focus::after {
+  content: attr(data-tip);
+  position: absolute; left: 0; top: 1.5em; z-index: 20;
+  width: max-content; max-width: min(18rem, 80vw);
+  padding: 0.45rem 0.6rem; border-radius: 8px;
+  background: var(--ink); color: var(--page);
+  font-size: 0.8rem; font-weight: 400; line-height: 1.35; white-space: normal;
+}

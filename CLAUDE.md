@@ -65,7 +65,8 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
   - Einmal-Container: `RUN='sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v /mnt/Daten-Z1/apps/feewer/data:/data fever:local'`
   - Migration, auch bei der Ersteinrichtung: Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten; Stand: `$RUN alembic current`
   - Sofort-Backup bei laufendem Stack: `sudo docker exec finanz-dashboard-worker-1 python -m fever.backup`
-  - Log: `sudo docker logs -f finanz-dashboard-worker-1`
+  - Log: `sudo docker logs -f finanz-dashboard-worker-1`, Dashboard: `sudo docker logs -f finanz-dashboard-web-1`
+  - Dashboard im Heimnetz: `http://<IP-von-TrueNAS>:8003`; Health: `curl -s http://127.0.0.1:8003/health`
   - Sofort-Abruf aller Reihen (unabhängig vom Abrufplan): `sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update`
   - Scores sofort neu berechnen: `sudo docker exec finanz-dashboard-worker-1 python -m fever.score`
   - Neue Migration vorher an einer Backup-Kopie proben: `docs/einrichtung.md`, Schritt 9

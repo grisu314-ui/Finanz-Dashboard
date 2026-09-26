@@ -1,6 +1,6 @@
 # Bedienung: das Dashboard lesen
 
-Stand: 25.09.2026 · Für: dich als Anwender · Status: ⏳ **Zielbild.** Die Oberfläche entsteht in M6–M8 (`docs/umsetzungsplan.md`). Dieser Text wird bei der Abnahme (M9) gegen die fertige App geprüft und dann auf ✅ gesetzt.
+Stand: 26.09.2026 · Für: dich als Anwender · Status: ⏳ **Zielbild, teilweise umgesetzt.** Seit M6 gibt es Seitenrahmen, Übersicht (Ampel, Stress, Fallhöhe, Konfidenz), Datenstand, Erklärungen und Erklärseiten; die Themen-Ansichten folgen in M7, die übrigen Texte in M8 (`docs/umsetzungsplan.md`). Dieser Text wird bei der Abnahme (M9) gegen die fertige App geprüft und dann auf ✅ gesetzt.
 
 Die genauen Schwellenwerte stehen bewusst nicht hier, sondern in der App auf den Erklärseiten (z. B. „Ampel“). Die Seiten werden aus der Konfiguration erzeugt und sind deshalb immer aktuell.
 

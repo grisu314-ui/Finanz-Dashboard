@@ -1,0 +1,10 @@
+/* Print / PDF (7.1): always light, no navigation or buttons, no card split across pages.
+   theme.js switches the charts to the light template before printing. */
+@media print {
+  :root { color-scheme: light; --page: #ffffff; --surface: #ffffff; --ink: #0b0b0b; --ink-2: #52514e;
+    --muted: #52514e; --grid: #e1e0d9; --axis: #c3c2b7; --border: #c3c2b7; --link: #0b0b0b; }
+  .nav, .fullscreen-toggle, .modebar-container, .banner-connection, .rangeselector { display: none !important; }
+  .card, .chart-card { break-inside: avoid; }
+  .chart-card.is-fullscreen { position: static; }
+  body { background: #ffffff; }
+}

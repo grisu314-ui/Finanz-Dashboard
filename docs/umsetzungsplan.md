@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2, M4 und M5 erledigt (M5 noch nicht auf TrueNAS), M3: Worker läuft auf TrueNAS mit 60 Reihen** · Nächster Schritt: M5 auf TrueNAS einspielen (mit Migration 0002), M6 planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 und M4 bis M6 erledigt (M6 noch nicht auf TrueNAS), M3: Worker läuft auf TrueNAS mit 60 Reihen und Scoring** · Nächster Schritt: M6 auf TrueNAS einspielen (Compose-Kopie in Dockge erneuern), M7 planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -21,8 +21,8 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ☑ 26.09.2026 | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B erteilt 26.09.2026 |
 | M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ◐ läuft auf TrueNAS seit 26.09.2026, ICE-Archiv ab Beobachtung 26.09.2023; offen: erste Werktags-Abrufe, Schritt 9 | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
 | M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ☑ 26.09.2026 (M4a bis M4d, E-37) | M3 | M4a bis M4d erteilt 26.09.2026 |
-| M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☑ 26.09.2026 (auf TrueNAS ⏳) | M4, L-1 bis L-12 | erteilt 26.09.2026 |
-| M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☐ | M1 (Lesen), M3 (Heartbeat) | ja |
+| M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026) | M4, L-1 bis L-12 | erteilt 26.09.2026 |
+| M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☑ 26.09.2026 (auf TrueNAS ⏳) | M1 (Lesen), M3 (Heartbeat) | erteilt 26.09.2026 |
 | M7 | Ansichten 1–7 | ☐ | M5, M6, L-13 | ja |
 | M8 | Erklärtexte je Kennzahl | ☐ | parallel zu M6/M7 | ja (Texte prüfen) |
 | M9 | Abnahme Phase 1 | ☐ | M0–M8 | – |
@@ -86,6 +86,10 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-49 | Kalender und Indikatoren (L-9 bis L-11) | Ein Score je Cboe-Handelstag (Tage mit VIX-Schluss); eine Beobachtung zählt an t, wenn Datum + Verzug zur `release_time` (Wochenende → Montag) spätestens am Ende des New-Yorker Tages t liegt. 16 Stress-Indikatoren in 3 Blöcken und 3 Fallhöhe-Komponenten (Tabelle unter M5; zunächst irrtümlich als 15 gezählt). VRP: niedrig = Stress; T10Y3M nur Anzeige; USD/JPY als 5-Tage-Veränderung und 21-Tage-Vola; Erstanträge ggü. 52-Wochen-Tief. Fallhöhe = Mittel von mindestens 2 Komponenten; VX-COT im Score mit dem 10-Jahres-Fenster, 3-Jahres-Perzentil zusätzlich gespeichert (Anzeige) | Nur Anzeige: HY-OAS und weitere ICE-Spreads (O-5), ANFCI, OFR gesamt und übrige Teilindizes, T10Y3M/T10Y2Y, SKEW, VIX9D, VIX6M, VX-Futures |
 | 26.09.2026 | E-50 | Speicherung der Scores | Migration 0002 mit `indicator_score` und `composite_score`; jede Neuberechnung ersetzt beide Tabellen vollständig in einer Transaktion | Rohdaten (`observation`) bleiben unberührt; keine Historie früherer Rechenläufe |
 | 26.09.2026 | E-51 | Randfälle des Scorings (Annahmen aus der Umsetzung von M5) | Bestätigt wie umgesetzt: EWMA beginnt nach einer Lücke neu; realisierte Vola ohne Mittelwertabzug; ein Tag ohne VIX/VIX3M-Wert unterbricht die Serien, beendet eine aktive Rot-Regel aber nicht; ohne Composite bestimmen die übrigen Regeln die Ampel, die Oberfläche zeigt „Composite fehlt“ | Die Kennzeichnung ohne Composite folgt in M6 |
+| 26.09.2026 | E-52 | Umfang der Übersicht in M6 | Ampel, Stress, Fallhöhe und Konfidenz mit Aktualität und Verlauf; dafür schon jetzt die Texte dieser vier Kennzahlen und der Konzeptseiten Perzentil und Veraltung | Der Nutzer prüft diese Texte wie in M8; alle übrigen Kennzahlen erscheinen erst mit ihrem Text (M7/M8) |
+| 26.09.2026 | E-53 | Umfang der Ansicht „Datenstand“ | Je Quelle (letzter Erfolg, Versuch, Fehler, dazu Worker und Scoring) und je Reihe (letzte Beobachtung, Abruf, Alter, „veraltet“ nach E-10) | Veraltete Reihen stehen oben |
+| 26.09.2026 | E-54 | gunicorn-Prozesse | 1 Prozess | 4 Threads im Prozess, damit parallele Callbacks nicht warten; wenig Speicher |
+| 26.09.2026 | E-55 | Farbsystem | Validierte Referenzpalette des Dataviz-Skills: Ampel in vier Statusfarben immer mit Text, Perzentile als blaue Einfarbskala (E-1), hell und dunkel je eigene Stufen | Linienfarben mit dem Validator geprüft; Systemschriften, keine Webfonts |
 
 ---
 
@@ -637,7 +641,7 @@ Für jeden Meilenstein gilt die Definition of Done:
   - Gegenprobe mit 36 absichtlich eingebauten Fehlern, alle erkannt (Perzentil, Orientierung, Veröffentlichung, Stichtag, Veraltung, Median, Mindestblöcke, Glättung, Fallhöhe, Konfidenz, Diffusion, Regeln, Hysterese, VIX-Regel, Transformationen, Auslöser der Neuberechnung, Worker)
   - Rechenzeit: 5,6 s für den ganzen Lauf mit 9281 Handelstagen (Rechnung 2,0 s), Entwicklungsumgebung
   - Migration mit dem gebauten Image als 568:568 auf einer Kopie des Backups vor der Migration: 0001 → 0002, danach `python -m fever.score` wie oben
-- **Nicht geprüft:** Migration und Scoring auf TrueNAS; Rechenzeit dort.
+- **Auf TrueNAS geprüft (26.09.2026):** Migration 0002 und `python -m fever.score`: „9281 Tage ab 02.01.1990, zuletzt 25.09.2026: Stress 37,8, Fallhöhe 79,9, Ampel Grün, Konfidenz 90,0 % (6,5 s)“, identisch mit der Entwicklungsumgebung.
 
 
 **Risiko:** Rechenzeit auf dem Zielsystem (rollierende Perzentile über bis zu 10 Jahre je Indikator). Erst messen, dann optimieren.
@@ -663,6 +667,23 @@ Für jeden Meilenstein gilt die Definition of Done:
 - jede angezeigte Kennzahl hat einen Text (siehe M8)
 
 **Sichtprüfung:** Playwright mit dem vorinstallierten Chromium in der Entwicklungsumgebung (kein Projekt-Requirement), Breiten 390 px und 1440 px, hell und dunkel, Druckvorschau. Screenshots bleiben außerhalb des Repos.
+
+**Ergebnis M6 (26.09.2026, umgesetzt; auf TrueNAS ⏳):**
+- **Umgesetzt wie entschieden (E-52 bis E-55):**
+  - `fever/web/app.py`: Dash 4.4.1 mit Seiten (`use_pages`), nur lokale Ressourcen, Seitenrahmen mit Kopfzeile (Worker zuletzt aktiv, Scores berechnet, Seite aktualisiert), Banner „Worker ohne Lebenszeichen“ (Grenze wie der Healthcheck) und „Keine Verbindung zum Server“ (clientseitig nach mehr als zwei Intervallen ohne Antwort), Aktualisierung alle 5 Minuten, Fußzeile mit den Pflichthinweisen (FRED, EZB) und Quellen, `/health`
+  - `fever/web/db.py` (nur lesend, `query_only`), `format.py` (Dezimalkomma, TT.MM.JJJJ, MEZ/MESZ, relatives Alter), `figures.py` (Chart-Fabrik nach 7.1), `components.py` (Kennzahl-Kopf mit CSS-Tooltip, Aktualität, Ampel, Perzentil-Chip, Chart-Karte mit Vollbild), `texts.py` (Textprüfung, Steckbrief und „Schwellen und Farben“ aus der Konfiguration), `views.py` (Seiteninhalte als testbare Funktionen)
+  - Seiten: Übersicht (Ampel mit zutreffenden Regeln, Stress, Fallhöhe, Konfidenz, Verlauf Stress/Fallhöhe, sichtbare Platzhalter O-1, O-5, Phase 2), Datenstand (Worker, je Quelle, je Reihe mit „veraltet“ nach E-10), Erklärungen, Erklärseite `/kennzahl/<id>`
+  - Texte für `traffic_light`, `stress`, `vulnerability`, `confidence`, `percentile`, `staleness` (inhaltliche Prüfung durch den Nutzer wie in M8); Indikatoren ohne Text werden nicht angezeigt
+  - `assets/`: `base.css` (Farben hell/dunkel aus der Referenzpalette), `tooltip.css`, `print.css`, `theme.js` (Systemwechsel, vor dem Druck hell), `fullscreen.js`
+  - Dienst `web` in `compose.dockge.yaml` (gunicorn, 1 Prozess mit 4 Threads, Port `0.0.0.0:${FEVER_WEB_PORT}`, Healthcheck über `/health` mit der Standardbibliothek); das Dockerfile kopiert `assets/`
+  - Veraltungsregel (E-10) als `is_stale` in `fever/release.py`, gemeinsam für Scoring und Oberfläche
+- **Belege:**
+  - `pytest -q`: 359 passed (18 neu in `tests/test_web.py` und `tests/test_compose.py`): Smoke-Test (`/`, Seiten, `/_dash-layout`, `/_dash-dependencies`, `/health`), `/health` 503 ohne Datenbank, keine externe URL im HTML, `query_only`, kein `dangerously_allow_html`, Chart-Standard, Textregeln, jede angezeigte Kennzahl hat einen Text, Formate
+  - gunicorn gegen `data-dev/`: alle Seiten 200
+  - Sichtprüfung mit Playwright und Chromium (390 px und 1440 px, hell und dunkel, fünf Seiten): keine Konsolenfehler, keine Anfrage an fremde Hosts, kein horizontales Scrollen; Druck aus dem Dunkelmodus hell ohne Navigation und Knöpfe; Tooltip per Fokus; Vollbild und ESC. Behoben nach der Sichtprüfung: Legende über den Zeitraum-Buttons, abgeschnittene Datierung, schräge Achsenbeschriftung bei 390 px
+  - Build-Probe; Dienst `web` über `compose.dockge.yaml` als 568:568: „healthy“, `0.0.0.0:8003`, Seiten 200
+  - Farben: Linienfarben mit dem Validator des Dataviz-Skills geprüft (hell und dunkel, alle Prüfungen bestanden)
+- **Nicht geprüft:** Betrieb auf TrueNAS; echte Geräte (nur Chromium-Emulation); Perzentilbänder im Verlauf fehlen noch (brauchen gespeicherte Bänder, M7).
 
 ### M7 – Ansichten 1–7
 
@@ -819,14 +840,15 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (26.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt (178 Tests grün): Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-51; M4 vollständig (60 Reihen in 32 Abrufgruppen, auf TrueNAS seit 26.09.2026: „60 Reihen, 0 mit Problemen“).
-  - M5 umgesetzt: 19 Indikatoren, Scoring nach Bericht 4.3 Schritte 1–6, Migration 0002, Scoring-Lauf im Worker und als `python -m fever.score`; 341 Tests grün. Noch nicht auf TrueNAS eingespielt.
+  - Entscheidungen bis E-55; M4 vollständig (60 Reihen in 32 Abrufgruppen), M5 auf TrueNAS seit 26.09.2026 (Scores identisch mit der Entwicklungsumgebung, 6,5 s).
+  - M6 umgesetzt: Dash-Oberfläche mit Übersicht, Datenstand, Erklärungen und Erklärseiten, Dienst `web` auf Port 8003; 359 Tests grün. Noch nicht auf TrueNAS eingespielt.
   - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“). Erstabruf aller 23 Reihen am 26.09.2026 per Sofort-Abruf; das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
-  1. M5 auf TrueNAS einspielen (Migration 0002): `docs/einrichtung.md`, Schritt 9, zuerst die Probe an einer Backup-Kopie; danach `python -m fever.score` und die Rechenzeit notieren.
-  2. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen (Nutzer schickt Ausgaben); dann M3 abschließen (geplant in der Woche ab 28.09.2026).
-  3. M6 planen (Web-Grundgerüst, Gestaltung, Aktualität, Datenstand); `scoring` in `source_status` im Datenstand als eigene Zeile benennen.
-  4. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit (Indizes und VX-Kontraktdateien), CFTC nach dem ersten Freitag, Shiller nach dem Oktober-Upload.
+  1. M6 auf TrueNAS einspielen: `git pull`, Build, Compose-Kopie in Dockge durch den neuen Inhalt von `compose.dockge.yaml` ersetzen (Dienst `web`), Stack neu starten, `http://<IP-von-TrueNAS>:8003` öffnen (`docs/einrichtung.md`, Schritte 8 und 9).
+  2. Nutzer prüft die sechs Texte aus E-52 inhaltlich.
+  3. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen; dann M3 abschließen (Woche ab 28.09.2026).
+  4. M7 planen (Ansichten 1–7): Ampelmatrix, Themen-Ansichten, Visualisierung; vorher L-13 (Krisenmarken) und die Speicherung der Perzentilbänder klären.
+  5. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe während der US-Handelszeit (Indizes und VX-Dateien), CFTC nach dem ersten Freitag, Shiller nach dem Oktober-Upload.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).

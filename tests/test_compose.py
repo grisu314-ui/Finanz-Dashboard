@@ -27,6 +27,17 @@ def test_runtime_file_guards_data_directory_user_and_health():
     assert "restart: unless-stopped" in RUNTIME
 
 
+def test_web_service_publishes_the_port_and_checks_health():
+    assert '"0.0.0.0:${FEVER_WEB_PORT:?' in RUNTIME
+    assert "fever.web.app:server" in RUNTIME and '"--workers", "1"' in RUNTIME
+    assert "http://127.0.0.1:8050/health" in RUNTIME
+    assert "FRED_API_KEY" not in RUNTIME.split("  web:")[1]  # the web never needs the secret
+
+
+def test_image_contains_the_assets():
+    assert "COPY assets/ assets/" in (REPO / "Dockerfile").read_text(encoding="utf-8")
+
+
 def test_every_variable_of_the_runtime_file_is_in_the_env_template():
     used = set(re.findall(r"\$\{([A-Z_]+)", RUNTIME))
     defined = set(re.findall(r"^([A-Z_]+)=", ENV_EXAMPLE, flags=re.MULTILINE))
