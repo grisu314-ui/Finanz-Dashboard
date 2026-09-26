@@ -45,6 +45,8 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 25.09.2026 | E-8 | Aufbewahrung der Backups | 14 tägliche, 5 vor Migrationen | Zwei Wochen zurück; geringer Platzbedarf |
 | 25.09.2026 | E-9 | Fehlerstatus im Datenstand (W-5) | Letzter Fehler je Quelle in `source_status`, wird überschrieben | Fehlerhafte Werte werden nie gespeichert; keine Fehlerhistorie. `CLAUDE.md` entsprechend präzisiert |
 | 26.09.2026 | E-10 | L-5: ab wann ist ein Wert veraltet? | Kalendertage nach erwarteter Veröffentlichung (Beobachtungsdatum + Verzug): täglich > 4, wöchentlich > 10, monatlich > 41. Das ist Frequenz plus Toleranz 3 / 3 / 10 | Kein Börsenkalender nötig; lange Feiertagswochenenden lösen keinen Fehlalarm aus. Die Toleranz steht je Reihe in `series.toml` (so sieht es `CLAUDE.md` vor); Abweichungen vom Standard nur mit Begründung im Eintrag, ein Test prüft das |
+| 26.09.2026 | E-11 | Datenordner auf dem Pi (O-2, Teilentscheidung) | `/home/dirk/volumes/fever`, direkt als Datenordner (darin `fever.sqlite3`, `raw/`, `backup/`) | Anlegen ohne `sudo` als Benutzer `dirk`. `FEVER_UID`/`FEVER_GID` müssen die IDs von `dirk` sein. Liegt `/home` auf der SD-Karte, verschleißt sie; Speichermedium bleibt offen (O-2). Pfad kommt weiterhin nur aus `.env`, nicht aus Code oder Compose |
+| 26.09.2026 | E-12 | `.env.example` vorbelegen? | Ja: Secrets leer, nicht geheime Werte vorbelegt (Datenordner) | `cp .env.example .env` liefert den richtigen Pfad. `CLAUDE.md`-Regel entsprechend präzisiert |
 
 ---
 
@@ -94,7 +96,7 @@ Für jeden Meilenstein gilt die Definition of Done:
    - Datenordner als Bind-Mount aus `.env`, Logging `json-file` mit `max-size` und `max-file`
    - Web-Port `0.0.0.0:${FEVER_WEB_PORT}` (E-4)
    - Healthchecks folgen in M3 (worker) und M6 (web)
-5. Geplante `.env`-Variablen (Namen werden hier festgelegt, in `.env.example` mit leeren Werten): `FRED_API_KEY`, `FEVER_DATA_DIR`, `FEVER_UID`, `FEVER_GID`, `FEVER_WEB_PORT`.
+5. Geplante `.env`-Variablen (Namen werden hier festgelegt; `.env.example` ursprünglich mit leeren Werten, seit E-12 nur Secrets leer): `FRED_API_KEY`, `FEVER_DATA_DIR`, `FEVER_UID`, `FEVER_GID`, `FEVER_WEB_PORT`.
 
 **Risiken:** Der QEMU-Build unter x86 ist langsam. Fehlen Wheels für die neueste Python-Version, eine Minor zurückgehen.
 

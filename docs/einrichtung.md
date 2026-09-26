@@ -6,8 +6,10 @@ Markierungen:
 - ✅ geprüft: ausgeführt, mit Datum und Ort
 - ⏳ geplant oder ungeprüft: Der Befehl steht fest, wurde aber noch nicht gegen den fertigen Code bzw. auf deinem Pi ausgeführt
 
-Beispielwerte, die du anpasst:
-- Datenordner `/srv/fever/data`
+Festgelegt (E-11 vom 26.09.2026):
+- Datenordner `/home/dirk/volumes/fever`
+
+Beispielwerte, die du anpassen kannst:
 - Web-Port `8050`
 - Projektordner `~/Finanz-Dashboard`
 
@@ -63,16 +65,23 @@ sudo timedatectl set-ntp true
 
 ### 2.4 Datenordner anlegen
 
-Der Datenordner muss auf einem **lokalen** Dateisystem liegen (z. B. ext4 auf der SSD), nicht auf einer Netzwerkfreigabe (NFS/SMB), weil die Datenbank dort nicht zuverlässig funktioniert.
+Der Datenordner ist `/home/dirk/volumes/fever` (E-11). Darin legt das Dashboard selbst an: `fever.sqlite3` (Datenbank), `raw/` (Rohantworten der Quellen) und `backup/`. Führe die Befehle als Benutzer `dirk` aus, **ohne** `sudo`; dann gehört der Ordner automatisch dir.
 
 ```bash
-sudo mkdir -p /srv/fever/data
-sudo chown "$(id -u):$(id -g)" /srv/fever/data
-df -T /srv/fever/data        # Spalte "Type": ext4 o. Ä., NICHT nfs oder cifs
-id -u; id -g                 # deine Benutzer- und Gruppen-ID, meist 1000 und 1000; für Schritt 6 notieren
+mkdir -p /home/dirk/volumes/fever
+ls -ld /home/dirk/volumes/fever                  # Eigentümer und Gruppe: dirk dirk
+id -u; id -g                                     # meist 1000 und 1000; für Schritt 6 notieren
+df -T /home/dirk/volumes/fever                   # Spalte "Type": ext4 o. Ä., NICHT nfs oder cifs
+findmnt -no SOURCE -T /home/dirk/volumes/fever   # Gerät, auf dem der Ordner liegt
 ```
 
-Ist die SSD z. B. unter `/mnt/ssd` eingehängt, nimm stattdessen `/mnt/ssd/fever/data`.
+So liest du die letzte Ausgabe:
+- `/dev/mmcblk0p2` o. Ä.: **SD-Karte.** Der Worker schreibt regelmäßig, eine SD-Karte verschleißt dabei. Dann besser den Pi von einer SSD starten; das Speichermedium ist noch offen (O-2).
+- `/dev/sda2`, `/dev/nvme0n1p2` o. Ä.: SSD oder USB-Datenträger. Gut.
+
+Der Datenordner muss auf einem **lokalen** Dateisystem liegen, nicht auf einer Netzwerkfreigabe (NFS/SMB), weil die Datenbank dort nicht zuverlässig funktioniert.
+
+**Wichtig für Schritt 6:** `FEVER_UID` und `FEVER_GID` müssen die Werte von `dirk` sein (Ausgabe von `id -u` und `id -g` oben). Der Container läuft mit dieser Benutzer-ID. Zeigt `ls -ld /home/dirk` die Rechte `drwx------`, kommt nur `dirk` in das Home-Verzeichnis; ein Container mit anderer ID könnte den Datenordner dann nicht erreichen.
 
 Der Ordner muss **vor** dem ersten Start existieren. Compose legt ihn bewusst nicht an, damit bei einem Tippfehler im Pfad keine Daten in einem falschen, neu angelegten Ordner landen.
 
@@ -173,11 +182,11 @@ chmod 600 .env    # nur du darfst die Datei lesen
 nano .env         # speichern: Strg+O, Enter; beenden: Strg+X
 ```
 
-Inhalt (Beispiel; `<…>` durch deinen Wert ersetzen, keine Leerzeichen um `=`):
+Die Vorlage enthält schon alle nicht geheimen Werte (E-12). Einzutragen ist nur der FRED-Schlüssel; `FEVER_UID`/`FEVER_GID` änderst du nur, wenn `id -u`/`id -g` aus Schritt 2.4 nicht 1000 ergeben. So sieht die fertige Datei aus (`<…>` durch deinen Wert ersetzen, keine Leerzeichen um `=`):
 
 ```ini
 FRED_API_KEY=<dein Schlüssel aus Schritt 4>
-FEVER_DATA_DIR=/srv/fever/data
+FEVER_DATA_DIR=/home/dirk/volumes/fever
 FEVER_UID=1000
 FEVER_GID=1000
 FEVER_WEB_PORT=8050
@@ -186,7 +195,7 @@ FEVER_WEB_PORT=8050
 | Variable | Bedeutung | Pflicht | leer bedeutet |
 |---|---|---|---|
 | `FRED_API_KEY` | FRED-API-Schlüssel (Schritt 4) | ja | Abbruch mit Fehlermeldung |
-| `FEVER_DATA_DIR` | absoluter Pfad des Datenordners (Schritt 2.4) | ja | Abbruch mit Fehlermeldung |
+| `FEVER_DATA_DIR` | Datenordner: `/home/dirk/volumes/fever` (Schritt 2.4) | ja | Abbruch mit Fehlermeldung |
 | `FEVER_UID`, `FEVER_GID` | Ausgabe von `id -u` bzw. `id -g` (Schritt 2.4) | nein | 1000 |
 | `FEVER_WEB_PORT` | Port des Dashboards im Heimnetz | nein | 8050 |
 
@@ -265,7 +274,7 @@ cd ~/Finanz-Dashboard && git pull && docker compose up -d --build
 
 ### 10.1 Backup ✅ (25.09.2026, Entwicklungsumgebung mit arm64-Image; auf dem Pi noch nicht)
 
-Backups liegen in `/srv/fever/data/backup/` und werden vor dem Ablegen auf Fehlerfreiheit geprüft (`integrity_check`).
+Backups liegen in `/home/dirk/volumes/fever/backup/` und werden vor dem Ablegen auf Fehlerfreiheit geprüft (`integrity_check`).
 
 | Art | Dateiname (Zeit in UTC) | entsteht | aufbewahrt (E-8) |
 |---|---|---|---|
@@ -277,7 +286,7 @@ Andere Dateien in `backup/` werden nie gelöscht. Sofortiges Backup:
 ```bash
 cd ~/Finanz-Dashboard
 docker compose run --rm worker python -m fever.backup
-ls -lh /srv/fever/data/backup/
+ls -lh /home/dirk/volumes/fever/backup/
 ```
 
 Erwartete Ausgabe (der Pfad `/data` ist dein Datenordner, von innen gesehen):
@@ -293,7 +302,7 @@ Bei einem Fehler endet der Befehl mit Exit-Code 2 und einer Meldung, z. B. `Kein
 **Wichtig:** Die lokal archivierten ICE-BofA-Spreads (HY-OAS u. a.) lassen sich nicht wieder beschaffen; FRED liefert seit April 2026 nur noch drei Jahre. Stirbt die SSD, sind sie ohne externe Kopie verloren. Ein automatisches Ziel außerhalb des Pi ist noch nicht entschieden (O-4). Bis dahin von Zeit zu Zeit manuell kopieren, z. B. von deinem PC oder Mac aus:
 
 ```bash
-scp <dein-benutzer>@<IP-des-Pi>:/srv/fever/data/backup/<backup-datei> .
+scp dirk@<IP-des-Pi>:/home/dirk/volumes/fever/backup/<backup-datei> .
 ```
 
 Die Daten nur für dich selbst verwenden, nicht weitergeben (ICE-Lizenz).
@@ -305,13 +314,13 @@ Nie eine laufende Datenbank überschreiben. Die Datenbank heißt `fever.sqlite3`
 ```bash
 cd ~/Finanz-Dashboard
 docker compose stop
-ls -l /srv/fever/data/                                  # was liegt da?
-ls /srv/fever/data/backup/                              # gewünschtes Backup aussuchen
-ALT=/srv/fever/data/alt-$(date +%F)
+ls -l /home/dirk/volumes/fever/                                  # was liegt da?
+ls /home/dirk/volumes/fever/backup/                              # gewünschtes Backup aussuchen
+ALT=/home/dirk/volumes/fever/alt-$(date +%F)
 mkdir -p "$ALT"
-mv /srv/fever/data/fever.sqlite3 "$ALT"/
-ls /srv/fever/data/fever.sqlite3-* 2>/dev/null && mv /srv/fever/data/fever.sqlite3-* "$ALT"/
-cp /srv/fever/data/backup/<backup-datei> /srv/fever/data/fever.sqlite3
+mv /home/dirk/volumes/fever/fever.sqlite3 "$ALT"/
+ls /home/dirk/volumes/fever/fever.sqlite3-* 2>/dev/null && mv /home/dirk/volumes/fever/fever.sqlite3-* "$ALT"/
+cp /home/dirk/volumes/fever/backup/<backup-datei> /home/dirk/volumes/fever/fever.sqlite3
 docker compose run --rm worker alembic current          # erwartet: "0001 (head)" oder neuer
 docker compose up -d
 ```
@@ -327,7 +336,7 @@ Den Ordner `alt-…` erst löschen, wenn das Dashboard wieder korrekt läuft. Ze
 | Banner „Worker ohne Lebenszeichen“ | `docker compose ps`, `docker compose logs --tail 100 worker` |
 | Einzelne Quelle veraltet | Ansicht „Datenstand“ im Dashboard: letzter Erfolg, letzter Versuch, letzter Fehler je Quelle |
 | Dienst „unhealthy“ | `docker compose ps` zeigt den Containernamen; dann `docker inspect --format '{{json .State.Health}}' <containername>` |
-| Speicher voll | `df -h /srv/fever/data` |
+| Speicher voll | `df -h /home/dirk/volumes/fever` |
 | Im Log steht `api_key=***` | Gewollt: Der FRED-Schlüssel wird in Logs und Fehlermeldungen nie ausgegeben |
 | Log-Zeilen „Abruf fehlgeschlagen …, Versuch 1/3“ | Einzelne Aussetzer sind normal; der Abruf wird bis zu dreimal versucht. Erst „nach 3 Versuchen“ ist ein echter Fehler, sichtbar im Datenstand |
 | Werte fälschlich „veraltet“ | Uhrzeit: `timedatectl` (Schritt 2.3) |

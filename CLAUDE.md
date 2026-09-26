@@ -167,7 +167,7 @@ Ein falscher Score fällt nicht auf, bis die Ampel eine falsche Lage zeigt.
 - Datenordner als Bind-Mount auf lokalem Dateisystem (kein NFS/SMB: SQLite-WAL funktioniert dort nicht), Host-Pfad aus `.env` (O-2). Ins Image wird nie geschrieben.
 - Logs nur auf stdout, in Compose begrenzt (`json-file` mit `max-size` und `max-file`), um das Speichermedium zu schonen.
 - Healthchecks ohne Zusatzpakete (`python -c …`): `web` per HTTP-Endpunkt, `worker` per Alter des Heartbeats.
-- Secrets nur in `.env` (wie `data*/` in `.gitignore`); im Repo liegt `.env.example` mit leeren Werten. Nie loggen, nie ins Image. `.env` liest du nicht. Einziges Secret derzeit: der FRED-API-Schlüssel.
+- Secrets nur in `.env` (wie `data*/` in `.gitignore`); im Repo liegt `.env.example`: Secrets leer, nicht geheime Werte vorbelegt (E-12). Nie loggen, nie ins Image. `.env` liest du nicht. Einziges Secret derzeit: der FRED-API-Schlüssel.
 - Ausgehende Verbindungen nur über einen zentralen HTTP-Client mit Host-Allowlist, Timeouts, Backoff und eigenem User-Agent; Ratenlimits der Quellen einhalten.
 - Den Web-Port nur so veröffentlichen, wie in O-3 entschieden.
 
@@ -192,7 +192,7 @@ Vor der Umsetzung des betroffenen Teils klären; Entschiedenes hier mit Antwort 
 | Nr. | Frage | Bis zur Entscheidung |
 |---|---|---|
 | O-1 | Kursquelle für ETFs und Indexmitglieder (RSP/SPY, Sektor- und Größenverhältnisse, Breite). FRED `SP500` reicht nur 10 Jahre zurück, genügt aber für VRP und Aktien-Anleihen-Korrelation | VRP und Korrelation aus FRED `SP500`; übrige Indikatoren weglassen, keine Quelle selbst wählen |
-| O-2 | Pi-Modell, RAM, Speichermedium, Pfad des Datenordners (SSD statt SD-Karte empfohlen) | Pfad nur über `.env` |
+| O-2 | Pi-Modell, RAM, Speichermedium, Pfad des Datenordners (SSD statt SD-Karte empfohlen) | Pfad **entschieden 26.09.2026:** `/home/dirk/volumes/fever` (über `.env`); Modell, RAM, Speichermedium offen |
 | O-3 | Zugang: nur Heimnetz oder Tailscale, ggf. mit Basic-Auth-Pforte | **Entschieden 25.09.2026:** nur Heimnetz, kein Passwort; Port an `0.0.0.0`; keine Portweiterleitung im Router |
 | O-4 | Backup-Ziel außerhalb des Pi | nur lokale Backups |
 | O-5 | ICE-Spreads: drei Jahre Historie bei fünf Jahren Mindesthistorie; betrifft Kreditblock und Rot-Regel. Optionen: BAA10Y (FRED, täglich ab 1986, Moody's-Lizenz) als langer Ersatz, Lizenz direkt bei ICE, befristete Ausnahme mit Kennzeichnung | archivieren und anzeigen, nicht in den Score |
