@@ -85,6 +85,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-48 | Glättung, Hysterese, Konfidenz, Diffusion (L-6, L-7, L-8, L-12) | EWMA über Handelstage: Volatilitätsblock Halbwertszeit 3, Composite 10, Fallhöhe 20; die Ampel nutzt den geglätteten Composite, die Einzelregeln Rohwerte. Hysterese spiegelbildlich: VIX/VIX3M-Rot endet nach 3 Tagen in Folge < 1, Diffusions-Gelb 5 Prozentpunkte unter 40 %. Konfidenz = Summe der V-Scores (Bericht, Tabelle 2) aktueller gültiger Indikatoren / Summe aller scorerelevanten. Diffusionsindex nur über Stress-Indikatoren | Der Composite-Weg zu Rot wirkt nach 10 Handelstagen zur Hälfte |
 | 26.09.2026 | E-49 | Kalender und Indikatoren (L-9 bis L-11) | Ein Score je Cboe-Handelstag (Tage mit VIX-Schluss); eine Beobachtung zählt an t, wenn Datum + Verzug zur `release_time` (Wochenende → Montag) spätestens am Ende des New-Yorker Tages t liegt. 16 Stress-Indikatoren in 3 Blöcken und 3 Fallhöhe-Komponenten (Tabelle unter M5; zunächst irrtümlich als 15 gezählt). VRP: niedrig = Stress; T10Y3M nur Anzeige; USD/JPY als 5-Tage-Veränderung und 21-Tage-Vola; Erstanträge ggü. 52-Wochen-Tief. Fallhöhe = Mittel von mindestens 2 Komponenten; VX-COT im Score mit dem 10-Jahres-Fenster, 3-Jahres-Perzentil zusätzlich gespeichert (Anzeige) | Nur Anzeige: HY-OAS und weitere ICE-Spreads (O-5), ANFCI, OFR gesamt und übrige Teilindizes, T10Y3M/T10Y2Y, SKEW, VIX9D, VIX6M, VX-Futures |
 | 26.09.2026 | E-50 | Speicherung der Scores | Migration 0002 mit `indicator_score` und `composite_score`; jede Neuberechnung ersetzt beide Tabellen vollständig in einer Transaktion | Rohdaten (`observation`) bleiben unberührt; keine Historie früherer Rechenläufe |
+| 26.09.2026 | E-51 | Randfälle des Scorings (Annahmen aus der Umsetzung von M5) | Bestätigt wie umgesetzt: EWMA beginnt nach einer Lücke neu; realisierte Vola ohne Mittelwertabzug; ein Tag ohne VIX/VIX3M-Wert unterbricht die Serien, beendet eine aktive Rot-Regel aber nicht; ohne Composite bestimmen die übrigen Regeln die Ampel, die Oberfläche zeigt „Composite fehlt“ | Die Kennzeichnung ohne Composite folgt in M6 |
 
 ---
 
@@ -618,7 +619,7 @@ Für jeden Meilenstein gilt die Definition of Done:
   - `fever/release.py`: geschätzte Veröffentlichung (E-14) aus `fever/sources/update.py` herausgelöst, damit das Scoring nichts aus dem Speicher importiert
   - Migration 0002 mit `indicator_score` und `composite_score`; `fever/store/scores.py`
   - `fever/score.py`: Scoring-Lauf mit `python -m fever.score`; der Worker rechnet am Ende eines Takts neu, wenn seit dem letzten Lauf Beobachtungen gespeichert wurden oder sich `scoring.toml` bzw. `series.toml` geändert haben (SHA-256). Läufe und Fehler stehen unter `scoring` in `source_status`
-- **Annahmen ohne eigene Entscheidung (bitte bestätigen oder ändern):**
+- **Randfälle, bestätigt am 26.09.2026 (E-51):**
   - EWMA: Fehlt ein Wert (z. B. Composite mit weniger als 3 Blöcken), fehlt auch der geglättete Wert, und die Glättung beginnt danach neu
   - Realisierte Vola (VRP, USD/JPY): Wurzel aus 252 × Mittel der quadrierten täglichen Logrenditen, ohne Mittelwertabzug (wie die Varianz hinter dem VIX)
   - VIX/VIX3M-Regel: zählt nur Werte vom Score-Tag selbst; ein Tag ohne Wert unterbricht die Serien, beendet eine aktive Regel aber nicht
@@ -818,21 +819,20 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (26.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt (178 Tests grün): Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-50; M4 vollständig (60 Reihen in 32 Abrufgruppen, auf TrueNAS seit 26.09.2026: „60 Reihen, 0 mit Problemen“).
+  - Entscheidungen bis E-51; M4 vollständig (60 Reihen in 32 Abrufgruppen, auf TrueNAS seit 26.09.2026: „60 Reihen, 0 mit Problemen“).
   - M5 umgesetzt: 19 Indikatoren, Scoring nach Bericht 4.3 Schritte 1–6, Migration 0002, Scoring-Lauf im Worker und als `python -m fever.score`; 341 Tests grün. Noch nicht auf TrueNAS eingespielt.
   - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“). Erstabruf aller 23 Reihen am 26.09.2026 per Sofort-Abruf; das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
   1. M5 auf TrueNAS einspielen (Migration 0002): `docs/einrichtung.md`, Schritt 9, zuerst die Probe an einer Backup-Kopie; danach `python -m fever.score` und die Rechenzeit notieren.
   2. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen (Nutzer schickt Ausgaben); dann M3 abschließen (geplant in der Woche ab 28.09.2026).
-  3. Die Annahmen unter „Ergebnis M5“ vom Nutzer bestätigen lassen (EWMA-Neustart, Vola ohne Mittelwertabzug, VIX/VIX3M-Regel bei fehlendem Wert, Ampel ohne Composite).
-  4. M6 planen (Web-Grundgerüst, Gestaltung, Aktualität, Datenstand); `scoring` in `source_status` im Datenstand als eigene Zeile benennen.
-  5. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit (Indizes und VX-Kontraktdateien), CFTC nach dem ersten Freitag, Shiller nach dem Oktober-Upload.
+  3. M6 planen (Web-Grundgerüst, Gestaltung, Aktualität, Datenstand); `scoring` in `source_status` im Datenstand als eigene Zeile benennen.
+  4. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit (Indizes und VX-Kontraktdateien), CFTC nach dem ersten Freitag, Shiller nach dem Oktober-Upload.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-13 (Abschnitt 5, vor M7), Bestätigung der M5-Annahmen.
+- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-13 (Abschnitt 5, vor M7).
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---
