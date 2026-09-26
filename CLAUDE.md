@@ -67,6 +67,8 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
   - Sofort-Backup bei laufendem Stack: `sudo docker exec finanz-dashboard-worker-1 python -m fever.backup`
   - Log: `sudo docker logs -f finanz-dashboard-worker-1`
   - Sofort-Abruf aller Reihen (unabhängig vom Abrufplan): `sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update`
+  - Scores sofort neu berechnen: `sudo docker exec finanz-dashboard-worker-1 python -m fever.score`
+  - Neue Migration vorher an einer Backup-Kopie proben: `docs/einrichtung.md`, Schritt 9
 
 ## Architektur
 
@@ -74,7 +76,9 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
 fever/sources/     je Quelle ein Modul (fetch, parse); update.py lädt je Abrufgruppe einmal, prüft, datiert (Vintage) und speichert
 fever/store/       Tabellen (SQLAlchemy Core), Lese- und Schreibfunktionen
 fever/scoring/     reine Berechnung, importiert nichts aus web/ oder store/
-fever/worker.py    Abrufschleife, Scoring-Lauf, Heartbeat
+fever/worker.py    Abrufschleife, Heartbeat, stößt den Scoring-Lauf an
+fever/score.py     Scoring-Lauf: Werte lesen, fever/scoring rechnen lassen, Score-Tabellen ersetzen; vom Worker und direkt aufrufbar
+fever/release.py   geschätzte Veröffentlichung einer Beobachtung (E-14), für Abruf, Worker und Scoring
 fever/backup.py    VACUUM INTO und Aufbewahrung; vom Worker und direkt aufrufbar
 fever/web/         Dash-App: Layouts, Callbacks, Health-Endpunkt
 config/series.toml   Rohreihen (Quelle, ID, Frequenz, Veröffentlichungszeit, Verzug, Toleranz,

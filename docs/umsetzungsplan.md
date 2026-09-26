@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2 und M4 erledigt, M3: Worker läuft auf TrueNAS mit 60 Reihen, M5 in Arbeit (Entscheidungen E-47 bis E-50)** · Nächster Schritt: M5 umsetzen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2, M4 und M5 erledigt (M5 noch nicht auf TrueNAS), M3: Worker läuft auf TrueNAS mit 60 Reihen** · Nächster Schritt: M5 auf TrueNAS einspielen (mit Migration 0002), M6 planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -21,7 +21,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ☑ 26.09.2026 | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B erteilt 26.09.2026 |
 | M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ◐ läuft auf TrueNAS seit 26.09.2026, ICE-Archiv ab Beobachtung 26.09.2023; offen: erste Werktags-Abrufe, Schritt 9 | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
 | M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ☑ 26.09.2026 (M4a bis M4d, E-37) | M3 | M4a bis M4d erteilt 26.09.2026 |
-| M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☐ | M4, L-1 bis L-12 | ja (Scoring) |
+| M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☑ 26.09.2026 (auf TrueNAS ⏳) | M4, L-1 bis L-12 | erteilt 26.09.2026 |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☐ | M1 (Lesen), M3 (Heartbeat) | ja |
 | M7 | Ansichten 1–7 | ☐ | M5, M6, L-13 | ja |
 | M8 | Erklärtexte je Kennzahl | ☐ | parallel zu M6/M7 | ja (Texte prüfen) |
@@ -83,7 +83,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-46 | Rangregel und Parameter der VX-Futures | Am Verfallstag zählt der verfallende Kontrakt nicht mehr; Parameter wie vorgeschlagen (täglich, Verzug 0, 22:00 ET, Toleranz 3, Grenzen 1–300 bzw. 1–400) | Der Schlussabrechnungswert (ein VIX-Wert) geht nicht als Futures-Preis in die Kurve; die Uhrzeit ist unbelegt |
 | 26.09.2026 | E-47 | Methode des Scorings (L-1 bis L-4) | Perzentil = Mittelrang einschließlich xₜ; Fenster rollierend 10 Jahre über die eigenen Beobachtungen des Indikators, bei 5 bis 10 Jahren alle vorhandenen, unter 5 Jahren kein Score (Bericht 4.3); Ampelschwellen auf den Composite-Wert selbst; Composite = Mittel der vorhandenen Blöcke, mindestens 3 von 5 | In Phase 1 gibt es 3 Stressblöcke (Breite O-1 und Positionierung fehlen); fällt einer aus, fehlt der Composite sichtbar |
 | 26.09.2026 | E-48 | Glättung, Hysterese, Konfidenz, Diffusion (L-6, L-7, L-8, L-12) | EWMA über Handelstage: Volatilitätsblock Halbwertszeit 3, Composite 10, Fallhöhe 20; die Ampel nutzt den geglätteten Composite, die Einzelregeln Rohwerte. Hysterese spiegelbildlich: VIX/VIX3M-Rot endet nach 3 Tagen in Folge < 1, Diffusions-Gelb 5 Prozentpunkte unter 40 %. Konfidenz = Summe der V-Scores (Bericht, Tabelle 2) aktueller gültiger Indikatoren / Summe aller scorerelevanten. Diffusionsindex nur über Stress-Indikatoren | Der Composite-Weg zu Rot wirkt nach 10 Handelstagen zur Hälfte |
-| 26.09.2026 | E-49 | Kalender und Indikatoren (L-9 bis L-11) | Ein Score je Cboe-Handelstag (Tage mit VIX-Schluss); eine Beobachtung zählt an t, wenn Datum + Verzug zur `release_time` (Wochenende → Montag) spätestens am Ende des New-Yorker Tages t liegt. 15 Stress-Indikatoren in 3 Blöcken und 3 Fallhöhe-Komponenten (Tabelle unter M5). VRP: niedrig = Stress; T10Y3M nur Anzeige; USD/JPY als 5-Tage-Veränderung und 21-Tage-Vola; Erstanträge ggü. 52-Wochen-Tief. Fallhöhe = Mittel von mindestens 2 Komponenten; VX-COT im Score mit dem 10-Jahres-Fenster, 3-Jahres-Perzentil zusätzlich gespeichert (Anzeige) | Nur Anzeige: HY-OAS und weitere ICE-Spreads (O-5), ANFCI, OFR gesamt und übrige Teilindizes, T10Y3M/T10Y2Y, SKEW, VIX9D, VIX6M, VX-Futures |
+| 26.09.2026 | E-49 | Kalender und Indikatoren (L-9 bis L-11) | Ein Score je Cboe-Handelstag (Tage mit VIX-Schluss); eine Beobachtung zählt an t, wenn Datum + Verzug zur `release_time` (Wochenende → Montag) spätestens am Ende des New-Yorker Tages t liegt. 16 Stress-Indikatoren in 3 Blöcken und 3 Fallhöhe-Komponenten (Tabelle unter M5; zunächst irrtümlich als 15 gezählt). VRP: niedrig = Stress; T10Y3M nur Anzeige; USD/JPY als 5-Tage-Veränderung und 21-Tage-Vola; Erstanträge ggü. 52-Wochen-Tief. Fallhöhe = Mittel von mindestens 2 Komponenten; VX-COT im Score mit dem 10-Jahres-Fenster, 3-Jahres-Perzentil zusätzlich gespeichert (Anzeige) | Nur Anzeige: HY-OAS und weitere ICE-Spreads (O-5), ANFCI, OFR gesamt und übrige Teilindizes, T10Y3M/T10Y2Y, SKEW, VIX9D, VIX6M, VX-Futures |
 | 26.09.2026 | E-50 | Speicherung der Scores | Migration 0002 mit `indicator_score` und `composite_score`; jede Neuberechnung ersetzt beide Tabellen vollständig in einer Transaktion | Rohdaten (`observation`) bleiben unberührt; keine Historie früherer Rechenläufe |
 
 ---
@@ -608,7 +608,36 @@ Für jeden Meilenstein gilt die Definition of Done:
 - Matrixregeln genau auf der Schwelle, Hysterese
 - Block ohne gültigen Indikator
 
-**Sichtbare Platzhalter:** Block „Breite“ ohne Datenquelle (O-1), HY-OAS-Rot-Regel inaktiv (O-5). Beides erscheint in der Oberfläche, nicht nur im Code.
+**Sichtbare Platzhalter:** Block „Breite“ ohne Datenquelle (O-1), Block „Positionierung“ ohne Indikator bis Phase 2 (AAII), HY-OAS-Rot-Regel inaktiv (O-5). Alles erscheint in der Oberfläche, nicht nur im Code (M6/M7).
+
+**Ergebnis M5 (26.09.2026, umgesetzt; auf TrueNAS ⏳):**
+- **Umgesetzt wie entschieden (E-47 bis E-50):**
+  - `config/scoring.toml`: alle Parameter (Perzentilfenster, Mindesthistorie, Transformationsfenster, Mindestzahl Blöcke und Fallhöhe-Komponenten, Halbwertszeiten, Ampelschwellen, Hysterese); jeder Parameter ist Pflicht, fehlende oder unbekannte sind ein Fehler
+  - `[indicator.*]` in `config/series.toml`: 19 Indikatoren (16 Stress in 3 Blöcken, 3 Fallhöhe; Tabelle oben). Die Anzahl in E-49 lautete zunächst 15; richtig sind 16 (Volatilität 4, Kredit/Funding 4, Makro 8)
+  - `fever/scoring/`: `transforms.py` (10 Transformationen), `percentile.py` (Mittelrang, Fenster, Mindesthistorie), `composite.py` (Status je Indikator und Tag, Blöcke, Composite, Fallhöhe, EWMA, Konfidenz, Diffusion, Ampelregeln mit Hysterese), `pipeline.py`. Keine Importe aus `store`, `web` oder `sources` (geprüft)
+  - `fever/release.py`: geschätzte Veröffentlichung (E-14) aus `fever/sources/update.py` herausgelöst, damit das Scoring nichts aus dem Speicher importiert
+  - Migration 0002 mit `indicator_score` und `composite_score`; `fever/store/scores.py`
+  - `fever/score.py`: Scoring-Lauf mit `python -m fever.score`; der Worker rechnet am Ende eines Takts neu, wenn seit dem letzten Lauf Beobachtungen gespeichert wurden oder sich `scoring.toml` bzw. `series.toml` geändert haben (SHA-256). Läufe und Fehler stehen unter `scoring` in `source_status`
+- **Annahmen ohne eigene Entscheidung (bitte bestätigen oder ändern):**
+  - EWMA: Fehlt ein Wert (z. B. Composite mit weniger als 3 Blöcken), fehlt auch der geglättete Wert, und die Glättung beginnt danach neu
+  - Realisierte Vola (VRP, USD/JPY): Wurzel aus 252 × Mittel der quadrierten täglichen Logrenditen, ohne Mittelwertabzug (wie die Varianz hinter dem VIX)
+  - VIX/VIX3M-Regel: zählt nur Werte vom Score-Tag selbst; ein Tag ohne Wert unterbricht die Serien, beendet eine aktive Regel aber nicht
+  - Ampel ohne Composite: Die übrigen Regeln (VIX/VIX3M, Fallhöhe, Diffusion) gelten weiter; der fehlende Composite ist in der Oberfläche zu kennzeichnen (M6)
+  - Gelb „Fallhöhe ≥ 80 bei Stress < 75“ ist als „Fallhöhe ≥ 80“ umgesetzt; bei Stress ≥ 75 greift ohnehin die Orange-Regel, das Ergebnis ist gleich
+  - Veraltung: Frequenz in Tagen täglich 1, wöchentlich 7, monatlich 31, quartalsweise 92 (E-10, E-44)
+- **Stand am 25.09.2026 (`data-dev/`, Abruf 26.09.2026):** Stress 37,8 (Volatilität 28, Kredit/Funding 70, Makro 32), Fallhöhe 79,9 (roh 82,2: Excess CAPE Yield 99,6, Margin Debt 91,3, VX-COT 55,7), Ampel Grün, Konfidenz 90 % (EBP veraltet, weil das September-Update der Fed fehlt), Diffusion 20 %
+- **Plausibilität in bekannten Episoden** (Stress geglättet / Fallhöhe / Ampel): 10.10.2008 93,7 / 24,1 / Rot; 24.08.2015 41,9 / 57,1 / Rot (VIX/VIX3M); 05.02.2018 23,2 / 70,8 / Grün; 16.03.2020 58,5 / 57,9 / Rot (VIX/VIX3M); 30.06.2020 88,6 / 46,1 / Rot (Composite, Hysterese); 12.10.2022 81,4 / 63,1 / Orange; 05.08.2024 59,7 / 64,7 / Gelb; 08.04.2025 54,2 / 64,2 / Rot (VIX/VIX3M). Seit 1990: Grün 63 %, Gelb 20 %, Orange 9 %, Rot 8 % der Handelstage
+- **Befunde zur Methode (keine Rechenfehler, Folgen der Entscheidungen):**
+  - Schnelle Schocks erreicht der Composite spät (Halbwertszeit 10, Makro- und Kreditblock träge); am 05.02.2018 war die Ampel noch grün, Rot kam über die VIX/VIX3M-Regel erst nach drei Tagen
+  - Langsame Indikatoren (Erstanträge ggü. Tief, Sahm, EBP) halten den Composite nach Krisen hoch: Ende Juni 2020 noch Rot, als die Märkte sich erholt hatten
+- **Belege:**
+  - `pytest -q`: 341 passed (50 neu in `tests/test_scoring.py`, `tests/test_score.py` und `tests/test_config.py`), darunter die Pflichttests aus `CLAUDE.md`: Look-ahead (synthetisch), Perzentil mit Gleichständen von Hand, Veraltung/Toleranz/Konfidenz, Regeln genau auf der Schwelle und Hysterese, Block ohne gültigen Indikator
+  - Look-ahead auf echten Daten: für 10.10.2008, 16.03.2020, 05.08.2024 und 18.09.2026 identische Ergebnisse mit und ohne Beobachtungen nach dem Stichtag (19 Indikatoren und Composite)
+  - Gegenprobe mit 36 absichtlich eingebauten Fehlern, alle erkannt (Perzentil, Orientierung, Veröffentlichung, Stichtag, Veraltung, Median, Mindestblöcke, Glättung, Fallhöhe, Konfidenz, Diffusion, Regeln, Hysterese, VIX-Regel, Transformationen, Auslöser der Neuberechnung, Worker)
+  - Rechenzeit: 5,6 s für den ganzen Lauf mit 9281 Handelstagen (Rechnung 2,0 s), Entwicklungsumgebung
+  - Migration mit dem gebauten Image als 568:568 auf einer Kopie des Backups vor der Migration: 0001 → 0002, danach `python -m fever.score` wie oben
+- **Nicht geprüft:** Migration und Scoring auf TrueNAS; Rechenzeit dort.
+
 
 **Risiko:** Rechenzeit auf dem Zielsystem (rollierende Perzentile über bis zu 10 Jahre je Indikator). Erst messen, dann optimieren.
 
@@ -773,7 +802,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 | Verzögerter Start des Workers | ICE-Historie geht tageweise verloren | M0–M3 zuerst, früh in Betrieb |
 | Dash 4 / Plotly 7 sind neuer als das Trainingswissen vieler KI-Modelle | erfundene oder veraltete Signaturen | Signaturen im installierten Paket nachsehen; bei Unsicherheit sagen |
 | Unverifizierte Endpoints (OFR, EBP, CISS, TFF-IDs, VIX6M) | Quelle fällt aus oder liefert anderes Format | real abrufen vor dem Parser (M2/M4), Fixture, sichtbarer Fehler |
-| Rechenzeit rollierender Perzentile | langsame Neuberechnung | messen in M5, erst dann optimieren |
+| Rechenzeit rollierender Perzentile | langsame Neuberechnung | gemessen in M5: 5,6 s je vollständigem Lauf (Entwicklungsumgebung); auf TrueNAS messen |
 | Druck von dunklen Charts | unlesbare PDFs | Prüfung in M6, Fallback `beforeprint` |
 | Kein Passwort im Heimnetz (E-3) | jedes Gerät im WLAN sieht das Dashboard | akzeptiert; die Daten sind öffentliche Marktdaten ohne Kontobezug |
 | Docker-Portfreigaben umgehen Host-Firewallregeln (E-4) | Firewall-Regeln greifen nicht für den Web-Port | in `docs/einrichtung.md` dokumentiert; keine Portweiterleitung im Router |
@@ -789,19 +818,21 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (26.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt (178 Tests grün): Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-46; M4 vollständig: M4a (EZB, OFR, EBP; 14 Reihen), M4b (CFTC COT, VIX-Futures; 4), M4c (Shiller-CAPE, Excess CAPE Yield, Margin Debt aus Z.1; 3), M4d (VX-Futures-Termstruktur nach Rang; 16). 292 Tests grün, 60 Reihen in 32 Abrufgruppen. Bis M4c auf TrueNAS eingespielt („44 Reihen, 0 mit Problemen“); M4d ist gepusht, aber noch nicht eingespielt.
+  - Entscheidungen bis E-50; M4 vollständig (60 Reihen in 32 Abrufgruppen, auf TrueNAS seit 26.09.2026: „60 Reihen, 0 mit Problemen“).
+  - M5 umgesetzt: 19 Indikatoren, Scoring nach Bericht 4.3 Schritte 1–6, Migration 0002, Scoring-Lauf im Worker und als `python -m fever.score`; 341 Tests grün. Noch nicht auf TrueNAS eingespielt.
   - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“). Erstabruf aller 23 Reihen am 26.09.2026 per Sofort-Abruf; das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
-  1. M4d auf TrueNAS einspielen: `docs/einrichtung.md`, Schritt 9; erwartet „60 Reihen, 0 mit Problemen“ (Erstabruf der VX-Futures rund 3 Minuten).
+  1. M5 auf TrueNAS einspielen (Migration 0002): `docs/einrichtung.md`, Schritt 9, zuerst die Probe an einer Backup-Kopie; danach `python -m fever.score` und die Rechenzeit notieren.
   2. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen (Nutzer schickt Ausgaben); dann M3 abschließen (geplant in der Woche ab 28.09.2026).
-  3. M5 planen: vorher L-1 bis L-4 und L-6 bis L-12 per Auswahlfrage klären (Abschnitt 5); Indikatoren einzeln vorschlagen (E-13).
-  4. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit (Indizes und VX-Kontraktdateien), CFTC nach dem ersten Freitag, Shiller nach dem Oktober-Upload.
+  3. Die Annahmen unter „Ergebnis M5“ vom Nutzer bestätigen lassen (EWMA-Neustart, Vola ohne Mittelwertabzug, VIX/VIX3M-Regel bei fehlendem Wert, Ampel ohne Composite).
+  4. M6 planen (Web-Grundgerüst, Gestaltung, Aktualität, Datenstand); `scoring` in `source_status` im Datenstand als eigene Zeile benennen.
+  5. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit (Indizes und VX-Kontraktdateien), CFTC nach dem ersten Freitag, Shiller nach dem Oktober-Upload.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 außer L-5 (Abschnitt 5).
+- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-13 (Abschnitt 5, vor M7), Bestätigung der M5-Annahmen.
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---

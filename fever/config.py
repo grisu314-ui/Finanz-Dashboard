@@ -1,8 +1,8 @@
 """Load the TOML configuration in config/ and check it.
 
-load() checks the top-level structure of any file; series_catalog() also checks
-the content of the raw series in series.toml (milestone M2). Rules for
-indicators and scoring parameters follow in M5 (docs/umsetzungsplan.md).
+load() checks the top-level structure of any file; series_catalog() checks the raw
+series in series.toml (M2), indicator_catalog() the derived indicators and
+scoring_config() the parameters in scoring.toml (M5, docs/umsetzungsplan.md).
 """
 
 import math
@@ -15,11 +15,12 @@ from pathlib import Path
 CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
 
 # Allowed top-level tables per file; anything else is an error (typo protection).
-# scoring.toml stays empty until the open domain gaps L-1 to L-13 are decided (M5).
 _ALLOWED_TABLES = {
     "series": {"series", "indicator"},
-    "scoring": set(),
+    "scoring": {"percentile", "transforms", "composite", "smoothing", "rules"},
 }
+# Files whose tables hold one sub-table per entry ([series.vix]); the others hold values.
+_NESTED = {"series"}
 
 
 class ConfigError(Exception):
@@ -46,6 +47,8 @@ def load(name: str, config_dir: Path = CONFIG_DIR) -> dict:
     for table in allowed & set(data):
         if not isinstance(data[table], dict):
             raise ConfigError(f"'{table}' in {path} muss eine Tabelle sein")
+        if name not in _NESTED:
+            continue
         for entry_id, entry in data[table].items():
             if not isinstance(entry, dict):
                 raise ConfigError(f"'{table}.{entry_id}' in {path} muss eine Tabelle sein")
@@ -200,3 +203,190 @@ def _series(series_id: str, entry: dict) -> Series:
 
 def _is_int(value) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
+
+
+# --- derived indicators (M5) ---------------------------------------------------------------------
+
+# Transformation -> number of input series (definitions in fever/scoring/transforms.py).
+TRANSFORMS = {
+    "level": 1, "ratio": 2, "difference": 2, "vrp": 2, "stock_bond_corr": 2,
+    "above_low": 1, "fx_change": 2, "fx_vol": 2, "yoy": 1, "cot_net_short": 3,
+}
+STRESS_BLOCKS = ("volatility", "credit", "macro", "breadth", "positioning")  # report 4.3, step 2
+VULNERABILITY = "vulnerability"
+# Calendar days per period; with the tolerance this gives E-10's limits 4 / 10 / 41 (quarterly 102).
+FREQUENCY_DAYS = {"daily": 1, "weekly": 7, "monthly": 31, "quarterly": 92}
+_INDICATOR_REQUIRED = {"name", "series", "transform", "orientation", "block", "v_score"}
+_INDICATOR_OPTIONAL = {"display_window"}
+
+
+@dataclass(frozen=True)
+class Indicator:
+    """One derived indicator from series.toml; see the comment above [indicator.*] there."""
+
+    id: str
+    name: str
+    series: tuple[Series, ...]
+    transform: str
+    orientation: str  # "high" or "low"
+    block: str  # a stress block or VULNERABILITY
+    v_score: int
+    display_window: bool = False
+
+    @property
+    def frequency(self) -> str:
+        return self.series[0].frequency
+
+    @property
+    def lag_days(self) -> int:
+        return max(series.lag_days for series in self.series)
+
+    @property
+    def tolerance_days(self) -> int:
+        return max(series.tolerance_days for series in self.series)
+
+
+def indicator_catalog(config_dir: Path = CONFIG_DIR) -> dict[str, Indicator]:
+    """All derived indicators from series.toml, checked against the raw series."""
+    catalog = series_catalog(config_dir)
+    entries = load("series", config_dir).get("indicator", {})
+    return {indicator_id: _indicator(indicator_id, entry, catalog) for indicator_id, entry in entries.items()}
+
+
+def _indicator(indicator_id: str, entry: dict, catalog: dict[str, Series]) -> Indicator:
+    def fail(message: str) -> ConfigError:
+        return ConfigError(f"indicator.{indicator_id}: {message}")
+
+    missing = sorted(_INDICATOR_REQUIRED - set(entry))
+    if missing:
+        raise fail(f"Pflichtfelder fehlen: {', '.join(missing)}")
+    unknown = sorted(set(entry) - _INDICATOR_REQUIRED - _INDICATOR_OPTIONAL)
+    if unknown:
+        raise fail(f"unbekannte Felder: {', '.join(unknown)}")
+    if not _SERIES_ID.fullmatch(indicator_id):
+        raise fail("die ID darf nur Kleinbuchstaben, Ziffern, '_' und '-' enthalten")
+    if not (isinstance(entry["name"], str) and entry["name"].strip()):
+        raise fail("'name' muss ein nicht leerer Text sein")
+    if entry["transform"] not in TRANSFORMS:
+        raise fail(f"unbekannte Transformation {entry['transform']!r} (erlaubt: {', '.join(TRANSFORMS)})")
+    inputs = entry["series"]
+    if not (isinstance(inputs, list) and all(isinstance(series_id, str) for series_id in inputs)):
+        raise fail("'series' muss eine Liste von Reihen-IDs sein")
+    if len(inputs) != TRANSFORMS[entry["transform"]]:
+        raise fail(f"'{entry['transform']}' braucht {TRANSFORMS[entry['transform']]} Reihe(n), nicht {len(inputs)}")
+    unknown_series = [series_id for series_id in inputs if series_id not in catalog]
+    if unknown_series:
+        raise fail(f"unbekannte Reihe(n): {', '.join(unknown_series)}")
+    series = tuple(catalog[series_id] for series_id in inputs)
+    if len({s.frequency for s in series}) != 1:
+        raise fail("alle Reihen eines Indikators müssen dieselbe Frequenz haben")
+    if entry["orientation"] not in ("high", "low"):
+        raise fail("'orientation' muss \"high\" oder \"low\" sein")
+    if entry["block"] not in (*STRESS_BLOCKS, VULNERABILITY):
+        raise fail(f"unbekannter Block {entry['block']!r} (erlaubt: {', '.join((*STRESS_BLOCKS, VULNERABILITY))})")
+    if not (_is_int(entry["v_score"]) and 1 <= entry["v_score"] <= 5):
+        raise fail("'v_score' muss eine ganze Zahl von 1 bis 5 sein (Bericht, Tabelle 2)")
+    if "display_window" in entry and not isinstance(entry["display_window"], bool):
+        raise fail("'display_window' muss true oder false sein")
+    return Indicator(
+        id=indicator_id,
+        name=entry["name"],
+        series=series,
+        transform=entry["transform"],
+        orientation=entry["orientation"],
+        block=entry["block"],
+        v_score=entry["v_score"],
+        display_window=entry.get("display_window", False),
+    )
+
+
+# --- scoring parameters (M5) ---------------------------------------------------------------------
+
+# Every parameter of scoring.toml: table -> {key: type}. All are required; nothing has a default,
+# so a missing or misspelt parameter is an error instead of a silent guess.
+_SCORING_KEYS = {
+    "percentile": {"window_years": int, "min_history_years": int, "display_window_years": int},
+    "transforms": {
+        "realized_vol_window": int, "correlation_window": int, "low_window": int,
+        "fx_change_window": int, "fx_vol_window": int,
+    },
+    "composite": {"min_blocks": int, "min_vulnerability": int},
+    "smoothing": {
+        "fast_block": str, "fast_block_half_life": float, "stress_half_life": float,
+        "vulnerability_half_life": float,
+    },
+    "rules": {
+        "red_stress": float, "red_vix_ratio": float, "red_vix_ratio_days": int, "orange_stress": float,
+        "orange_stress_with_vulnerability": float, "orange_vulnerability": float,
+        "yellow_vulnerability": float, "yellow_diffusion_share": float, "yellow_diffusion_percentile": float,
+        "hysteresis": float,
+    },
+}
+
+
+@dataclass(frozen=True)
+class ScoringConfig:
+    """Parameters from scoring.toml; the key names are unique across its tables."""
+
+    window_years: int
+    min_history_years: int
+    display_window_years: int
+    realized_vol_window: int
+    correlation_window: int
+    low_window: int
+    fx_change_window: int
+    fx_vol_window: int
+    min_blocks: int
+    min_vulnerability: int
+    fast_block: str
+    fast_block_half_life: float
+    stress_half_life: float
+    vulnerability_half_life: float
+    red_stress: float
+    red_vix_ratio: float
+    red_vix_ratio_days: int
+    orange_stress: float
+    orange_stress_with_vulnerability: float
+    orange_vulnerability: float
+    yellow_vulnerability: float
+    yellow_diffusion_share: float
+    yellow_diffusion_percentile: float
+    hysteresis: float
+
+
+def scoring_config(config_dir: Path = CONFIG_DIR) -> ScoringConfig:
+    """All parameters from scoring.toml, checked for completeness, type and range."""
+    data = load("scoring", config_dir)
+    values = {}
+    for table, keys in _SCORING_KEYS.items():
+        entries = data.get(table, {})
+        missing = sorted(set(keys) - set(entries))
+        if missing:
+            raise ConfigError(f"scoring.{table}: Parameter fehlen: {', '.join(missing)}")
+        unknown = sorted(set(entries) - set(keys))
+        if unknown:
+            raise ConfigError(f"scoring.{table}: unbekannte Parameter: {', '.join(unknown)}")
+        for key, kind in keys.items():
+            value = entries[key]
+            if kind is str:
+                ok = isinstance(value, str)
+            elif kind is int:
+                ok = _is_int(value) and value > 0
+            else:
+                ok = isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
+            if not ok:
+                expected = {str: "ein Text", int: "eine ganze Zahl > 0", float: "eine Zahl > 0"}[kind]
+                raise ConfigError(f"scoring.{table}.{key} muss {expected} sein")
+            values[key] = float(value) if kind is float else value
+    config = ScoringConfig(**values)
+    if config.fast_block not in STRESS_BLOCKS:
+        raise ConfigError(f"scoring.smoothing.fast_block: unbekannter Block {config.fast_block!r}")
+    if not config.display_window_years < config.min_history_years <= config.window_years:
+        raise ConfigError("scoring.percentile: erwartet display_window_years < min_history_years <= window_years")
+    if config.min_blocks > len(STRESS_BLOCKS):
+        raise ConfigError(f"scoring.composite.min_blocks: höchstens {len(STRESS_BLOCKS)} Blöcke")
+    for key in ("red_stress", "orange_stress", "orange_stress_with_vulnerability", "orange_vulnerability",
+                "yellow_vulnerability", "yellow_diffusion_share", "yellow_diffusion_percentile", "hysteresis"):
+        if getattr(config, key) > 100:
+            raise ConfigError(f"scoring.rules.{key}: höchstens 100 (Perzentilskala)")
+    return config

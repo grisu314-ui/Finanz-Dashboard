@@ -22,6 +22,7 @@ from sqlalchemy.engine import Engine
 from fever import log
 from fever.config import ConfigError, Series, group_members, series_catalog
 from fever.http import FetchError, Fetched, HttpClient
+from fever.release import estimated_release  # noqa: F401  (also imported from here by the worker and tests)
 from fever.sources import Row, SourceError, cboe, cfe, cftc, ecb, fed, fred, ofr, shiller
 from fever.store.db import DataDirError, data_dir, make_engine
 from fever.store.observations import NewObservation, append_observations, latest_obs_date, latest_values
@@ -137,17 +138,6 @@ def check(rows: list[Row], series: Series, retrieved_at: datetime) -> tuple[list
         else:
             valid.append(row)
     return valid, problems
-
-
-def estimated_release(obs_date: date, series: Series) -> datetime:
-    """Observation date + lag_days, Saturday/Sunday moved to Monday, at release_time New York, in UTC.
-
-    US holidays are not taken into account (E-14).
-    """
-    day = obs_date + timedelta(days=series.lag_days)
-    if day.weekday() >= 5:
-        day += timedelta(days=7 - day.weekday())
-    return datetime.combine(day, series.release_time, tzinfo=NEW_YORK).astimezone(timezone.utc)
 
 
 def _observation(row: Row, series: Series, retrieved_at: datetime, backfill: bool) -> NewObservation:

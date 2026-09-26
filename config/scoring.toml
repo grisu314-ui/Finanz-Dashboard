@@ -1,4 +1,41 @@
-# Scoring parameters: windows, minimum history, thresholds, half-lives, matrix rules.
-# Start values come from report section 4.3. They are added in milestone M5, after the
-# open domain gaps L-1 to L-13 are decided (docs/umsetzungsplan.md, section 5).
-# Parameters live only in this file and change only on explicit instruction.
+# Scoring parameters (milestone M5). Start values from report section 4.3; open points decided
+# on 26.09.2026 (E-47 to E-49, docs/umsetzungsplan.md). Parameters live only in this file and
+# change only on explicit instruction, even if a backtest suggests other values.
+# Every percentile and threshold is on the scale 0-100, oriented so that high = more stress
+# or more vulnerability. Half-lives and day counts are Cboe trading days (score calendar, E-49).
+
+[percentile]
+window_years = 10          # rolling window over the indicator's own observations (E-47, L-2)
+min_history_years = 5      # below this an indicator is shown but not scored (report 4.3)
+display_window_years = 3   # extra percentile for indicators with display_window = true (L-9)
+
+[transforms]               # windows of the transformations in series.toml, in observations
+realized_vol_window = 21   # vrp: realised volatility of the S&P 500
+correlation_window = 63    # stock_bond_corr
+low_window = 52            # above_low: weekly initial claims against their 52-week low
+fx_change_window = 5       # fx_change: 5 ECB fixing days
+fx_vol_window = 21         # fx_vol
+
+[composite]
+min_blocks = 3             # stress composite = mean of the available blocks, at least this many (E-47, L-4)
+min_vulnerability = 2      # vulnerability = mean of at least this many components (E-49, L-11)
+
+[smoothing]                # EWMA half-lives (E-48, L-8)
+fast_block = "volatility"  # this block is smoothed before it enters the composite
+fast_block_half_life = 3
+stress_half_life = 10
+vulnerability_half_life = 20
+
+[rules]                    # traffic light, report 4.3 step 5, on the smoothed values (E-47, E-48)
+red_stress = 90
+red_vix_ratio = 1.0        # VIX/VIX3M above this ...
+red_vix_ratio_days = 3     # ... on this many trading days in a row; ends after as many days below
+orange_stress = 80
+orange_stress_with_vulnerability = 75   # together with vulnerability >= orange_vulnerability
+orange_vulnerability = 80
+yellow_vulnerability = 80  # report: "at stress < 75"; above that the orange rule applies anyway
+yellow_diffusion_share = 40             # percent of the valid stress indicators ...
+yellow_diffusion_percentile = 80        # ... above this percentile
+hysteresis = 5             # a rule ends only this many points below its threshold (E-48, L-7)
+# The red rule "HY-OAS rise over 20 days >= 95th percentile" is inactive until O-5 is decided
+# (three years of history); the interface shows it as inactive (M6/M7).
