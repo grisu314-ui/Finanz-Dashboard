@@ -1,0 +1,110 @@
+{
+ "2027": [
+  {
+   "product_display": "VX+VXT/F7",
+   "expire_date": "2027-01-20",
+   "contract_dt": "2027-01-20",
+   "futures_root": "VX",
+   "duration_type": "M",
+   "path": "data/us/futures/market_statistics/historical_data/VX/VX_2027-01-20.csv"
+  },
+  {
+   "product_display": "VX+VXT/G7",
+   "expire_date": "2027-02-17",
+   "contract_dt": "2027-02-17",
+   "futures_root": "VX",
+   "duration_type": "M",
+   "path": "data/us/futures/market_statistics/historical_data/VX/VX_2027-02-17.csv"
+  },
+  {
+   "product_display": "VX+VXT/H7",
+   "expire_date": "2027-03-17",
+   "contract_dt": "2027-03-17",
+   "futures_root": "VX",
+   "duration_type": "M",
+   "path": "data/us/futures/market_statistics/historical_data/VX/VX_2027-03-17.csv"
+  },
+  {
+   "product_display": "VX+VXT/J7",
+   "expire_date": "2027-04-21",
+   "contract_dt": "2027-04-21",
+   "futures_root": "VX",
+   "duration_type": "M",
+   "path": "data/us/futures/market_statistics/historical_data/VX/VX_2027-04-21.csv"
+  },
+  {
+   "product_display": "VX+VXT/K7",
+   "expire_date": "2027-05-18",
+   "contract_dt": "2027-05-18",
+   "futures_root": "VX",
+   "duration_type": "M",
+   "path": "data/us/futures/market_statistics/historical_data/VX/VX_2027-05-18.csv"
+  },
+  {
+   "product_display": "VX+VXT/M7",
+   "expire_date": "2027-06-16",
+   "contract_dt": "2027-06-16",
+   "futures_root": "VX",
+   "duration_type": "M",
+   "path": "data/us/futures/market_statistics/historical_data/VX/VX_2027-06-16.csv"
+  }
+ ],
+ "2026": [
+  {
+   "product_display": "VX+VXT/Q6",
+   "expire_date": "2026-08-19",
+   "contract_dt": "2026-08-19",
+   "futures_root": "VX",
+   "duration_type": "M",
+   "path": "data/us/futures/market_statistics/historical_data/VX/VX_2026-08-19.csv"
+  },
+  {
+   "product_display": "VX+VXT/U6",
+   "expire_date": "2026-09-16",
+   "contract_dt": "2026-09-16",
+   "futures_root": "VX",
+   "duration_type": "M",
+   "path": "data/us/futures/market_statistics/historical_data/VX/VX_2026-09-16.csv"
+  },
+  {
+   "product_display": "VX+VXT/V6",
+   "expire_date": "2026-10-21",
+   "contract_dt": "2026-10-21",
+   "futures_root": "VX",
+   "duration_type": "M",
+   "path": "data/us/futures/market_statistics/historical_data/VX/VX_2026-10-21.csv"
+  },
+  {
+   "product_display": "VX+VXT/X6",
+   "expire_date": "2026-11-18",
+   "contract_dt": "2026-11-18",
+   "futures_root": "VX",
+   "duration_type": "M",
+   "path": "data/us/futures/market_statistics/historical_data/VX/VX_2026-11-18.csv"
+  },
+  {
+   "product_display": "VX+VXT/Z6",
+   "expire_date": "2026-12-16",
+   "contract_dt": "2026-12-16",
+   "futures_root": "VX",
+   "duration_type": "M",
+   "path": "data/us/futures/market_statistics/historical_data/VX/VX_2026-12-16.csv"
+  },
+  {
+   "product_display": "VX+VXT39/U6",
+   "expire_date": "2026-09-30",
+   "contract_dt": "2026-09-30",
+   "futures_root": "VX",
+   "duration_type": "W",
+   "path": "data/us/futures/market_statistics/historical_data/VX/VX_2026-09-30.csv"
+  },
+  {
+   "product_display": "VX+VXT40/V6",
+   "expire_date": "2026-10-07",
+   "contract_dt": "2026-10-07",
+   "futures_root": "VX",
+   "duration_type": "W",
+   "path": "data/us/futures/market_statistics/historical_data/VX/VX_2026-10-07.csv"
+  }
+ ]
+}

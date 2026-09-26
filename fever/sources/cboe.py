@@ -7,7 +7,7 @@ close is stored. Licence: personal, non-commercial use (decision E-26).
 
 import csv
 import io
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from fever.config import Series
@@ -21,7 +21,8 @@ _OHLC = ["DATE", "OPEN", "HIGH", "LOW", "CLOSE"]
 _MAX_SHOWN = 120  # characters of a broken line quoted in an error message
 
 
-def fetch(client: HttpClient, series: Series) -> Fetched:
+def fetch(client: HttpClient, series: Series, since: date | None = None) -> Fetched:
+    # `since` is not needed: every request returns the full history.
     return client.get(URL.format(symbol=series.source_id))
 
 

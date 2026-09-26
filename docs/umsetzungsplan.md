@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3: Worker läuft auf TrueNAS, M4a bis M4c erledigt (M4c noch nicht auf TrueNAS)** · Nächster Schritt: M4c auf TrueNAS einspielen, M4d planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 und M4 erledigt, M3: Worker läuft auf TrueNAS (M4d noch nicht eingespielt)** · Nächster Schritt: M4d auf TrueNAS einspielen, M5 planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -20,7 +20,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M1 | Speicher, Migrationen, Backup | ☑ 25.09.2026 | M0, Schema-Freigabe, W-5 | erteilt 25.09.2026 |
 | M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ☑ 26.09.2026 | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B erteilt 26.09.2026 |
 | M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ◐ läuft auf TrueNAS seit 26.09.2026, ICE-Archiv ab Beobachtung 26.09.2023; offen: erste Werktags-Abrufe, Schritt 9 | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
-| M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ◐ M4a, M4b, M4c ☑ 26.09.2026; M4d offen (E-37) | M3 | M4a bis M4c erteilt 26.09.2026 |
+| M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ☑ 26.09.2026 (M4a bis M4d, E-37) | M3 | M4a bis M4d erteilt 26.09.2026 |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☐ | M4, L-1 bis L-12 | ja (Scoring) |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☐ | M1 (Lesen), M3 (Heartbeat) | ja |
 | M7 | Ansichten 1–7 | ☐ | M5, M6, L-13 | ja |
@@ -79,6 +79,8 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-42 | Quelle für Margin Debt | Fed-Statistik Z.1 über FRED: `BOGZ1FL663067003Q` (Receivables Due from Customers der Broker-Dealer), statt FINRA | FINRA-Bedingungen untersagen Speichern ohne schriftliche Zustimmung (Befunde unter M4). Folgen: quartalsweise statt monatlich, etwa 10 Wochen Verzug nach Quartalsende, anderes Niveau (Median 0,63 × FINRA); neue Frequenz „quartalsweise“ im Katalog, Toleranz im M4c-Plan. `CLAUDE.md` angepasst |
 | 26.09.2026 | E-43 | Zuschnitt und Abruf von M4c | Shiller: nur CAPE und Excess CAPE Yield als Reihen (die ganze Datei liegt im Rohdatenarchiv); Link zur Datei aus der Download-Seite, weil der Pfad wechselnde Kennungen trägt; Fixture synthetisch. Margin Debt: eine Z.1-Reihe über FRED | Zwei Abrufe je Takt für Shiller (Seite rund 120 KB, Datei rund 1,7 MB); Rohdatenarchiv nur bei geändertem Inhalt |
 | 26.09.2026 | E-44 | Parameter der M4c-Reihen, Toleranz quartalsweise | Wie vorgeschlagen (Tabelle unter M4, „Ergebnis M4c“): Shiller Verzug 45, Z.1 Verzug 175; neue Standardtoleranz quartalsweise 10 Tage (Ergänzung zu E-10) | Rückfüllung Z.1 im Shutdown-Fall Q3 2025 17 Tage zu früh. Shiller-Verzug beruht auf einer einzigen beobachteten Aktualisierung |
+| 26.09.2026 | E-45 | Speichermodell der VX-Futures (M4d) | Rangreihen: Settlement und Kalendertage bis Verfall für die Ränge 1 bis 8 der Monatskontrakte als normale Reihen (16), eigene Quelle `cfe`; kein Schemawechsel. Umsetzung von E-18 | Kurve je Tag mit echter Laufzeitachse; VX1/VX2 später direkt nutzbar. Einzelkontrakte sind nur im Rohdatenarchiv; neu berechenbar, weil Cboe die Dateien weiter anbietet |
+| 26.09.2026 | E-46 | Rangregel und Parameter der VX-Futures | Am Verfallstag zählt der verfallende Kontrakt nicht mehr; Parameter wie vorgeschlagen (täglich, Verzug 0, 22:00 ET, Toleranz 3, Grenzen 1–300 bzw. 1–400) | Der Schlussabrechnungswert (ein VIX-Wert) geht nicht als Futures-Preis in die Kurve; die Uhrzeit ist unbelegt |
 
 ---
 
@@ -538,9 +540,31 @@ Für jeden Meilenstein gilt die Definition of Done:
   - Gegenprobe Z.1: FRED gegen die Fed-Gesamtdatei `FRB_Z1_csv.zip`, 305 von 305 Quartalen identisch
   - Gegenprobe mit 17 absichtlich eingebauten Fehlern, alle erkannt (Link-Host, doppelte Links, HTML-Entities, Excel-Kennung, Kopfzeilensuche, Spalte per Teiltext, Leerzeichen, Monat abgeschnitten, Monatsprüfung, NA, Hinweiszeile, `checked()`, Allowlist, Registrierung, Frequenz, beide Verzüge)
   - Build-Probe (linux/amd64): 42 s, `xlrd` 2.0.2 im Image
+- **Auf TrueNAS geprüft (26.09.2026):** Sofort-Abruf „44 Reihen, 0 mit Problemen“.
 - **Nicht geprüft:**
-  - Abruf auf TrueNAS. In der Cloud-Umgebung brach der Proxy Verbindungen zu `shillerdata.com` zeitweise ab (`ws_closed_mid_exchange`, auch mit curl); ein zweiter Sofort-Abruf meldete deshalb nach drei Versuchen einen Fehler für die Gruppe `shiller`, sichtbar und ohne Datenverlust
+  - In der Cloud-Umgebung brach der Proxy Verbindungen zu `shillerdata.com` zeitweise ab (`ws_closed_mid_exchange`, auch mit curl); ein zweiter Sofort-Abruf meldete deshalb nach drei Versuchen einen Fehler für die Gruppe `shiller`, sichtbar und ohne Datenverlust
   - Regelmäßigkeit und Uhrzeit der Shiller-Uploads (Verzug 45 unbelegt; Internet Archive aus der Cloud-Umgebung nicht erreichbar)
+
+**Ergebnis M4d (26.09.2026, erledigt):**
+- **Umgesetzt wie freigegeben (E-45, E-46):**
+  - Neue Quelle `cfe` (Cboe Futures Exchange), `fever/sources/cfe.py`: Kontraktliste von `www.cboe.com` (JSON), dann die CSV je Monatskontrakt von `cdn.cboe.com`; Wochenkontrakte und Mini-VX bleiben außen vor. Ein Abruf wird als JSON-Bündel archiviert
+  - 16 Reihen in der Gruppe `cfe_vx`: `cfe_vx1` bis `cfe_vx8` (Settlement) und `cfe_vx1_days` bis `cfe_vx8_days` (Kalendertage bis Verfall)
+  - Rangregel: Rang n ist der n-te Monatskontrakt, der am Handelstag gelistet ist (erste Zeile seiner Datei an oder vor dem Tag) und danach verfällt. Am Verfallstag zählt der verfallende Kontrakt nicht mehr. Fehlt einem gelisteten Kontrakt die Zeile, bleibt sein Rang leer; spätere rücken nicht auf. Settlement 0 gilt als fehlend
+  - `fetch` aller Quellmodule hat den optionalen Parameter `since` (jüngster gespeicherter Tag der Gruppe, Minimum über die Mitglieder). Nur `cfe` nutzt ihn: Erstabruf aller Monatskontrakte, danach nur Kontrakte mit Verfall ab `since` − 45 Tage; das Bündel nennt den ersten vollständig abgedeckten Tag
+  - Allowlist um `www.cboe.com`; Fixtures: gekürzte echte Kontraktliste (keine Kurse), Kontraktdatei mit synthetischen Werten (E-27)
+- **Parameter (E-46):** täglich, Verzug 0, 22:00 ET wie die Cboe-Indizes (unbelegt, Prüfung mit M3, Schritt 9), Toleranz 3 (E-10), Grenzen Settlement 1 bis 300, Restlaufzeit 1 bis 400 Tage.
+- **Befunde:**
+  - Kontraktdateien gibt es ab Verfall Januar 2013 (174 Monatskontrakte bis Juni 2027); ältere liefern „Access Denied“. Bis 17.05.2013 steht als Settlement 0; verwertbar ab 20.05.2013
+  - An jedem der 3362 Handelstage seit 20.05.2013 gibt es mindestens 8 Monatskontrakte mit Settlement, ohne Lücke unter den vorderen Rängen. Settlement historisch 8,75 bis 72,63
+  - Die Tages-Settlementdatei (`settlement/csv?dt=…`) liefert für unbekannte Daten (2013, 2008) stillschweigend die aktuellen Kurse; sie wird nicht verwendet
+  - `robots.txt` von `www.cboe.com` sperrt nur `/book/` und `volume_reports`; Nutzung wie E-26
+- **Belege:**
+  - `pytest -q`: 292 passed (31 neu)
+  - Echter Abruf gegen `data-dev/`: Erstabruf 175 Anfragen in 178 s, je Reihe 3362 Werte vom 20.05.2013 bis 25.09.2026; Folgeabruf 12 Anfragen in 12 s, keine neuen Zeilen. Rohdaten: 666 KB (Erstabruf), 26 KB (Folgeabruf). `python -m fever.sources.update`: 60 Reihen, davon Shiller mit Proxy-Abbruch der Cloud-Umgebung (siehe M4c); Worker-Start „60 Reihen in 32 Abrufgruppen“
+  - Gegenprobe gegen die Tages-Settlementdatei vom 25.09.2026: Ränge 1 bis 8 und Restlaufzeiten identisch
+  - Unabhängige Neuberechnung aus getrennt geladenen Kontraktdateien: 26 896 Werte (3362 Tage × 8 Ränge), keine Abweichung
+  - Gegenprobe mit 18 absichtlich eingebauten Fehlern, alle erkannt (Verfallstag, Aufrücken, Listungsbeginn, Settlement 0, erster vollständiger Tag, laufender Tag, Wochenkontrakte, Kontraktbezeichnung, Tag nach Verfall, Mindestzahl, Fenster, vertauschte Werte, Rang 9, Kopfzeile, `since` fehlt oder vom jüngsten Mitglied, Allowlist, Registrierung)
+- **Nicht geprüft:** Abruf auf TrueNAS (der erste Abruf dauert rund 3 Minuten); Uhrzeit, ab der Cboe den Handelstag in die Kontraktdateien schreibt (22:00 ET übernommen von den Indizes).
 
 ### M5 – Scoring (Schritte 1–6, Stufe 1)
 
@@ -740,13 +764,13 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (26.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt (178 Tests grün): Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-44; M4a (EZB, OFR, EBP; 14 Reihen), M4b (CFTC COT, VIX-Futures; 4 Reihen) und M4c (Shiller-CAPE, Excess CAPE Yield, Margin Debt aus Z.1; 3 Reihen) umgesetzt, 261 Tests grün, 44 Reihen in 31 Abrufgruppen. M4a und M4b laufen auf TrueNAS; M4c ist gepusht, aber noch nicht eingespielt.
+  - Entscheidungen bis E-46; M4 vollständig: M4a (EZB, OFR, EBP; 14 Reihen), M4b (CFTC COT, VIX-Futures; 4), M4c (Shiller-CAPE, Excess CAPE Yield, Margin Debt aus Z.1; 3), M4d (VX-Futures-Termstruktur nach Rang; 16). 292 Tests grün, 60 Reihen in 32 Abrufgruppen. Bis M4c auf TrueNAS eingespielt („44 Reihen, 0 mit Problemen“); M4d ist gepusht, aber noch nicht eingespielt.
   - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“). Erstabruf aller 23 Reihen am 26.09.2026 per Sofort-Abruf; das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
-  1. M4c auf TrueNAS einspielen (neuer Build wegen `xlrd`): `docs/einrichtung.md`, Schritt 9; erwartet „44 Reihen, 0 mit Problemen“.
+  1. M4d auf TrueNAS einspielen: `docs/einrichtung.md`, Schritt 9; erwartet „60 Reihen, 0 mit Problemen“ (Erstabruf der VX-Futures rund 3 Minuten).
   2. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen (Nutzer schickt Ausgaben); dann M3 abschließen (geplant in der Woche ab 28.09.2026).
-  3. M4d (VX-Futures) planen: Speichermodell für Einzelkontrakte.
-  4. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit, CFTC nach dem ersten Freitag.
+  3. M5 planen: vorher L-1 bis L-4 und L-6 bis L-12 per Auswahlfrage klären (Abschnitt 5); Indikatoren einzeln vorschlagen (E-13).
+  4. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit (Indizes und VX-Kontraktdateien), CFTC nach dem ersten Freitag, Shiller nach dem Oktober-Upload.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).

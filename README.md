@@ -6,7 +6,7 @@ Zweck ist Regime- und Risikoanzeige, **keine Crash-Prognose, keine Handelssignal
 
 ## Status
 
-Stand 26.09.2026: **M0 bis M2 erledigt, M3 in Betrieb, M4a bis M4c umgesetzt**: Docker-Image, Datenbank mit geschütztem Archiv, Backup und Wiederherstellung, 44 Datenreihen von Cboe, FRED, EZB, OFR, Fed, CFTC und Shiller mit Prüfung und Veröffentlichungszeitpunkt, Worker mit Abrufplan und Healthcheck; der Worker läuft auf TrueNAS. Die VX-Futures folgen in M4d, die Oberfläche ab M6. Fortschritt: `docs/umsetzungsplan.md`, Abschnitt 1.
+Stand 26.09.2026: **M0 bis M2 und M4 erledigt, M3 in Betrieb**: Docker-Image, Datenbank mit geschütztem Archiv, Backup und Wiederherstellung, 60 Datenreihen von Cboe (Indizes und VX-Futures), FRED, EZB, OFR, Fed, CFTC und Shiller mit Prüfung und Veröffentlichungszeitpunkt, Worker mit Abrufplan und Healthcheck; der Worker läuft auf TrueNAS. Als Nächstes folgt das Scoring (M5), die Oberfläche ab M6. Fortschritt: `docs/umsetzungsplan.md`, Abschnitt 1.
 
 ## Dokumentation
 

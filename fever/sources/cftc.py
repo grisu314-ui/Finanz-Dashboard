@@ -9,7 +9,7 @@ domain; the CFTC asks for acknowledgement (checked 26.09.2026).
 
 import json
 import re
-from datetime import datetime
+from datetime import date, datetime
 
 from fever.config import Series
 from fever.http import Fetched, HttpClient
@@ -34,7 +34,8 @@ def _split(series: Series) -> tuple[str, str]:
     return market, field
 
 
-def fetch(client: HttpClient, series: Series) -> Fetched:
+def fetch(client: HttpClient, series: Series, since: date | None = None) -> Fetched:
+    # `since` is not needed: every request returns the full history.
     market, _ = _split(series)
     return client.get(URL, {
         "$select": ",".join((DATE_FIELD, *FIELDS)),
