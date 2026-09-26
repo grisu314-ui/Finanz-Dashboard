@@ -3,15 +3,16 @@
 # Parameters decided on 26.09.2026 (E-23); evidence per series in docs/umsetzungsplan.md, M2.
 #
 # Fields per raw series (checked by fever/config.py, series_catalog):
-#   source          "cboe" or "fred"
+#   source          one of fever.config.SOURCES ("cboe", "fred", "ecb", "ofr", "fed", "cftc", "shiller")
 #   source_id       identifier at the source; the table key is the same in lower case (E-16)
 #   name, unit      display texts
-#   frequency       "daily", "weekly" or "monthly"
+#   frequency       "daily", "weekly", "monthly" or "quarterly"
 #   release_time    "HH:MM" in America/New_York from which the value is usually available
 #   lag_days        calendar days from observation date to publication (regular maximum, E-23).
 #                   First fetch only: estimated publication = observation date + lag_days, moved
 #                   from Saturday/Sunday to Monday, at release_time, at most the retrieval time (E-14)
-#   tolerance_days  E-10 standard: daily 3, weekly 3, monthly 10; other values need tolerance_reason
+#   tolerance_days  E-10 standard: daily 3, weekly 3, monthly 10, quarterly 10 (E-44); other values
+#                   need tolerance_reason
 #   bounds          [lower, upper], inclusive. Catches unit and format errors only; a value outside
 #                   is dropped and reported (E-15), so historical extremes must lie well inside
 #   license         optional licence note
@@ -532,3 +533,46 @@ lag_days = 3
 tolerance_days = 3
 bounds = [0, 10000000]
 license = "CFTC (US-Bundesbehörde): gemeinfrei, Quellenangabe erbeten"
+
+# --- Fed Financial Accounts (Z.1) via FRED (M4c): margin debt instead of FINRA (E-42).
+# --- Quarterly, dated on the first day of the quarter; public domain, citation requested.
+
+[series.bogz1fl663067003q]
+source = "fred"
+source_id = "BOGZ1FL663067003Q"
+name = "Margin-Kredite der Broker-Dealer an Kunden (Fed Z.1)"
+unit = "Mio. USD"
+frequency = "quarterly"
+release_time = "13:15"
+lag_days = 175
+tolerance_days = 10
+bounds = [0, 10000000]
+license = "Federal Reserve Board, Financial Accounts (Z.1): gemeinfrei, Quellenangabe erbeten"
+
+# --- Robert J. Shiller, ie_data.xls (M4c), group shiller. Contains S&P data: no redistribution.
+
+[series.shiller_cape]
+source = "shiller"
+source_id = "Cyclically Adjusted Price Earnings Ratio P/E10 or CAPE"
+group = "shiller"
+name = "Shiller-CAPE (P/E10)"
+unit = "Verhältnis"
+frequency = "monthly"
+release_time = "16:00"
+lag_days = 45
+tolerance_days = 10
+bounds = [1, 100]
+license = "Robert J. Shiller, Online Data (enthält S&P-Daten): nur private Nutzung, keine Weitergabe"
+
+[series.shiller_ecy]
+source = "shiller"
+source_id = "Excess CAPE Yield"
+group = "shiller"
+name = "Excess CAPE Yield (Shiller)"
+unit = "Anteil (0,01 = 1 %)"
+frequency = "monthly"
+release_time = "16:00"
+lag_days = 45
+tolerance_days = 10
+bounds = [-0.5, 0.5]
+license = "Robert J. Shiller, Online Data (enthält S&P-Daten): nur private Nutzung, keine Weitergabe"

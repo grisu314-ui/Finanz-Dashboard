@@ -28,6 +28,8 @@ ALLOWED_HOSTS = {
     "www.financialresearch.gov": 1.0,  # OFR Financial Stress Index, from M4a
     "www.federalreserve.gov": 1.0,  # Excess Bond Premium, from M4a
     "publicreporting.cftc.gov": 1.0,  # CFTC Commitments of Traders (Socrata), from M4b
+    "shillerdata.com": 1.0,  # download page of Shiller's ie_data.xls, from M4c
+    "img1.wsimg.com": 1.0,  # file host behind shillerdata.com (the link carries changing ids), from M4c
 }
 USER_AGENT = f"Fieberthermometer/{__version__} (private, non-commercial)"
 TIMEOUT = (10, 60)  # seconds: connect, read

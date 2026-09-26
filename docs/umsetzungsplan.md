@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3: Worker läuft auf TrueNAS, M4a und M4b erledigt und auf TrueNAS** · Nächster Schritt: M4c planen (Shiller-CAPE, Margin Debt aus Z.1); M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3: Worker läuft auf TrueNAS, M4a bis M4c erledigt (M4c noch nicht auf TrueNAS)** · Nächster Schritt: M4c auf TrueNAS einspielen, M4d planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -20,7 +20,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M1 | Speicher, Migrationen, Backup | ☑ 25.09.2026 | M0, Schema-Freigabe, W-5 | erteilt 25.09.2026 |
 | M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ☑ 26.09.2026 | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B erteilt 26.09.2026 |
 | M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ◐ läuft auf TrueNAS seit 26.09.2026, ICE-Archiv ab Beobachtung 26.09.2023; offen: erste Werktags-Abrufe, Schritt 9 | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
-| M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ◐ M4a ☑ 26.09.2026, M4b ☑ 26.09.2026; M4c–M4d offen (E-37) | M3 | M4a und M4b erteilt 26.09.2026 |
+| M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ◐ M4a, M4b, M4c ☑ 26.09.2026; M4d offen (E-37) | M3 | M4a bis M4c erteilt 26.09.2026 |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☐ | M4, L-1 bis L-12 | ja (Scoring) |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☐ | M1 (Lesen), M3 (Heartbeat) | ja |
 | M7 | Ansichten 1–7 | ☐ | M5, M6, L-13 | ja |
@@ -77,6 +77,8 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-40 | Parameter der M4b-Reihen | Wie vorgeschlagen (Tabelle unter M4, „Ergebnis M4b“) | Geschätzter Stand der Rückfüllung in Feiertagswochen bis zu 3 Tage zu früh (E-14 ohne Feiertage). Ein verspäteter Freitagsbericht kommt erst am Montag an (E-31 fasst wöchentliche Reihen nicht nach) |
 | 26.09.2026 | E-41 | Excel-Leser für M4c | `xlrd` wird aufgenommen, sobald M4c es braucht (Shiller `ie_data.xls`, Binärformat); geprüft 26.09.2026: 2.0.2, Wheel `py2.py3-none-any`, BSD | Für `.xlsx` (FINRA) ist keine Bibliothek nötig: Die Datei nutzt Inline-Strings, lesbar mit `zipfile` und `xml.etree` in unter 50 Zeilen |
 | 26.09.2026 | E-42 | Quelle für Margin Debt | Fed-Statistik Z.1 über FRED: `BOGZ1FL663067003Q` (Receivables Due from Customers der Broker-Dealer), statt FINRA | FINRA-Bedingungen untersagen Speichern ohne schriftliche Zustimmung (Befunde unter M4). Folgen: quartalsweise statt monatlich, etwa 10 Wochen Verzug nach Quartalsende, anderes Niveau (Median 0,63 × FINRA); neue Frequenz „quartalsweise“ im Katalog, Toleranz im M4c-Plan. `CLAUDE.md` angepasst |
+| 26.09.2026 | E-43 | Zuschnitt und Abruf von M4c | Shiller: nur CAPE und Excess CAPE Yield als Reihen (die ganze Datei liegt im Rohdatenarchiv); Link zur Datei aus der Download-Seite, weil der Pfad wechselnde Kennungen trägt; Fixture synthetisch. Margin Debt: eine Z.1-Reihe über FRED | Zwei Abrufe je Takt für Shiller (Seite rund 120 KB, Datei rund 1,7 MB); Rohdatenarchiv nur bei geändertem Inhalt |
+| 26.09.2026 | E-44 | Parameter der M4c-Reihen, Toleranz quartalsweise | Wie vorgeschlagen (Tabelle unter M4, „Ergebnis M4c“): Shiller Verzug 45, Z.1 Verzug 175; neue Standardtoleranz quartalsweise 10 Tage (Ergänzung zu E-10) | Rückfüllung Z.1 im Shutdown-Fall Q3 2025 17 Tage zu früh. Shiller-Verzug beruht auf einer einzigen beobachteten Aktualisierung |
 
 ---
 
@@ -509,6 +511,37 @@ Für jeden Meilenstein gilt die Definition of Done:
 - **Auf TrueNAS geprüft (26.09.2026, zusammen mit M4a):** Sofort-Abruf „41 Reihen, 0 mit Problemen“.
 - **Nicht geprüft:** tatsächliche Ankunft des Freitagsberichts vor 15:45 ET (Rohdatenarchiv nach dem ersten Freitag prüfen, wie M3, Schritt 9).
 
+**Ergebnis M4c (26.09.2026, erledigt):**
+- **Umgesetzt wie freigegeben (E-43):**
+  - `fever/sources/shiller.py`: Abruf in zwei Schritten. Die Download-Seite `shillerdata.com` wird geladen, darin muss genau ein Link auf `img1.wsimg.com/…/ie_data.xls` stehen; danach wird die Datei geladen. Einlesen mit `xlrd` 2.0.2 (E-41): Blatt „Data“, Kopfzeile = Zeile mit „Date“ in Spalte A, Spalte über den vollständigen Kopftext (`source_id`), Datum `JJJJ.MM` mit Oktober als `.1`, „NA“ und leere Zellen als fehlende Werte, Hinweiszeile am Ende übersprungen
+  - 2 Reihen in der Gruppe `shiller` (`shiller_cape`, `shiller_ecy`) und die Z.1-Reihe `bogz1fl663067003q` über das vorhandene FRED-Modul (E-42); neue Frequenz `quarterly`
+  - Allowlist um `shillerdata.com` und `img1.wsimg.com`; `xlrd==2.0.2` in `requirements.txt`
+  - Fixtures: Shiller synthetisch (enthält S&P-Daten, E-27), erzeugt mit `tests/fixtures/shiller/make_ie_data.py` (braucht `xlwt`, keine Projektabhängigkeit); Z.1 als gekürzte echte Antwort (gemeinfrei)
+- **Parameter (E-44):**
+
+  | Reihe | Frequenz | Verzug | Uhrzeit ET | Toleranz | Grenzen | Beleg |
+  |---|---|---|---|---|---|---|
+  | `shiller_cape` | monatlich | 45 | 16:00 | 10 | 1 bis 100 | Historie 4,78 bis 44,20; Verzug = Monatsende plus rund zwei Wochen für unregelmäßige Uploads (nur ein Upload beobachtet: 02.09.2026, 13:52 ET) |
+  | `shiller_ecy` | monatlich | 45 | 16:00 | 10 | −0,5 bis 0,5 | Historie −0,026 bis 0,235 (dezimal, 0,01 = 1 %) |
+  | `bogz1fl663067003q` | quartalsweise | 175 | 13:15 | 10 (neuer Standard) | 0 bis 10 000 000 | Mio. USD, Historie 594 bis 742 321. Erstveröffentlichung 2019–2026 (ALFRED, 30 Quartale) 156 bis 192 Tage nach Quartalsbeginn, Median 161,5; regulärer Höchstwert 175, nur der Shutdown-Fall Q3 2025 lag bei 192 |
+
+- **Befunde:**
+  - Die Zeile des laufenden Monats ist vorläufig: Kurs und GS10 vom ersten Handelstag, CPI geschätzt (Hinweiszeile der Datei). Sie wird mit der Abrufzeit gespeichert und später revidiert; mit Verzug 45 zählt ein Monat im Score erst ab Mitte des Folgemonats.
+  - Excess CAPE Yield laut Datei = 1/CAPE − (GS10 − annualisierte Inflation der letzten 10 Jahre); für alle 1749 Monate nachgerechnet (L-10).
+  - Z.1 wird um 12:00 ET veröffentlicht (Fed; Datei `FRB_Z1_csv.zip` mit `Last-Modified` 11.09.2026 16:00 UTC). FRED übernahm das Update am 11.09.2026 um 12:52 ET. Nächster Termin: 10.12.2026.
+  - **Strukturbruch in Z.1:** Laut Series Analyzer der Fed enthält die Reihe vor 2000:Q1 auch Forderungen an Nicht-Kunden (F830). Veränderungen gegenüber dem Vorjahr über diese Grenze sind verzerrt; relevant für Fenster und Backtest (L-10, Phase 2).
+  - In der neuen Tabellenstruktur der Fed (L.130 heißt jetzt S125s3.s) und in `z1_csv_files.zip` fehlt die Reihe; sie steht nur noch im Gesamtpaket `FRB_Z1_csv.zip` und bei FRED.
+- **Belege:**
+  - `pytest -q`: 261 passed (30 neu)
+  - Echte Abrufe gegen `data-dev/`: Shiller 2 × 1749 Zeilen ab 01.1881, Z.1 305 Zeilen ab Q4 1945; zweiter Lauf ohne neue Zeilen und ohne zweite Rohdatei. `python -m fever.sources.update`: „44 Reihen, 0 mit Problemen“; Worker-Start „44 Reihen in 31 Abrufgruppen“
+  - Gegenprobe Shiller: Excess CAPE Yield aus CAPE, GS10 und CPI der archivierten Datei nachgerechnet, 1749 von 1749 Monaten, größte Abweichung 2,2·10⁻¹⁶
+  - Gegenprobe Z.1: FRED gegen die Fed-Gesamtdatei `FRB_Z1_csv.zip`, 305 von 305 Quartalen identisch
+  - Gegenprobe mit 17 absichtlich eingebauten Fehlern, alle erkannt (Link-Host, doppelte Links, HTML-Entities, Excel-Kennung, Kopfzeilensuche, Spalte per Teiltext, Leerzeichen, Monat abgeschnitten, Monatsprüfung, NA, Hinweiszeile, `checked()`, Allowlist, Registrierung, Frequenz, beide Verzüge)
+  - Build-Probe (linux/amd64): 42 s, `xlrd` 2.0.2 im Image
+- **Nicht geprüft:**
+  - Abruf auf TrueNAS. In der Cloud-Umgebung brach der Proxy Verbindungen zu `shillerdata.com` zeitweise ab (`ws_closed_mid_exchange`, auch mit curl); ein zweiter Sofort-Abruf meldete deshalb nach drei Versuchen einen Fehler für die Gruppe `shiller`, sichtbar und ohne Datenverlust
+  - Regelmäßigkeit und Uhrzeit der Shiller-Uploads (Verzug 45 unbelegt; Internet Archive aus der Cloud-Umgebung nicht erreichbar)
+
 ### M5 – Scoring (Schritte 1–6, Stufe 1)
 
 **Voraussetzung:** L-1 bis L-12 entschieden (L-10 seit E-13 hier); `scoring.toml` mit Startwerten aus Bericht 4.3 und den Entscheidungen; Freigabe.
@@ -604,7 +637,7 @@ Nichts davon wird geraten. Die Vorschläge sind begründete Startpunkte, keine E
 | L-7 | Hysterese für Regeln ohne Perzentilskala (VIX/VIX3M > 1 an 3 Tagen, Diffusionsindex ≥ 40 %) | Ampel | VIX/VIX3M: Die Regel endet, wenn das Verhältnis an 3 Tagen in Folge < 1 liegt (spiegelbildlich). Diffusionsindex: 5 Prozentpunkte unter der Schwelle, analog zur Perzentil-Hysterese | M5 |
 | L-8 | Glättung: welcher Block ist „schnell“, in welcher Reihenfolge wird geglättet, nutzt die Ampel geglättete Werte? | Stress, Ampel | Schnell = Volatilität/Optionen (HWZ 3 auf den Blockscore). Composite HWZ 10. Die Ampel nutzt den geglätteten Composite, die Einzelregeln (VIX/VIX3M, HY-OAS) Rohwerte. Folge: Bei HWZ 10 wirkt ein Sprung erst nach 10 Handelstagen zur Hälfte, der Composite-Weg zu Rot ist also träge | M5 |
 | L-9 | VX-COT-Perzentil über 3 Jahre (Bericht 6.3) vs. 10-Jahres-Fenster (4.3) | Positionierung | Im Score das Standardfenster (4.3), in Ansicht 4 zusätzlich das 3-Jahres-Perzentil als Anzeige | M5 |
-| L-10 | Transformationen ohne Definition: Erstanträge „Veränderung ggü. Tief“ (welches Fenster?), USD/JPY-Vola (Fenster), Re-Steepening-Flag (Definition), Aktien-Anleihen-Korrelation (Anleiherendite aus DGS10-Änderung?), COT-Maß und Orientierung, Definition der Excess CAPE Yield, Margin Debt nur ggü. Vorjahr (keine Marktkapitalisierung in Phase 1), VIX6M (nicht in 6.1, Endpoint prüfen) | Indikatoren | Je Indikator beim Anlegen in `series.toml` einzeln vorschlagen und fragen. Quelle für USD/JPY: E-17 | M5 (E-13) |
+| L-10 | Transformationen ohne Definition: Erstanträge „Veränderung ggü. Tief“ (welches Fenster?), USD/JPY-Vola (Fenster), Re-Steepening-Flag (Definition), Aktien-Anleihen-Korrelation (Anleiherendite aus DGS10-Änderung?), COT-Maß und Orientierung, Excess CAPE Yield (Shiller-Spalte: 1/CAPE − (GS10 − 10-Jahres-Inflation), Ergebnis M4c), Margin Debt aus Z.1 quartalsweise (E-42): ggü. Vorjahr oder relativ zur Marktkapitalisierung aus Z.1; Strukturbruch vor 2000:Q1, VIX6M (nicht in 6.1, Endpoint prüfen) | Indikatoren | Je Indikator beim Anlegen in `series.toml` einzeln vorschlagen und fragen. Quelle für USD/JPY: E-17 | M5 (E-13) |
 | L-11 | Fallhöhe in Phase 1: Top-10-Konzentration (O-1), HY-OAS-Niveau (O-5) und AAII (Phase 2) fehlen | Fallhöhe | Mittel der vorhandenen Komponenten (Excess CAPE Yield, Margin Debt ggü. Vorjahr, VX-COT-Short-Vol), mindestens 2; Fehlende sichtbar | M5 |
 | L-12 | Diffusionsindex: welche Einzelreihen zählen? | Ampel (Gelb) | Nur Stress-Indikatoren mit gültigem, aktuellem Wert und ausreichender Historie. Fallhöhe-Indikatoren nicht, sonst ginge Fallhöhe doppelt in „Gelb“ ein | M5 |
 | L-13 | Krisenmarken in der Composite-Historie: genaue Zeiträume | Anzeige | Start und Ende je Episode mit Quelle in einer eigenen Datei `config/episodes.toml` (Anzeige, kein Score) | M7 |
@@ -698,6 +731,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 | Speicherklausel der Cboe-Nutzungsbedingungen (E-26) | Cboe könnte das private Archiv beanstanden | nur private Nutzung, keine Weitergabe, ein Abruf je Datei und Tag; bei Beanstandung Cboe-Reihen aus dem Katalog nehmen |
 | Veröffentlichungszeiten teils nur einmal beobachtet (E-23) | geschätzte Vintages der Rückfüllung um Stunden verschoben | Prüfung aus dem Rohdatenarchiv in M3 (Schritt 9) |
 | Datenordner im Git-Arbeitsverzeichnis (E-28) | `git clean -fdx` löscht Datenbank und Backups zugleich | Warnung in `docs/einrichtung.md` und `CLAUDE.md`; optional TrueNAS-Snapshots des Datasets `data` |
+| Shiller-Download über wechselnden Link (E-43) | Umbau der Seite oder neuer Dateiname stoppt CAPE und Excess CAPE Yield | sichtbarer Fehler im Datenstand; Parser in `fever/sources/shiller.py` anpassen |
 | Betrieb direkt vom Entwicklungsbranch (E-30) | ein ungeprüfter Push landet beim nächsten Update im Betrieb | nur geprüften Stand pushen; Update nur auf Anweisung in `docs/einrichtung.md` |
 
 ---
@@ -706,17 +740,17 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (26.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt (178 Tests grün): Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-42; M4a (EZB, OFR, EBP; 14 Reihen) und M4b (CFTC COT, VIX-Futures; 4 Reihen) umgesetzt, 231 Tests grün, 41 Reihen im Katalog.
+  - Entscheidungen bis E-44; M4a (EZB, OFR, EBP; 14 Reihen), M4b (CFTC COT, VIX-Futures; 4 Reihen) und M4c (Shiller-CAPE, Excess CAPE Yield, Margin Debt aus Z.1; 3 Reihen) umgesetzt, 261 Tests grün, 44 Reihen in 31 Abrufgruppen. M4a und M4b laufen auf TrueNAS; M4c ist gepusht, aber noch nicht eingespielt.
   - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“). Erstabruf aller 23 Reihen am 26.09.2026 per Sofort-Abruf; das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
-  1. M4c planen und zur Freigabe vorlegen: Shiller-CAPE mit `xlrd` (E-41), Margin Debt aus Z.1 (E-42) mit neuer Frequenz „quartalsweise“ (Verzug und Toleranz aus den ALFRED-Ständen ableiten). M4a und M4b laufen auf TrueNAS seit 26.09.2026 („41 Reihen, 0 mit Problemen“).
+  1. M4c auf TrueNAS einspielen (neuer Build wegen `xlrd`): `docs/einrichtung.md`, Schritt 9; erwartet „44 Reihen, 0 mit Problemen“.
   2. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen (Nutzer schickt Ausgaben); dann M3 abschließen (geplant in der Woche ab 28.09.2026).
   3. M4d (VX-Futures) planen: Speichermodell für Einzelkontrakte.
   4. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit, CFTC nach dem ersten Freitag.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
-  - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com`, `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`.
+  - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
 - **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 außer L-5 (Abschnitt 5).
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.

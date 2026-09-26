@@ -17,6 +17,8 @@ EXPECTED_IDS = {
     "fed_ebp", "fed_gz_spread",
     # M4b
     "cftc_vx_open_interest", "cftc_vx_noncomm_long", "cftc_vx_noncomm_short", "cftc_vx_noncomm_spread",
+    # M4c
+    "bogz1fl663067003q", "shiller_cape", "shiller_ecy",
 }
 
 VALID = """
@@ -59,7 +61,7 @@ def test_repository_special_cases_are_configured():
     assert catalog["vvix"].start == date(2007, 1, 3)  # E-24
     assert catalog["iorb"].lead_days == 7  # E-25
     assert all(s.lead_days == 0 for s in catalog.values() if s.id != "iorb")
-    for series_id in ("bamlh0a0hym2", "bamlh0a1hybb", "bamlh0a3hyc", "bamlc0a0cm", "bamlc0a4cbbb", "sp500"):
+    for series_id in ("bamlh0a0hym2", "bamlh0a1hybb", "bamlh0a3hyc", "bamlc0a0cm", "bamlc0a4cbbb", "sp500", "shiller_cape", "shiller_ecy"):
         assert "keine Weitergabe" in catalog[series_id].license
 
 
@@ -146,7 +148,8 @@ def test_repository_groups():
 
     groups = group_members(series_catalog())
     assert len(groups["ofr_fsi"]) == 9 and len(groups["fed_ebp"]) == 2 and len(groups["cftc_vx"]) == 4
-    assert all(len(members) == 1 for group, members in groups.items() if group not in ("ofr_fsi", "fed_ebp", "cftc_vx"))
+    assert len(groups["shiller"]) == 2
+    assert all(len(members) == 1 for group, members in groups.items() if group not in ("ofr_fsi", "fed_ebp", "cftc_vx", "shiller"))
 
 
 def test_group_members_share_the_schedule(tmp_path):

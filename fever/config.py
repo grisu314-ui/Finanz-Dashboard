@@ -53,10 +53,11 @@ def load(name: str, config_dir: Path = CONFIG_DIR) -> dict:
 
 
 # Decision E-10: tolerance in calendar days on top of the frequency; other values need a reason.
-STANDARD_TOLERANCE_DAYS = {"daily": 3, "weekly": 3, "monthly": 10}
+# Quarterly added with M4c (E-44).
+STANDARD_TOLERANCE_DAYS = {"daily": 3, "weekly": 3, "monthly": 10, "quarterly": 10}
 # Sources whose own identifiers are simple enough to be series ids (E-16); the others use
 # "<source>_<short name>" with the exact identifier in source_id (E-35).
-SOURCES = ("cboe", "fred", "ecb", "ofr", "fed", "cftc")
+SOURCES = ("cboe", "fred", "ecb", "ofr", "fed", "cftc", "shiller")
 _OWN_ID_SOURCES = ("cboe", "fred")
 
 _REQUIRED = {

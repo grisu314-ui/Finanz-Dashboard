@@ -12,6 +12,7 @@ requests==2.34.2    # synchronous HTTP client for all data sources
 dash==4.4.1         # web UI: layout and callbacks
 plotly==7.1.0       # charts, used directly via plotly.graph_objects
 gunicorn==26.2.0    # WSGI server for the Dash app
+xlrd==2.0.2         # reads Shiller's ie_data.xls (Excel 97-2003); pure-Python wheel (E-41)
 
 # --- transitive dependencies (pinned for reproducible builds) ---
 annotated-types==0.8.0
