@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3: Worker läuft auf TrueNAS, M4a und M4b erledigt und auf TrueNAS** · Nächster Schritt: Quelle für Margin Debt entscheiden, dann M4c planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3: Worker läuft auf TrueNAS, M4a und M4b erledigt und auf TrueNAS** · Nächster Schritt: M4c planen (Shiller-CAPE, Margin Debt aus Z.1); M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -20,7 +20,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M1 | Speicher, Migrationen, Backup | ☑ 25.09.2026 | M0, Schema-Freigabe, W-5 | erteilt 25.09.2026 |
 | M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ☑ 26.09.2026 | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B erteilt 26.09.2026 |
 | M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ◐ läuft auf TrueNAS seit 26.09.2026, ICE-Archiv ab Beobachtung 26.09.2023; offen: erste Werktags-Abrufe, Schritt 9 | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
-| M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, FINRA, VX-Futures | ◐ M4a ☑ 26.09.2026, M4b ☑ 26.09.2026; M4c–M4d offen (E-37) | M3 | M4a und M4b erteilt 26.09.2026 |
+| M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ◐ M4a ☑ 26.09.2026, M4b ☑ 26.09.2026; M4c–M4d offen (E-37) | M3 | M4a und M4b erteilt 26.09.2026 |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☐ | M4, L-1 bis L-12 | ja (Scoring) |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☐ | M1 (Lesen), M3 (Heartbeat) | ja |
 | M7 | Ansichten 1–7 | ☐ | M5, M6, L-13 | ja |
@@ -76,6 +76,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-39 | Zuschnitt von M4b | Nur VIX-Futures (`1170E1`) aus dem Legacy-Bericht „Futures Only“: Open Interest, Non-Commercials Long, Short und Spread. Keine E-mini-S&P-500-Positionen, kein TFF-Bericht | Genügt für das COT-Maß der Fallhöhe (L-10, L-11); weitere Märkte lassen sich später als eigene Gruppe ergänzen |
 | 26.09.2026 | E-40 | Parameter der M4b-Reihen | Wie vorgeschlagen (Tabelle unter M4, „Ergebnis M4b“) | Geschätzter Stand der Rückfüllung in Feiertagswochen bis zu 3 Tage zu früh (E-14 ohne Feiertage). Ein verspäteter Freitagsbericht kommt erst am Montag an (E-31 fasst wöchentliche Reihen nicht nach) |
 | 26.09.2026 | E-41 | Excel-Leser für M4c | `xlrd` wird aufgenommen, sobald M4c es braucht (Shiller `ie_data.xls`, Binärformat); geprüft 26.09.2026: 2.0.2, Wheel `py2.py3-none-any`, BSD | Für `.xlsx` (FINRA) ist keine Bibliothek nötig: Die Datei nutzt Inline-Strings, lesbar mit `zipfile` und `xml.etree` in unter 50 Zeilen |
+| 26.09.2026 | E-42 | Quelle für Margin Debt | Fed-Statistik Z.1 über FRED: `BOGZ1FL663067003Q` (Receivables Due from Customers der Broker-Dealer), statt FINRA | FINRA-Bedingungen untersagen Speichern ohne schriftliche Zustimmung (Befunde unter M4). Folgen: quartalsweise statt monatlich, etwa 10 Wochen Verzug nach Quartalsende, anderes Niveau (Median 0,63 × FINRA); neue Frequenz „quartalsweise“ im Katalog, Toleranz im M4c-Plan. `CLAUDE.md` angepasst |
 
 ---
 
@@ -418,7 +419,7 @@ Für jeden Meilenstein gilt die Definition of Done:
 
 ### M4 – Weitere Quellen
 
-**Ziel:** CFTC (COT), EZB (CISS), OFR (FSI), Fed-Board (EBP), Shiller-CAPE, FINRA Margin Debt; dazu USD/JPY als Kreuzkurs aus EZB-Referenzkursen (E-17) und die VX-Futures-Termstruktur von Cboe (E-18).
+**Ziel:** CFTC (COT), EZB (CISS), OFR (FSI), Fed-Board (EBP), Shiller-CAPE, Margin Debt (Fed Z.1 über FRED, E-42; ursprünglich FINRA); dazu USD/JPY als Kreuzkurs aus EZB-Referenzkursen (E-17) und die VX-Futures-Termstruktur von Cboe (E-18).
 
 **Schritte:**
 1. Je Quelle wie in M2.
@@ -428,7 +429,7 @@ Für jeden Meilenstein gilt die Definition of Done:
 
 **Tests:** Parser gegen Fixtures; Formatänderung der Quelle führt zu einem sichtbaren Fehler, nicht zu stillem Ausfall.
 
-**Aufteilung (E-37):** M4a EZB, OFR, EBP · M4b CFTC COT · M4c Shiller-CAPE, FINRA · M4d VX-Futures. Jeder Teil hat einen eigenen Plan und eine eigene Freigabe.
+**Aufteilung (E-37):** M4a EZB, OFR, EBP · M4b CFTC COT · M4c Shiller-CAPE, Margin Debt (Z.1, E-42) · M4d VX-Futures. Jeder Teil hat einen eigenen Plan und eine eigene Freigabe.
 
 **Befunde für alle Teile (26.09.2026, echte Abrufe):**
 
@@ -440,7 +441,7 @@ Für jeden Meilenstein gilt die Definition of Done:
 | Fed EBP | `www.federalreserve.gov/econres/notes/feds-notes/ebp_csv.csv` | monatlich ab 01/1973; Spalten `gz_spread`, `ebp`, `est_prob` |
 | CFTC COT (M4b) | Socrata `publicreporting.cftc.gov/resource/6dca-aqww.json` (Legacy, Futures Only), `gpe5-46if` (TFF) | VIX-Futures `1170E1` ab 27.07.2004 (1114 Berichte); E-mini S&P 500 `13874A` |
 | Shiller (M4c) | `shillerdata.com` verlinkt `img1.wsimg.com/…/ie_data.xls` (Pfad mit Kennung) | `.xls` (Binärformat), Blatt „Data“, Datum als `JJJJ.MM` (Oktober = `2026.1`), Spalten CAPE, TR CAPE, Excess CAPE Yield; laufender Monat vorläufig |
-| FINRA (M4c) | `www.finra.org/sites/default/files/2021-03/margin-statistics.xlsx` | `.xlsx`, Debit Balances in Mio. USD, neueste Zeile zuerst |
+| FINRA (entfällt, E-42) | `www.finra.org/sites/default/files/2021-03/margin-statistics.xlsx` | `.xlsx`, Debit Balances in Mio. USD, neueste Zeile zuerst |
 | Cboe VX (M4d) | Kontraktliste `www.cboe.com/us/futures/market_statistics/historical_data/product/list/VX/` (JSON), CSV je Kontrakt auf `cdn.cboe.com/data/us/futures/…/VX/VX_<Verfall>.csv` | Spalten u. a. Settle, Open Interest; Monats- und Wochenkontrakte |
 
 - **Excel-Leser für M4c:** `xlrd` 2.0.2 (für `.xls` nötig) und `openpyxl` 3.1.5 mit `et_xmlfile` 2.0.0 sind reine Python-Wheels (`py3-none-any`). Die Auswahl wird in M4c entschieden.
@@ -623,6 +624,7 @@ Nichts davon wird geraten. Die Vorschläge sind begründete Startpunkte, keine E
 | W-7 | Der Migrationsablauf in `CLAUDE.md` (stop → Backup → upgrade → up) gilt „auch bei der Ersteinrichtung“; dann gibt es aber nichts zu stoppen oder zu sichern | Die Einrichtungsanleitung lässt Stop und Backup bei der Ersteinrichtung aus; `fever.backup` meldet eine fehlende Datenbank klar |
 | W-8 | Bericht 6.1: VIX3M-Historie ab 04.12.2007. Die Cboe-CSV beginnt erst am 18.09.2009 (geprüft 26.09.2026) | Archiviert wird, was die CSV liefert; für das 10-Jahres-Fenster folgenlos |
 | W-9 | `CLAUDE.md` verlangt gekürzte echte Antworten als Fixtures, verbietet aber die Weitergabe lizenzierter Daten; das Repository ist öffentlich | E-27: Format echt, Werte lizenzierter Quellen synthetisch |
+| W-10 | `CLAUDE.md` verlangte FINRA Margin Debt als Download ohne Login und verbietet zugleich Scraping gegen Nutzungsbedingungen; FINRA untersagt Speichern und Datenbanken ohne schriftliche Zustimmung | E-42: Margin Debt aus Fed Z.1 über FRED; `CLAUDE.md` angepasst |
 
 ---
 
@@ -704,12 +706,12 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (26.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt (178 Tests grün): Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-41; M4a (EZB, OFR, EBP; 14 Reihen) und M4b (CFTC COT, VIX-Futures; 4 Reihen) umgesetzt, 231 Tests grün, 41 Reihen im Katalog.
+  - Entscheidungen bis E-42; M4a (EZB, OFR, EBP; 14 Reihen) und M4b (CFTC COT, VIX-Futures; 4 Reihen) umgesetzt, 231 Tests grün, 41 Reihen im Katalog.
   - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“). Erstabruf aller 23 Reihen am 26.09.2026 per Sofort-Abruf; das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
-  1. Quelle für Margin Debt entscheiden (Optionen unter M4, „Margin Debt, Optionen“), dann M4c planen. M4a und M4b laufen auf TrueNAS seit 26.09.2026 („41 Reihen, 0 mit Problemen“).
+  1. M4c planen und zur Freigabe vorlegen: Shiller-CAPE mit `xlrd` (E-41), Margin Debt aus Z.1 (E-42) mit neuer Frequenz „quartalsweise“ (Verzug und Toleranz aus den ALFRED-Ständen ableiten). M4a und M4b laufen auf TrueNAS seit 26.09.2026 („41 Reihen, 0 mit Problemen“).
   2. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen (Nutzer schickt Ausgaben); dann M3 abschließen (geplant in der Woche ab 28.09.2026).
-  3. M4c planen: Shiller-CAPE mit `xlrd` (E-41) und Margin Debt nach der Entscheidung aus Punkt 1.
+  3. M4d (VX-Futures) planen: Speichermodell für Einzelkontrakte.
   4. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit, CFTC nach dem ersten Freitag.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
