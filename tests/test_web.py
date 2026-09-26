@@ -354,3 +354,23 @@ def test_every_history_view_names_the_latest_vintage_rule(data):
     for page in (views.overview("light", NOW), views.areas(), views.kennzahl("vix", "light", NOW),
                  views.kennzahl("stress", "light", NOW)):
         assert views.HISTORY_NOTE in rendered(page)
+
+
+def test_area_charts_start_with_the_whole_history():
+    """E-61: charts in the areas start with all years (all recessions visible); others with the last years."""
+    days = [date(2000, 1, 3), date(2026, 9, 25)]
+    chart = Chart("vix", "VIX", "Cboe", [Line("VIX", days, [20.0, 15.0])], "Punkte")
+    assert time_series(chart, "light")[0].layout.xaxis.range[0] > date(2020, 1, 1)
+    assert time_series(replace(chart, full_history=True), "light")[0].layout.xaxis.range[0] == date(2000, 1, 3)
+
+
+def test_area_and_indicator_charts_use_the_whole_history(data, monkeypatch):
+    charts = []
+    real = views.ui.chart_card
+    monkeypatch.setattr(views.ui, "chart_card", lambda graph_id, chart, theme: charts.append(chart) or real(graph_id, chart, theme))
+    views.area_chart("volatility", "light", NOW)
+    views.indicator_detail("vix", "light", NOW)
+    assert len(charts) == 3 and all(chart.full_history for chart in charts)
+    charts.clear()
+    views.kennzahl("vix", "light", NOW)  # the Kennzahl page keeps the last years
+    assert charts and not any(chart.full_history for chart in charts)

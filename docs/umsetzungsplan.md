@@ -95,6 +95,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-58 | Texte für die neuen Kennzahlen | Alle 22 jetzt (19 Indikatoren, Blöcke Volatilität, Kredit, Makro); E-52 bleibt: keine Kennzahl ohne Text | Fakten aus Bericht Abschn. 1–3 und Primärquellen mit Abrufdatum; der Nutzer prüft die Texte |
 | 26.09.2026 | E-59 | Charts je Indikator | Wert und Perzentil untereinander, beide mit Rezessionsflächen | Keine zweite y-Achse |
 | 26.09.2026 | E-60 | Aufklappen | Zwei Ebenen: Bereich (Verlauf und Indikatorzeilen), darunter jeder Indikator einzeln; Charts entstehen nur für geöffnete Abschnitte | Gemessen: alle 19 Indikatoren auf einmal wären rund 9,4 MB Chart-Daten je Aufruf und Aktualisierung |
+| 26.09.2026 | E-61 | Startzeitraum der Charts | Bereiche und Einzelreihen starten mit der ganzen Historie (alle Rezessionsflächen sichtbar); der Verlauf oben in der Übersicht und die Erklärseiten bleiben bei 5 Jahren | Die letzte US-Rezession endete im April 2020; im 5-Jahres-Startbild wäre keine Fläche zu sehen |
 
 ---
 
@@ -727,9 +728,10 @@ Laut Bericht 6.3, soweit Daten vorhanden:
   - `fever/web/texts.py`: `contribution()` erzeugt die Schritte je Indikator aus der Konfiguration (Umrechnung, Perzentilfenster und Richtung, Mindesthistorie und Veraltung, Median im Bereich bzw. Mittel der Fallhöhe, Glättung, Stress, Diffusion, VIX/VIX3M-Regel, Konfidenzgewicht, Anzeigeperzentil); `views._role_today()` nennt den heutigen Anteil aus den gespeicherten Scores
   - 22 neue Texte (`fever/web/texts/`), dazu Erklärseiten aller 19 Indikatoren und der drei Blöcke; die Erklärseite eines Indikators enthält ebenfalls den Abschnitt „So fließt der Wert in den Bereich ein“
   - Hinweis unter jedem Verlauf (Übersicht, Bereiche, Erklärseiten): Je Beobachtung zählt der neueste Stand (Phase-1-Ausnahme aus `CLAUDE.md`, fehlte seit M6)
+  - Startzeitraum (E-61): Charts der Bereiche und Einzelreihen zeigen zu Beginn die ganze Historie (`Chart.full_history`); geprüft im Browser: Bereich Kredit/Funding und EBP ab 1990 mit vier Rezessionsflächen
 - **Korrigiert (Fehler seit M6):** „Historie ab“ im Steckbrief nahm bei Indikatoren aus mehreren Reihen das früheste Datum irgendeiner Reihe (VIX/VIX3M zeigte 1990, SOFR − IORB 2018). Jetzt `db.history_start()`: der erste Tag, an dem alle Reihen vorliegen (VIX/VIX3M 18.09.2009, SOFR − IORB 29.07.2021, VRP und Aktien-Anleihen-Korrelation 26.09.2016).
 - **Belege (Entwicklungsumgebung, 26.09.2026):**
-  - `pytest -q`: 373 passed; neu in `tests/test_web.py`: Rahmen mit genau den Indikatoren je Bereich (alle 19, alles zu Beginn geschlossen), Rahmen außerhalb des aktualisierten Inhalts und Callbacks registriert, Charts nur offen, Rezessionsflächen in Bereichs- und Indikator-Charts, Reihenfolge der Kopfzeilen, ohne Scores, Einflussschritte folgen der Konfiguration (geänderte Parameter ändern den Text), heutige Rolle, `history_start`, Erklärseite mit Einfluss, Hinweis zum neuesten Stand
+  - `pytest -q`: 375 passed; neu in `tests/test_web.py`: Startzeitraum (ganze Historie in den Bereichen, 5 Jahre auf den Erklärseiten), Rahmen mit genau den Indikatoren je Bereich (alle 19, alles zu Beginn geschlossen), Rahmen außerhalb des aktualisierten Inhalts und Callbacks registriert, Charts nur offen, Rezessionsflächen in Bereichs- und Indikator-Charts, Reihenfolge der Kopfzeilen, ohne Scores, Einflussschritte folgen der Konfiguration (geänderte Parameter ändern den Text), heutige Rolle, `history_start`, Erklärseite mit Einfluss, Hinweis zum neuesten Stand
   - Gegenprobe mit eingebauten Fehlern (`min` statt `max` in `history_start`, Bereich offen statt geschlossen, festes „10 Jahre“ im Text): jeweils ein Test rot
   - Browser (Chromium, 390 und 1440 px, hell und dunkel): Aufklappen von Bereich und Indikator, simulierte 5-Minuten-Aktualisierung (Abschnitte bleiben offen, 3 Charts bleiben), Zuklappen setzt `hidden`, Wiederaufklappen mit voller Chartbreite (328 bzw. 1218 px); keine Konsolenfehler. Datenmenge: Seitenaufruf 615 KB, Bereich Volatilität 536 KB, ein Indikator 447 KB
   - Scores unverändert (keine Änderung an Scoring, Schema, Dockerfile oder Compose)
@@ -881,9 +883,9 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (26.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt: Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-60; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026 (Scores identisch mit der Entwicklungsumgebung; Dashboard auf Port 8003 läuft laut Nutzer).
+  - Entscheidungen bis E-61; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026 (Scores identisch mit der Entwicklungsumgebung; Dashboard auf Port 8003 läuft laut Nutzer).
   - Nachtrag M6 (Commit `5593fea`): Rezessionsbalken (E-56, Reihe `usrec`, 61 Reihen in 33 Abrufgruppen) und vier Korrekturen aus der Sichtprüfung.
-  - M7a: vier Bereiche mit den 19 Score-Indikatoren auf der Übersicht, zwei Ebenen zum Aufklappen, Einfluss je Indikator, 22 neue Texte; Korrektur „Historie ab“; Hinweis zum neuesten Stand unter jedem Verlauf; 373 Tests grün. Beides noch nicht auf TrueNAS.
+  - M7a: vier Bereiche mit den 19 Score-Indikatoren auf der Übersicht, zwei Ebenen zum Aufklappen, Einfluss je Indikator, 22 neue Texte; Korrektur „Historie ab“; Hinweis zum neuesten Stand unter jedem Verlauf; Charts der Bereiche mit ganzer Historie (E-61); 375 Tests grün. Beides noch nicht auf TrueNAS.
   - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“); das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
   1. Update auf TrueNAS: `git pull`, Build, Stack in Dockge stoppen und starten (Compose unverändert, keine Migration), Sofort-Abruf; erwartet „61 Reihen, 0 mit Problemen“ (`docs/einrichtung.md`, Schritt 9).

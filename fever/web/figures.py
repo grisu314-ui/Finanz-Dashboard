@@ -85,6 +85,7 @@ class Chart:
     y_range: tuple[float, float] | None = None
     y_ticks: dict[float, str] = field(default_factory=dict)  # fixed tick labels, e.g. traffic light levels
     recessions: tuple[tuple[date, date], ...] = ()  # grey bars behind the lines (E-56)
+    full_history: bool = False  # start with the whole history instead of the last INITIAL_YEARS (E-61)
 
 
 def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go.Figure, dict]:
@@ -110,7 +111,7 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go
     shapes = []
     if last is not None:
         first = min(min(line.x) for line in chart.lines if line.x)
-        xaxis["range"] = [max(first, _years_before(last, INITIAL_YEARS)), last]
+        xaxis["range"] = [first if chart.full_history else max(first, _years_before(last, INITIAL_YEARS)), last]
         shapes = [
             {"type": "rect", "xref": "x", "yref": "paper", "x0": start, "x1": end, "y0": 0, "y1": 1,
              "fillcolor": palette["recession"], "line": {"width": 0}, "layer": "below"}

@@ -243,7 +243,8 @@ def _retrieved(indicator_id: str, fresh: dict) -> datetime | None:
 
 
 def _indicator_charts(kennzahl_id, theme, row, retrieved, prefix) -> list:
-    """Value and percentile over time, both with the recession bars (E-56, E-59)."""
+    """Value and percentile over time, both with the recession bars (E-56, E-59); in the areas with the
+    whole history from the start (E-61), on the Kennzahl page with the last years."""
     indicator = indicator_catalog()[kennzahl_id]
     history = db.indicator_history(kennzahl_id)
     shown = {"ok", "history"}
@@ -251,16 +252,17 @@ def _indicator_charts(kennzahl_id, theme, row, retrieved, prefix) -> list:
     source = ", ".join(sorted({SOURCE_NAMES.get(s.source, s.source) for s in indicator.series}))
     title = texts.text(kennzahl_id).title
     recessions = db.recessions()
+    full = prefix == "area"
     return [
         ui.chart_card(f"{prefix}-{kennzahl_id}-value", Chart(
             kennzahl_id, f"{title}: Wert", source,
             [Line("Wert", days, [r["value"] if r["status"] in shown else None for r in history], hover_decimals=2, shape="hv")],
-            "Wert", observed=row["obs_date"], retrieved=retrieved, recessions=recessions), theme),
+            "Wert", observed=row["obs_date"], retrieved=retrieved, recessions=recessions, full_history=full), theme),
         ui.chart_card(f"{prefix}-{kennzahl_id}-percentile", Chart(
             f"{kennzahl_id}-percentile", f"{title}: Perzentil", source,
             [Line("Perzentil", days, [r["percentile"] if r["status"] == "ok" else None for r in history], hover_decimals=0, shape="hv")],
             "Perzentil (0–100)", observed=row["obs_date"], retrieved=retrieved, y_range=(0, 100),
-            recessions=recessions), theme),
+            recessions=recessions, full_history=full), theme),
     ]
 
 
@@ -404,7 +406,7 @@ def area_chart(area: str, theme: str, now: datetime) -> list:
     chart = Chart(f"area-{area}", f"{head}: Verlauf", "eigene Berechnung (Scoring)",
                   [Line(name, days, [r[column] for r in history]) for column, name in columns],
                   "Wert (0–100)", observed=latest["score_date"], retrieved=latest["computed_at"], y_range=(0, 100),
-                  recessions=db.recessions())
+                  recessions=db.recessions(), full_history=True)
     return [ui.chart_card(f"area-{area}-history", chart, theme)]
 
 

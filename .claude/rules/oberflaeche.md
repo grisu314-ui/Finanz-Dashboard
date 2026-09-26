@@ -30,7 +30,7 @@ Details, Begründungen und Entscheidungsprotokoll (E-1 bis E-7): `docs/umsetzung
 
 ## Bereiche und Einzelreihen (M7a)
 - Die Bereiche stehen als statischer Rahmen außerhalb des alle 5 Minuten ersetzten Inhalts; nur so bleiben offene Abschnitte offen.
-- Charts entstehen nur für geöffnete Abschnitte (Callbacks mit `MATCH`); Auf- und Zuklappen setzt `hidden` im Browser und löst ein `resize` aus.
+- Charts entstehen nur für geöffnete Abschnitte (Callbacks mit `MATCH`); Auf- und Zuklappen setzt `hidden` im Browser und löst ein `resize` aus. Sie starten mit der ganzen Historie (`full_history`, E-61), alle übrigen Verläufe mit 5 Jahren.
 - „So fließt der Wert in den Bereich ein“ wird aus `series.toml` und `scoring.toml` erzeugt (`texts.contribution`); die heutige Rolle kommt aus den gespeicherten Scores, nie aus einer Berechnung im Web.
 - Unter jedem Verlauf steht der Hinweis, dass je Beobachtung der neueste Stand zählt (`views.HISTORY_NOTE`).
 
