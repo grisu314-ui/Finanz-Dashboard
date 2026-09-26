@@ -328,6 +328,8 @@ Den Ordner `alt-…` erst löschen, wenn das Dashboard wieder korrekt läuft. Ze
 | Einzelne Quelle veraltet | Ansicht „Datenstand“ im Dashboard: letzter Erfolg, letzter Versuch, letzter Fehler je Quelle |
 | Dienst „unhealthy“ | `docker compose ps` zeigt den Containernamen; dann `docker inspect --format '{{json .State.Health}}' <containername>` |
 | Speicher voll | `df -h /srv/fever/data` |
+| Im Log steht `api_key=***` | Gewollt: Der FRED-Schlüssel wird in Logs und Fehlermeldungen nie ausgegeben |
+| Log-Zeilen „Abruf fehlgeschlagen …, Versuch 1/3“ | Einzelne Aussetzer sind normal; der Abruf wird bis zu dreimal versucht. Erst „nach 3 Versuchen“ ist ein echter Fehler, sichtbar im Datenstand |
 | Werte fälschlich „veraltet“ | Uhrzeit: `timedatectl` (Schritt 2.3) |
 
 Logs werden in der Größe begrenzt (Compose-Einstellung), damit sie die SSD nicht füllen.

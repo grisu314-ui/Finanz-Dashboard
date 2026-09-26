@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 25.09.2026 · Status: **M0 und M1 erledigt** · Nächster Schritt: M2 (Voraussetzungen in Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 und M1 erledigt, M2 Teil A (HTTP-Client) erledigt** · Nächster Schritt: M2 Teil B (Voraussetzungen in Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -18,7 +18,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 |---|---|---|---|---|
 | M0 | Projektgerüst, Image, Compose | ☑ 25.09.2026 | – | erteilt 25.09.2026 |
 | M1 | Speicher, Migrationen, Backup | ☑ 25.09.2026 | M0, Schema-Freigabe, W-5 | erteilt 25.09.2026 |
-| M2 | HTTP-Client, Serienkatalog, Quellen Cboe und FRED/ALFRED | ☐ | M1, L-5, L-10 (betroffene Reihen) | ja |
+| M2 | HTTP-Client, Serienkatalog, Quellen Cboe und FRED/ALFRED | ◐ Teil A ☑ 26.09.2026 | M1, L-5, L-10 (betroffene Reihen), Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026 |
 | M3 | Worker und erste Inbetriebnahme auf dem Pi (ICE-Archiv startet) | ☐ | M2 | ja |
 | M4 | Weitere Quellen: CFTC, EZB, OFR, EBP, Shiller-CAPE, FINRA | ☐ | M3, L-10 | ja |
 | M5 | Scoring Schritte 1–6, Aggregation Stufe 1 | ☐ | M4, L-1 bis L-9, L-11, L-12 | ja (Scoring) |
@@ -217,6 +217,24 @@ Für jeden Meilenstein gilt die Definition of Done:
 - Plausibilitätsverletzung wird geloggt und nicht gespeichert
 - Allowlist lehnt fremde Hosts ab
 - API-Schlüssel erscheint nie im Log
+
+**Ergebnis Teil A (26.09.2026, erledigt): zentraler HTTP-Client `fever/http.py`**
+- **Umgesetzt wie freigegeben:**
+  - Allowlist mit Mindestabstand je Host: `cdn.cboe.com` und `api.stlouisfed.org`, je 1 s
+  - nur HTTPS auf Standardport, ohne Benutzerangabe in der URL
+  - Weiterleitungen folgt der Client selbst, höchstens 3, jede Station wird gegen die Allowlist geprüft
+  - Timeouts 10 s / 60 s
+  - 3 Versuche bei Verbindungsfehler, Timeout, 429 und 5xx; Wartezeit 2 s, dann 4 s, `Retry-After` beachtet und auf 60 s gedeckelt
+  - andere Statuscodes sofort als Fehler; nur HTTP 200 gilt als Erfolg
+  - User-Agent `Fieberthermometer/0.1.0 (private, non-commercial)`
+- **Schlüssel-Schutz:**
+  - `fever/log.py` maskiert den Wert von `FRED_API_KEY` in jeder formatierten Logzeile, auch in Tracebacks und Meldungen fremder Bibliotheken.
+  - `FetchError`-Texte sind maskiert. Ungültige URLs werden ohne Exception-Verkettung gemeldet.
+  - Anlass (getestet): `requests` und urllib3 schreiben die URL samt `api_key` in Exception-Texte und Retry-Warnungen.
+- **Belege:**
+  - `pytest -q`: 70 passed (21 davon für den HTTP-Client)
+  - Gegenprobe mit acht absichtlich eingebauten Fehlern, jeder erkannt: keine Maskierung im Client, Formatter ohne Maskierung, Allowlist aus, HTTP erlaubt, 404 wiederholt, kein Ratenlimit, `Retry-After` ignoriert, automatisches Folgen von Weiterleitungen
+- **Nicht geprüft:** echte Abrufe; die folgen in Teil B, sobald die Hosts freigegeben sind. Dockerfile und Compose sind unverändert, daher keine neue arm64-Probe.
 
 ### M3 – Worker und erste Inbetriebnahme auf dem Pi
 
@@ -435,13 +453,12 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 ## 9. Übergabe an die nächste Sitzung
 
-- **Stand (25.09.2026):** M0 und M1 erledigt: Image (arm64 geprüft), Compose, Konfiguration, Speicher mit Migration, Schutz des Archivs, Backup und Wiederherstellung, 49 Tests grün. Noch keine Quellen, kein Worker, keine Oberfläche.
-- **Nächster Schritt:** M2. Voraussetzungen:
+- **Stand (26.09.2026):** M0, M1 und M2 Teil A erledigt: Image (arm64 geprüft), Compose, Konfiguration, Speicher mit Migration, Schutz des Archivs, Backup und Wiederherstellung, zentraler HTTP-Client mit Schlüssel-Maskierung, 70 Tests grün. Noch keine Quellen, kein Worker, keine Oberfläche.
+- **Nächster Schritt:** M2 Teil B (Quellen Cboe und FRED). Voraussetzungen:
   1. **Netzwerk der Cloud-Entwicklungsumgebung** (nur für KI-Sitzungen; der Pi ist nicht betroffen): Die Quellen-Hosts stehen nicht auf der Allowlist („Host not in allowlist“, geprüft 25.09.2026). Der Nutzer ergänzt sie in den Umgebungseinstellungen unter Network access. Für M2: `cdn.cboe.com`, `api.stlouisfed.org`. Für M4 später: `publicreporting.cftc.gov`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `www.finra.org` und der Host des Shiller-Datensatzes (in M4 prüfen).
   2. **FRED-Schlüssel für Testabrufe:** als Umgebungsvariable `FRED_API_KEY` in den Einstellungen der Cloud-Umgebung. Nie im Chat und nie im Repo. Die `.env` wird nie gelesen.
   3. **Fachliche Entscheidungen:** L-5 (Toleranzen) und L-10 für die ersten Reihen, per Auswahlfrage.
   4. Plan für M2 vorlegen (`CLAUDE.md`, Arbeitsweise 1–2).
-- **Ohne Netz möglich:** HTTP-Client (Allowlist, Timeouts, Backoff, Maskierung des Schlüssels) mit Tests gegen einen Fake-Transport.
 - **Offene Entscheidungen des Nutzers:** O-1, O-2, O-4, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 (Abschnitt 5), Betriebs-Branch (M3).
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), arm64-Probe und Compose-Tests siehe Abschnitt 10; Betriebsbefehle in `docs/einrichtung.md`, Abschnitt 12.
 
@@ -484,4 +501,11 @@ Stand 25.09.2026, erprobt in der Claude-Code-Cloud-Umgebung. Die Umgebung ist ei
      --build-arg HTTPS_PROXY --build-arg HTTP_PROXY --load -t fever:probe-arm64 .
    ```
 6. **Compose prüfen ohne `.env`** (die echte `.env` wird nie gelesen): eine Testdatei mit Platzhaltern im Scratchpad anlegen und `docker compose --env-file <scratch>/probe.env config` aufrufen.
-7. **Abhängigkeiten ändern:** im arm64-Container mit `pip install --only-binary=:all: -r <direkte Pakete>` auflösen, `pip freeze` übernehmen, direkte Pakete mit Zweckkommentar oben in `requirements.txt`, transitive darunter.
+7. **Echte Abrufe in Containern** (Teil B): Proxy-Variablen, Zertifikat und Schlüssel durchreichen, ohne ihn anzuzeigen:
+   ```bash
+   docker run --rm --network host -e HTTPS_PROXY -e HTTP_PROXY -e FRED_API_KEY \
+     -e REQUESTS_CA_BUNDLE=/ca.crt -v /root/.ccr/ca-bundle.crt:/ca.crt:ro -v "$PWD":/src fever-devtest python …
+   ```
+   `requests` nutzt sonst sein eigenes Zertifikatsbündel und scheitert am Proxy. Große Antworten erst in eine Datei schreiben und nur Anfang und Ende ansehen (`CLAUDE.md`).
+8. **Nach einem Neustart der Cloud-Umgebung** sind Docker-Daemon, QEMU-Registrierung und Hilfs-Images weg. Die Schritte 1, 2 und 4 wiederholen; am 26.09.2026 dauerte das rund 2 Minuten.
+9. **Abhängigkeiten ändern:** im arm64-Container mit `pip install --only-binary=:all: -r <direkte Pakete>` auflösen, `pip freeze` übernehmen, direkte Pakete mit Zweckkommentar oben in `requirements.txt`, transitive darunter.

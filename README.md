@@ -6,7 +6,7 @@ Zweck ist Regime- und Risikoanzeige, **keine Crash-Prognose, keine Handelssignal
 
 ## Status
 
-Stand 25.09.2026: **M0 und M1 erledigt**: Projektgerüst, Docker-Image für den Pi, Datenbank mit geschütztem Archiv, Backup und Wiederherstellung. Noch nicht lauffähig: Datenabruf (ab M2/M3) und Oberfläche (ab M6). Fortschritt: `docs/umsetzungsplan.md`, Abschnitt 1.
+Stand 26.09.2026: **M0, M1 und M2 Teil A erledigt**: Projektgerüst, Docker-Image für den Pi, Datenbank mit geschütztem Archiv, Backup und Wiederherstellung, abgesicherter HTTP-Client. Noch nicht lauffähig: Datenabruf (ab M2/M3) und Oberfläche (ab M6). Fortschritt: `docs/umsetzungsplan.md`, Abschnitt 1.
 
 ## Dokumentation
 
