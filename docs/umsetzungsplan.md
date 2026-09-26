@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3 umgesetzt, Einrichtung auf TrueNAS offen** · Nächster Schritt: Einrichtung nach `docs/einrichtung.md` (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3: Worker läuft auf TrueNAS** · Nächster Schritt: erste Werktags-Abrufe prüfen (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -19,7 +19,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M0 | Projektgerüst, Image, Compose | ☑ 25.09.2026 | – | erteilt 25.09.2026 |
 | M1 | Speicher, Migrationen, Backup | ☑ 25.09.2026 | M0, Schema-Freigabe, W-5 | erteilt 25.09.2026 |
 | M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ☑ 26.09.2026 | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B erteilt 26.09.2026 |
-| M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ◐ umgesetzt 26.09.2026, Einrichtung auf TrueNAS offen | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
+| M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ◐ läuft auf TrueNAS seit 26.09.2026; offen: erste Werktags-Abrufe, Schritt 9 | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
 | M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, FINRA, VX-Futures | ☐ | M3 | ja |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☐ | M4, L-1 bis L-12 | ja (Scoring) |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☐ | M1 (Lesen), M3 (Heartbeat) | ja |
@@ -68,6 +68,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-31 | Abrufplan des Workers | Jede Reihe einmal pro New-Yorker Werktag ab `release_time`; nach einem Fehler stündlich erneut. Tägliche Reihen zusätzlich stündlich bis Tagesende New York, solange der bis jetzt erwartete Wert fehlt. Nach einem Neustart wird nachgeholt | Etwa 23 Vollabrufe pro Werktag plus Nachfassen an Feiertagen und bei Verspätung. An Wochenenden keine Abrufe. Das Nachfassen berechnet den erwarteten Wert mit `lag_days` (E-23) |
 | 26.09.2026 | E-32 | Compose-Dateien | Zwei Dateien (Empfehlung war eine): `docker-compose.yml` nur zum Bauen im Projektverzeichnis, `compose.dockge.yaml` für den Betrieb in Dockge | Beide nutzen `fever:local`; ein Test prüft Image, Build-Freiheit der Laufzeit-Datei und die `.env`-Variablen. Die Kopie in Dockge muss nach Änderungen an `compose.dockge.yaml` von Hand nachgezogen werden |
 | 26.09.2026 | E-33 | Healthcheck-Grenze des Workers | 45 Minuten Heartbeat-Alter (drei Takte) | Gilt ab M6 auch für den Hinweis „Worker ohne Lebenszeichen“ |
+| 26.09.2026 | E-34 | Namen auf TrueNAS | Bleiben wie angelegt: Dataset `feewer`, Dockge-Stack `finanz-dashboard` (Container `finanz-dashboard-worker-1`) | Anleitung, `CLAUDE.md` und Befehle auf diese Namen umgestellt |
 
 ---
 
@@ -404,7 +405,8 @@ Für jeden Meilenstein gilt die Definition of Done:
   - Abrufe im laufenden Worker: Der Probelauf war an einem Samstag, nach E-31 ist dann nichts fällig. Der Abrufweg selbst ist mit echten Daten in M2 geprüft.
   - Der Docker-Healthcheck-Status (erste Prüfung nach 5 Minuten); geprüft ist der Befehl selbst im Container.
   - Alles auf TrueNAS: ob `git` vorhanden ist, `sudo docker`, das Anlegen des Datasets, Dockge mit `.env`, `timedatectl`. Die Anleitung markiert diese Schritte mit ⏳.
-- **Offen bis ☑:** Einrichtung auf TrueNAS durch den Nutzer nach `docs/einrichtung.md`, erster Werktag mit Abrufen, dann Prüfung der Veröffentlichungszeiten aus dem Rohdatenarchiv (Schritt 9).
+- **Inbetriebnahme auf TrueNAS (26.09.2026, Nutzer):** Stack `finanz-dashboard`, Container `finanz-dashboard-worker-1` „Up (healthy)“, Healthcheck „gesund“. Dataset-Name `feewer` und Stack-Name bleiben (E-34). Der Klon in das schon vorhandene Dataset scheiterte an `git clone` (nicht leeres Verzeichnis); die Anleitung nutzt seitdem `git init` + `fetch` + `checkout`.
+- **Offen bis ☑:** erster Werktag mit Abrufen, dann Prüfung der Veröffentlichungszeiten aus dem Rohdatenarchiv (Schritt 9).
 
 ### M4 – Weitere Quellen
 
@@ -614,10 +616,10 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (26.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt (178 Tests grün): Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-33.
-  - Noch nicht auf TrueNAS eingerichtet; das ICE-Archiv beginnt mit dem ersten Werktag im Betrieb.
+  - Entscheidungen bis E-34.
+  - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“). Nach dem Abrufplan sind die ersten Abrufe am Montag, 28.09.; ein Sofort-Abruf am Wochenende sichert die ältesten Tage des ICE-Fensters (`docs/einrichtung.md`, Schritt 7).
 - **Nächster Schritt:**
-  1. Der Nutzer richtet TrueNAS nach `docs/einrichtung.md` ein und meldet Ausgaben bzw. Fehler; die KI markiert geprüfte Schritte mit ✅ und Datum.
+  1. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen (Nutzer schickt Ausgaben).
   2. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit.
   3. Danach M4 (weitere Quellen); vorher Plan und Freigabe.
 - **Hinweise:**

@@ -61,11 +61,12 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
 - `docker build .`: Build-Probe auf dem Entwicklungsrechner (x86_64 wie TrueNAS; Cloud-Umgebung: `docs/umsetzungsplan.md`, Abschn. 10)
 - Betrieb auf TrueNAS (Details: `docs/einrichtung.md`); Projektverzeichnis `/mnt/Daten-Z1/apps/feewer`, Datenordner dort `data/`:
   - Build: `sudo docker compose build` im Projektverzeichnis (Bau-Datei `docker-compose.yml`, E-32)
-  - Start, Stopp, Update: Dockge-Stack `fever` aus einer Kopie von `compose.dockge.yaml` mit eigener `.env`
+  - Start, Stopp, Update: Dockge-Stack `finanz-dashboard` aus einer Kopie von `compose.dockge.yaml` mit eigener `.env`
   - Einmal-Container: `RUN='sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v /mnt/Daten-Z1/apps/feewer/data:/data fever:local'`
   - Migration, auch bei der Ersteinrichtung: Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten; Stand: `$RUN alembic current`
-  - Sofort-Backup bei laufendem Stack: `sudo docker exec fever-worker-1 python -m fever.backup`
-  - Log: `sudo docker logs -f fever-worker-1`
+  - Sofort-Backup bei laufendem Stack: `sudo docker exec finanz-dashboard-worker-1 python -m fever.backup`
+  - Log: `sudo docker logs -f finanz-dashboard-worker-1`
+  - Sofort-Abruf aller Reihen (unabhängig vom Abrufplan): `docs/einrichtung.md`, Schritt 7
 
 ## Architektur
 
@@ -195,7 +196,7 @@ Vor der Umsetzung des betroffenen Teils klären; Entschiedenes hier mit Antwort 
 | Nr. | Frage | Bis zur Entscheidung |
 |---|---|---|
 | O-1 | Kursquelle für ETFs und Indexmitglieder (RSP/SPY, Sektor- und Größenverhältnisse, Breite). FRED `SP500` reicht nur 10 Jahre zurück, genügt aber für VRP und Aktien-Anleihen-Korrelation | VRP und Korrelation aus FRED `SP500`; übrige Indikatoren weglassen, keine Quelle selbst wählen |
-| O-2 | Zielsystem, RAM, Speichermedium, Pfad des Datenordners | **Entschieden 26.09.2026 (E-21, E-28, E-29):** TrueNAS 25.10.7 statt Pi (Pi: CM4 mit 1,8 GiB RAM, SD-Karte mit 2,6 GB frei). Projekt `/mnt/Daten-Z1/apps/feewer`, Datenordner Kind-Dataset `data/`, Container als `apps` 568:568, Dockge-Stack `fever`, Betrieb vom Branch `claude-testing` (E-30) |
+| O-2 | Zielsystem, RAM, Speichermedium, Pfad des Datenordners | **Entschieden 26.09.2026 (E-21, E-28, E-29):** TrueNAS 25.10.7 statt Pi (Pi: CM4 mit 1,8 GiB RAM, SD-Karte mit 2,6 GB frei). Projekt `/mnt/Daten-Z1/apps/feewer`, Datenordner Kind-Dataset `data/`, Container als `apps` 568:568, Dockge-Stack `finanz-dashboard` (E-34), Betrieb vom Branch `claude-testing` (E-30); Worker läuft seit 26.09.2026 |
 | O-3 | Zugang: nur Heimnetz oder Tailscale, ggf. mit Basic-Auth-Pforte | **Entschieden 25.09.2026:** nur Heimnetz, kein Passwort; Port an `0.0.0.0`; keine Portweiterleitung im Router |
 | O-4 | Backup-Ziel außerhalb des Servers | **Entschieden 26.09.2026 (E-22):** Backups bleiben im Datenordner auf TrueNAS, kein weiteres Ziel; Aufwand für Backups gering halten |
 | O-5 | ICE-Spreads: drei Jahre Historie bei fünf Jahren Mindesthistorie; betrifft Kreditblock und Rot-Regel. Optionen: BAA10Y (FRED, täglich ab 1986, Moody's-Lizenz) als langer Ersatz, Lizenz direkt bei ICE, befristete Ausnahme mit Kennzeichnung | archivieren und anzeigen, nicht in den Score |

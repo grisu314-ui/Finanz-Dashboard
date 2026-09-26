@@ -1,6 +1,6 @@
 # Einrichtung und Betrieb auf TrueNAS mit Dockge
 
-Stand: 26.09.2026 · Für: dich als Anwender · Status: **M3 umgesetzt, Einrichtung auf TrueNAS steht aus.** Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Auf TrueNAS ist noch nichts ausgeführt. Die Oberfläche folgt mit Meilenstein M6 (siehe `docs/umsetzungsplan.md`).
+Stand: 26.09.2026 · Für: dich als Anwender · Status: **Worker läuft auf TrueNAS seit 26.09.2026 („healthy“).** Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind zusätzlich in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Die Oberfläche folgt mit Meilenstein M6 (siehe `docs/umsetzungsplan.md`).
 
 Markierungen:
 - ✅ geprüft: ausgeführt, mit Datum und Ort
@@ -16,7 +16,7 @@ Festgelegt (Entscheidungen E-21, E-28 bis E-33 vom 26.09.2026):
 | Benutzer der Container | `apps`, UID/GID 568:568 |
 | Branch | `claude-testing` |
 | Web-Port (ab M6) | 8003 |
-| Dockge-Stack | Name `fever` (Vorschlag; die Containernamen unten setzen ihn voraus) |
+| Dockge-Stack | Name `finanz-dashboard`, Container `finanz-dashboard-worker-1` (die Befehle unten setzen ihn voraus) |
 
 Befehle stehen in grauen Kästen. Was nach `#` folgt, ist ein Kommentar und wird nicht mit eingegeben. Die Befehle laufen in der TrueNAS-Shell als `admin`.
 
@@ -25,7 +25,7 @@ Befehle stehen in grauen Kästen. Was nach `#` folgt, ist ein Kommentar und wird
 ## 0. Überblick
 
 - **Build:** Das Image `fever:local` wird im Projektverzeichnis mit `docker-compose.yml` gebaut (Bau-Datei, startet nichts).
-- **Betrieb:** Dockge startet den Stack `fever` aus einer Kopie von `compose.dockge.yaml`. Einstellungen und der FRED-Schlüssel stehen in der `.env` dieses Stacks.
+- **Betrieb:** Dockge startet den Stack `finanz-dashboard` aus einer Kopie von `compose.dockge.yaml`. Einstellungen und der FRED-Schlüssel stehen in der `.env` dieses Stacks.
 - **Container:**
   - `worker` holt Marktdaten nach Veröffentlichungsplan (America/New_York), speichert sie, schreibt alle 15 Minuten ein Lebenszeichen und legt täglich ein Backup an.
   - `web` (die Oberfläche) folgt mit M6.
@@ -137,7 +137,7 @@ Quelle der Schritte: FRED-Dokumentation zum API-Schlüssel, per Websuche am 25.0
 
 ## 5. Image bauen
 
-✅ 26.09.2026, Entwicklungsumgebung: Build desselben Dockerfiles (x86_64, 42 s), Image 125 MB, Benutzer `fever`. ⏳ auf TrueNAS.
+✅ 26.09.2026, TrueNAS (Worker läuft mit diesem Image); zuvor Entwicklungsumgebung: x86_64, 42 s, Image 125 MB.
 
 ```bash
 cd /mnt/Daten-Z1/apps/feewer
@@ -149,7 +149,7 @@ sudo docker image ls fever    # erwartet: fever   local   …
 
 ## 6. Datenbank anlegen
 
-✅ 26.09.2026, Entwicklungsumgebung (als UID 568). ⏳ auf TrueNAS.
+✅ 26.09.2026, TrueNAS (der Worker startet nur mit Datenbank); zuvor Entwicklungsumgebung als UID 568.
 
 Einmalig vor dem ersten Start. Der Hilfsbefehl `$RUN` startet einen Einmal-Container mit dem Datenordner. Er wird unten mehrfach verwendet; nach einem neuen Login in der Shell muss er neu gesetzt werden:
 
@@ -165,9 +165,9 @@ Ohne diesen Schritt startet der Worker nicht, sondern meldet im Log „Datenbank
 
 ## 7. Dockge-Stack anlegen und starten
 
-✅ 26.09.2026, Entwicklungsumgebung mit `docker compose` statt Dockge: Start, Backup, Healthcheck „gesund“, Stopp in unter 1 s. ⏳ mit Dockge auf TrueNAS.
+✅ 26.09.2026, TrueNAS mit Dockge: Container `finanz-dashboard-worker-1` „Up (healthy)“, Healthcheck „gesund: letzter Heartbeat vor 2 Minuten“. Zuvor Entwicklungsumgebung: Stopp in unter 1 s.
 
-1. In Dockge „+ Compose“, Stack-Name `fever`.
+1. In Dockge „+ Compose“, Stack-Name `finanz-dashboard`.
 2. Als `compose.yaml` den Inhalt von `compose.dockge.yaml` einfügen:
    ```bash
    cat /mnt/Daten-Z1/apps/feewer/compose.dockge.yaml
@@ -190,16 +190,24 @@ Ein fehlender Datenordner ist ein Fehler und wird nicht stillschweigend angelegt
 Prüfen:
 
 ```bash
-sudo docker logs --tail 20 fever-worker-1
+sudo docker logs --tail 20 finanz-dashboard-worker-1
 #   erwartet u. a.: INFO __main__: Worker gestartet: 23 Reihen, Takt 15 Minuten
 #                   INFO __main__: Tägliches Backup erstellt und geprüft: fever-…-daily.sqlite3
-sudo docker exec fever-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"
+sudo docker exec finanz-dashboard-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"
 #   erwartet: gesund: letzter Heartbeat vor 0 Minuten
 ```
 
 Dockge zeigt den Worker nach spätestens rund 5 Minuten als „healthy“; vorher steht dort „starting“.
 
 **Wann die ersten Daten kommen:** Der Worker ruft jede Reihe an New-Yorker Werktagen ab ihrer Veröffentlichungszeit ab (E-31); an Wochenenden ruft er nichts ab. Als Erstes kommt SOFR um 08:15 New York (derzeit 14:15 Uhr deutscher Zeit). Im Log steht dann z. B. `INFO fever.sources.update: sofr: 2118 neue Zeilen (Erstabruf)`. Das lokale ICE-Archiv beginnt mit dem ersten Abruf der ICE-Reihen um 10:15 New York (derzeit 16:15 Uhr).
+
+**Sofort-Abruf** (✅ 26.09.2026, Entwicklungsumgebung: 23 Reihen in 23 s): ruft alle Reihen einmal sofort ab, unabhängig vom Abrufplan. Sinnvoll nach der Einrichtung an einem Wochenende: FRED liefert die ICE-Spreads nur für drei Jahre rückwirkend, jeder Tag Warten kostet den ältesten Tag. Doppelte Abrufe schaden nicht; unveränderte Werte werden nicht erneut gespeichert.
+
+```bash
+sudo docker exec finanz-dashboard-worker-1 python -c "from fever import log; log.setup(); from fever.config import series_catalog; from fever.http import HttpClient; from fever.sources.update import update_series; from fever.store.db import data_dir, make_engine; d = data_dir(); e = make_engine(d); c = HttpClient(); [update_series(e, d, c, s) for s in series_catalog().values()]"
+#   erwartet je Reihe eine Zeile, z. B.: INFO fever.sources.update: bamlh0a0hym2: 787 neue Zeilen (Erstabruf)
+#   ein zweiter Lauf meldet "0 neue Zeilen"
+```
 
 ## 8. Dashboard aufrufen ⏳ (ab M6)
 
@@ -217,10 +225,10 @@ cd /mnt/Daten-Z1/apps/feewer
 git pull
 git diff --stat HEAD@{1} -- compose.dockge.yaml .env.example    # Ausgabe? Dann Schritt 7.2/7.3 wiederholen
 sudo docker compose build
-# in Dockge: Stack "fever" stoppen
+# in Dockge: Stack "finanz-dashboard" stoppen
 $RUN python -m fever.backup        # Sicherung vor der Migration
 $RUN alembic upgrade head
-# in Dockge: Stack "fever" starten
+# in Dockge: Stack "finanz-dashboard" starten
 ```
 
 ## 10. Backup und Wiederherstellung
@@ -239,7 +247,7 @@ Backups liegen in `/mnt/Daten-Z1/apps/feewer/data/backup/` und werden vor dem Ab
 Andere Dateien in `backup/` werden nie gelöscht. Sofortiges Backup bei laufendem Stack:
 
 ```bash
-sudo docker exec fever-worker-1 python -m fever.backup
+sudo docker exec finanz-dashboard-worker-1 python -m fever.backup
 #   erwartet: … INFO __main__: Backup erstellt und geprüft: /data/backup/fever-…-manual.sqlite3
 sudo ls -lh /mnt/Daten-Z1/apps/feewer/data/backup/
 ```
@@ -253,7 +261,7 @@ Bei gestopptem Stack stattdessen `$RUN python -m fever.backup`. Bei einem Fehler
 Nie eine laufende Datenbank überschreiben. Die Datenbank heißt `fever.sqlite3`. Nach einem Absturz können daneben `fever.sqlite3-wal` und `fever.sqlite3-shm` liegen; sie gehören zur alten Datei und müssen mit weg. Die Kopie läuft über `$RUN`, damit sie `apps` gehört.
 
 ```bash
-# in Dockge: Stack "fever" stoppen
+# in Dockge: Stack "finanz-dashboard" stoppen
 D=/mnt/Daten-Z1/apps/feewer/data
 sudo ls -l $D $D/backup                        # was liegt da? gewünschtes Backup aussuchen
 ALT=$D/alt-$(date +%F)
@@ -262,7 +270,7 @@ sudo mv $D/fever.sqlite3 "$ALT"/
 sudo sh -c "mv $D/fever.sqlite3-* '$ALT'/ 2>/dev/null; true"
 $RUN cp /data/backup/<backup-datei> /data/fever.sqlite3
 $RUN alembic current                           # erwartet: "0001 (head)" oder neuer
-# in Dockge: Stack "fever" starten
+# in Dockge: Stack "finanz-dashboard" starten
 ```
 
 Den Ordner `alt-…` erst löschen, wenn wieder alles korrekt läuft. Zeigt `alembic current` kein `(head)`, stammt das Backup von vor einer Migration: dann `$RUN alembic upgrade head` ausführen.
@@ -271,8 +279,8 @@ Den Ordner `alt-…` erst löschen, wenn wieder alles korrekt läuft. Zeigt `ale
 
 | Symptom | Prüfen |
 |---|---|
-| Worker startet immer wieder neu | `sudo docker logs --tail 50 fever-worker-1`. „Datenbank fehlt“: Schritt 6. „Datenordner fehlt“ oder „Permission denied“: Schritt 3.3 |
-| Worker „unhealthy“ | Das Lebenszeichen ist älter als 45 Minuten (E-33). `sudo docker inspect --format '{{json .State.Health}}' fever-worker-1`, dazu das Log |
+| Worker startet immer wieder neu | `sudo docker logs --tail 50 finanz-dashboard-worker-1`. „Datenbank fehlt“: Schritt 6. „Datenordner fehlt“ oder „Permission denied“: Schritt 3.3 |
+| Worker „unhealthy“ | Das Lebenszeichen ist älter als 45 Minuten (E-33). `sudo docker inspect --format '{{json .State.Health}}' finanz-dashboard-worker-1`, dazu das Log |
 | Keine neuen Werte | Wochenende oder US-Feiertag? Sonst Log: Zeilen mit „Nichts gespeichert“ oder „verworfen“ nennen Reihe und Grund |
 | Einzelne Quelle veraltet | ab M6 Ansicht „Datenstand“: letzter Erfolg, letzter Versuch, letzter Fehler je Quelle |
 | Speicher | `zfs list -o name,used,avail Daten-Z1/apps/feewer/data` |
@@ -284,15 +292,16 @@ Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
 
 ## 12. Befehlsübersicht
 
-`$RUN` wie in Schritt 6; Containername bei Stack-Name `fever`.
+`$RUN` wie in Schritt 6; Containername bei Stack-Name `finanz-dashboard`.
 
 | Zweck | Befehl | Status |
 |---|---|---|
-| Image bauen | `cd /mnt/Daten-Z1/apps/feewer && sudo docker compose build` | ✅ Dockerfile-Build Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
+| Image bauen | `cd /mnt/Daten-Z1/apps/feewer && sudo docker compose build` | ✅ TrueNAS 26.09.2026 |
 | Datenbank anlegen / migrieren | `$RUN alembic upgrade head` | ✅ Entwicklungsumgebung 26.09.2026 (UID 568) |
 | Stand der Datenbank | `$RUN alembic current` | ✅ Entwicklungsumgebung 25.09.2026 |
-| Start, Stopp | Dockge, Stack `fever` | ✅ mit `docker compose` Entwicklungsumgebung 26.09.2026, ⏳ Dockge |
-| Worker-Log | `sudo docker logs -f fever-worker-1` | ⏳ |
-| Healthcheck von Hand | `sudo docker exec fever-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"` | ✅ Entwicklungsumgebung 26.09.2026 |
-| Sofort-Backup | `sudo docker exec fever-worker-1 python -m fever.backup` (Stack gestoppt: `$RUN python -m fever.backup`) | ✅ Entwicklungsumgebung 25.09.2026 |
+| Start, Stopp | Dockge, Stack `finanz-dashboard` | ✅ TrueNAS 26.09.2026 (Start) |
+| Worker-Log | `sudo docker logs -f finanz-dashboard-worker-1` | ⏳ |
+| Healthcheck von Hand | `sudo docker exec finanz-dashboard-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"` | ✅ TrueNAS 26.09.2026 |
+| Sofort-Abruf aller Reihen | siehe Schritt 7, „Sofort-Abruf“ | ✅ Entwicklungsumgebung 26.09.2026 |
+| Sofort-Backup | `sudo docker exec finanz-dashboard-worker-1 python -m fever.backup` (Stack gestoppt: `$RUN python -m fever.backup`) | ✅ Entwicklungsumgebung 25.09.2026 |
 | Migration (Ablauf) | Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten | ⏳ |
