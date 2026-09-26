@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0, M1 und M2 erledigt** · Zielsystem seit E-21: TrueNAS · Nächster Schritt: M3 (Voraussetzungen in Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3 umgesetzt, Einrichtung auf TrueNAS offen** · Nächster Schritt: Einrichtung nach `docs/einrichtung.md` (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -19,7 +19,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M0 | Projektgerüst, Image, Compose | ☑ 25.09.2026 | – | erteilt 25.09.2026 |
 | M1 | Speicher, Migrationen, Backup | ☑ 25.09.2026 | M0, Schema-Freigabe, W-5 | erteilt 25.09.2026 |
 | M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ☑ 26.09.2026 | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B erteilt 26.09.2026 |
-| M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ☐ | M2, Angaben zu TrueNAS (M3, Schritt 5) | ja |
+| M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ◐ umgesetzt 26.09.2026, Einrichtung auf TrueNAS offen | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
 | M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, FINRA, VX-Futures | ☐ | M3 | ja |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☐ | M4, L-1 bis L-12 | ja (Scoring) |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☐ | M1 (Lesen), M3 (Heartbeat) | ja |
@@ -62,6 +62,12 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-25 | IORB-Werte mit Datum in der Zukunft | Bis 7 Tage voraus zulassen (Feld `lead_days`, Standard 0) | Der angekündigte Satz wird gespeichert, sobald FRED ihn listet. Bei allen anderen Reihen bleibt ein Zukunftsdatum ein Fehler |
 | 26.09.2026 | E-26 | Cboe-CSV trotz unklarer Speicherklausel in den Nutzungsbedingungen | Weiter verwenden | Private, nicht kommerzielle Nutzung, ein Abruf je Datei und Tag, keine Weitergabe. Die Auslegungsfrage bleibt als Risiko (Abschnitt 8) |
 | 26.09.2026 | E-27 | Echte ICE- und Cboe-Werte in Fixtures des öffentlichen Repos (W-9) | Fixtures lizenzierter Quellen mit Originalformat und synthetischen Werten; den betroffenen Commit ersetzen (Force-Push auf `claude-testing`) | Die Werte sind aus der Branch-Historie entfernt; GitHub hält den alten Commit über seine ID noch eine Weile abrufbar. Regel in `CLAUDE.md` (Neue Quelle) ergänzt |
+| 26.09.2026 | E-28 | Datenordner auf TrueNAS | Kind-Dataset `data` im Projekt-Dataset: `/mnt/Daten-Z1/apps/feewer/data` (Dataset-Name `feewer` wie angelegt) | Von Git und Docker-Build über `data*/` ignoriert. Eigene Rechte und bei Bedarf eigene Snapshots. `git clean -fdx` im Projektverzeichnis würde Datenbank und Backups löschen; Warnung in Anleitung und `CLAUDE.md` |
+| 26.09.2026 | E-29 | Benutzer der Container | TrueNAS `apps`, 568:568, über `user:` in der Laufzeit-Compose aus der `.env` | Kein Neubau des Images für eine andere UID nötig. Kopieren und Wiederherstellen per `sudo` bzw. Einmal-Container |
+| 26.09.2026 | E-30 | Betriebs-Branch | `claude-testing` direkt (Empfehlung war `main` mit PR je Meilenstein) | Jeder Push ist beim nächsten `git pull` auf TrueNAS im Betrieb. Auf `claude-testing` nur geprüften Stand pushen (Tests, bei Compose/Dockerfile Build-Probe) |
+| 26.09.2026 | E-31 | Abrufplan des Workers | Jede Reihe einmal pro New-Yorker Werktag ab `release_time`; nach einem Fehler stündlich erneut. Tägliche Reihen zusätzlich stündlich bis Tagesende New York, solange der bis jetzt erwartete Wert fehlt. Nach einem Neustart wird nachgeholt | Etwa 23 Vollabrufe pro Werktag plus Nachfassen an Feiertagen und bei Verspätung. An Wochenenden keine Abrufe. Das Nachfassen berechnet den erwarteten Wert mit `lag_days` (E-23) |
+| 26.09.2026 | E-32 | Compose-Dateien | Zwei Dateien (Empfehlung war eine): `docker-compose.yml` nur zum Bauen im Projektverzeichnis, `compose.dockge.yaml` für den Betrieb in Dockge | Beide nutzen `fever:local`; ein Test prüft Image, Build-Freiheit der Laufzeit-Datei und die `.env`-Variablen. Die Kopie in Dockge muss nach Änderungen an `compose.dockge.yaml` von Hand nachgezogen werden |
+| 26.09.2026 | E-33 | Healthcheck-Grenze des Workers | 45 Minuten Heartbeat-Alter (drei Takte) | Gilt ab M6 auch für den Hinweis „Worker ohne Lebenszeichen“ |
 
 ---
 
@@ -360,9 +366,9 @@ Für jeden Meilenstein gilt die Definition of Done:
 1. Schleife alle 15 Minuten; fällige Abrufe nach Veröffentlichungsplan in America/New_York.
 2. Heartbeat schreiben, sauberes Beenden bei SIGTERM (`docker compose stop`), tägliches Backup.
 3. Healthcheck: Heartbeat-Alter (Vorschlag: höchstens 45 Minuten, also drei Takte).
-4. Branch für den Betrieb festlegen (Auswahlfrage). Bisher existiert nur der Entwicklungsbranch `claude-testing`.
-5. Angaben des Nutzers vor dem Plan zu M3: TrueNAS-Version, Pfad des Datasets für den Datenordner, Projektverzeichnis für den Build, Stack-Verzeichnis von Dockge, Eigentümer (UID/GID) des Datenordners, freier Web-Port.
-6. Build und Betrieb trennen: ob die bestehende `docker-compose.yml` zur Laufzeit-Datei wird oder eine zweite Datei entsteht, im Plan zu M3 entscheiden (zwei Dateien können auseinanderlaufen).
+4. Branch für den Betrieb: `claude-testing` (E-30).
+5. Angaben des Nutzers (26.09.2026): TrueNAS 25.10.7, Projekt-Dataset `/mnt/Daten-Z1/apps/feewer`, Datenordner als Kind-Dataset `data` (E-28), `apps` 568:568 (E-29), Web-Port 8003.
+6. Build und Betrieb getrennt in zwei Dateien (E-32).
 7. Einrichtung auf TrueNAS nach der neuen `docs/einrichtung.md`. Führt der Nutzer aus, weil die KI keinen Zugriff auf TrueNAS hat. Jeder ausgeführte Schritt wird mit ✅ und Datum markiert.
 8. Abrufe je Reihe nach `release_time` und `lag_days` aus `config/series.toml` planen. `fever.sources.update.update_series` erledigt Abruf, Prüfung und Speichern einer Reihe.
 9. Nach einigen Tagen Betrieb die tatsächlichen Änderungszeiten aus dem Rohdatenarchiv (Zeitstempel bei geändertem Inhalt) mit `release_time` vergleichen. Das betrifft vor allem die nur einmal beobachteten Uhrzeiten (M2, „Ergebnis Teil B“). Abweichungen als Änderung zur Freigabe vorlegen, dazu das Verhalten der Cboe-CSV während der US-Handelszeit.
@@ -371,6 +377,34 @@ Für jeden Meilenstein gilt die Definition of Done:
 - Fälligkeit rund um die Sommerzeitwechsel: USA endet am 01.11.2026, EU am 25.10.2026
 - handelsfreie Tage sind kein Fehler
 - Heartbeat wird geschrieben
+
+**Ergebnis (26.09.2026, umgesetzt; Einrichtung auf TrueNAS offen):**
+- **Umgesetzt wie freigegeben:**
+  - `fever/worker.py`: Takt 15 Minuten, Abrufplan E-31, Heartbeat zu Beginn jedes Takts und vor jedem Abruf, tägliches Backup einmal pro UTC-Tag (übersteht Neustarts, weil es an den Backup-Dateien hängt), Ende bei SIGTERM/SIGINT zwischen zwei Reihen, `healthcheck()` nach E-33
+  - Ein unerwarteter Fehler bei einer Reihe wird mit Traceback geloggt, maskiert in `source_status` eingetragen, und die übrigen Reihen laufen weiter
+  - Ohne Datenbank startet der Worker nicht (Exit-Code 2, Meldung „Datenbank fehlt …“); er legt nie eine an
+  - `docker-compose.yml` (Bau-Datei, Projekt `fever-build`, startet nichts) und `compose.dockge.yaml` (Laufzeit, `user:` aus `.env`, `stop_grace_period: 30s`, Healthcheck alle 5 Minuten)
+  - `.env.example` für TrueNAS; `docs/einrichtung.md` neu für TrueNAS und Dockge
+  - Speicherfunktionen `latest_obs_date`, `record_heartbeat`/`read_heartbeat`; `has_backup` in `fever/backup.py`; `UpdateResult.fetched`
+- **Abweichungen vom Plan:**
+  - Den Dienst `web` enthält `compose.dockge.yaml` erst ab M6 (statt eines Profils): Bis dahin gibt es kein Modul, das er starten könnte.
+  - Das Dockerfile ist nur in zwei Kommentaren geändert (Benutzer kommt im Betrieb aus `user:`).
+- **Belege:**
+  - `pytest -q`: 178 passed (35 neu: Abrufplan, Worker, Compose)
+  - Build-Probe x86_64 mit dem Dockerfile (plus Zertifikatszeilen, Abschnitt 10): 42 s, Image 125 MB, alle Importe laden
+  - `docker compose config`: beide Dateien gültig; ohne `.env` Abbruch mit „FEVER_UID fehlt in .env …“; `up` mit der Bau-Datei gibt nur den Hinweis aus
+  - Laufzeit-Stack mit `docker compose` (statt Dockge) gegen einen Datenordner mit Eigentümer 568:568:
+    - Container läuft als `uid=568 gid=568`
+    - Log „Worker gestartet: 23 Reihen, Takt 15 Minuten“ und „Tägliches Backup erstellt und geprüft“
+    - Healthcheck „gesund“, Exit-Code 0
+    - `docker compose stop` in unter 1 s, Log „Worker beendet“, Exit-Code 0
+    - alle Dateien gehören 568:568
+  - Gegenprobe mit 12 absichtlich eingebauten Fehlern, jeder erkannt: Wochenende nicht ausgeschlossen, UTC statt New York, kein Warten nach Fehlschlag, Nachfassen bei Wochenreihen, kein Nachfassen bei fehlendem Tageswert, Fehlschlag als Erfolg, kein Heartbeat, Backup in jedem Takt, Ausnahme stoppt den Takt, Stopp-Signal ignoriert, Healthcheck-Grenze falsch, Laufzeit-Compose baut
+- **Nicht geprüft:**
+  - Abrufe im laufenden Worker: Der Probelauf war an einem Samstag, nach E-31 ist dann nichts fällig. Der Abrufweg selbst ist mit echten Daten in M2 geprüft.
+  - Der Docker-Healthcheck-Status (erste Prüfung nach 5 Minuten); geprüft ist der Befehl selbst im Container.
+  - Alles auf TrueNAS: ob `git` vorhanden ist, `sudo docker`, das Anlegen des Datasets, Dockge mit `.env`, `timedatectl`. Die Anleitung markiert diese Schritte mit ⏳.
+- **Offen bis ☑:** Einrichtung auf TrueNAS durch den Nutzer nach `docs/einrichtung.md`, erster Werktag mit Abrufen, dann Prüfung der Veröffentlichungszeiten aus dem Rohdatenarchiv (Schritt 9).
 
 ### M4 – Weitere Quellen
 
@@ -416,7 +450,7 @@ Für jeden Meilenstein gilt die Definition of Done:
 - `fever/web/pages/`: Übersicht, Themen-Ansichten, Visualisierung, Datenstand, Erklärungen, `/kennzahl/<id>`
 - `assets/`: `base.css` (Tokens hell/dunkel, Layout), `tooltip.css`, `print.css`, `fullscreen.js`, `theme.js`
 
-**Schritte:** Abschnitt 7 umsetzen. Healthcheck `web` in Compose. Pflichthinweis nach den FRED-Nutzungsbedingungen auf jeder Seite, z. B. in der Fußzeile: „This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.“
+**Schritte:** Abschnitt 7 umsetzen. Dienst `web` in `compose.dockge.yaml` ergänzen (Port `0.0.0.0:${FEVER_WEB_PORT}` nach E-4, Anzahl der gunicorn-Prozesse 1–2 festlegen) mit Healthcheck. Pflichthinweis nach den FRED-Nutzungsbedingungen auf jeder Seite, z. B. in der Fußzeile: „This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.“
 
 **Tests:**
 - Smoke-Test: App startet, `/_dash-layout` und Health-Endpunkt liefern 200
@@ -571,19 +605,28 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 | Docker-Portfreigaben umgehen Host-Firewallregeln (E-4) | Firewall-Regeln greifen nicht für den Web-Port | in `docs/einrichtung.md` dokumentiert; keine Portweiterleitung im Router |
 | Speicherklausel der Cboe-Nutzungsbedingungen (E-26) | Cboe könnte das private Archiv beanstanden | nur private Nutzung, keine Weitergabe, ein Abruf je Datei und Tag; bei Beanstandung Cboe-Reihen aus dem Katalog nehmen |
 | Veröffentlichungszeiten teils nur einmal beobachtet (E-23) | geschätzte Vintages der Rückfüllung um Stunden verschoben | Prüfung aus dem Rohdatenarchiv in M3 (Schritt 9) |
+| Datenordner im Git-Arbeitsverzeichnis (E-28) | `git clean -fdx` löscht Datenbank und Backups zugleich | Warnung in `docs/einrichtung.md` und `CLAUDE.md`; optional TrueNAS-Snapshots des Datasets `data` |
+| Betrieb direkt vom Entwicklungsbranch (E-30) | ein ungeprüfter Push landet beim nächsten Update im Betrieb | nur geprüften Stand pushen; Update nur auf Anweisung in `docs/einrichtung.md` |
 
 ---
 
 ## 9. Übergabe an die nächste Sitzung
 
-- **Stand (26.09.2026):** M0, M1 und M2 erledigt (143 Tests grün). 23 Rohreihen von Cboe und FRED werden abgerufen, geprüft und mit Vintage gespeichert (Abschnitt 4, M2, „Ergebnis Teil B“); Entscheidungen E-13 bis E-26. Zielsystem ist seit E-21 TrueNAS mit Dockge statt Pi; Compose, `.env.example` und `docs/einrichtung.md` beschreiben noch den Pi und werden in M3 umgestellt. Noch kein Worker, keine Oberfläche; das ICE-Archiv startet erst mit dem Betrieb (M3).
-- **Nächster Schritt:** M3 (Worker und Inbetriebnahme auf TrueNAS). Voraussetzungen:
-  1. Angaben des Nutzers zu TrueNAS (M3, Schritt 5) und Entscheidung über den Betriebs-Branch (Schritt 4).
-  2. Plan für M3 vorlegen und Freigabe abwarten (`CLAUDE.md`, Arbeitsweise 1–2).
-  3. **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): `api.stlouisfed.org` und `cdn-api.cboe.com` erreichbar (26.09.2026). Für M4 später: `publicreporting.cftc.gov`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `www.finra.org` und der Host des Shiller-Datensatzes.
-  4. **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 außer L-5 (Abschnitt 5), Angaben zu TrueNAS und Betriebs-Branch (M3).
-- **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Tests siehe Abschnitt 10; die Betriebsbefehle für TrueNAS folgen in M3 (`docs/einrichtung.md` beschreibt noch den Pi).
+- **Stand (26.09.2026):**
+  - M0 bis M2 erledigt, M3 umgesetzt (178 Tests grün): Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
+  - Entscheidungen bis E-33.
+  - Noch nicht auf TrueNAS eingerichtet; das ICE-Archiv beginnt mit dem ersten Werktag im Betrieb.
+- **Nächster Schritt:**
+  1. Der Nutzer richtet TrueNAS nach `docs/einrichtung.md` ein und meldet Ausgaben bzw. Fehler; die KI markiert geprüfte Schritte mit ✅ und Datum.
+  2. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit.
+  3. Danach M4 (weitere Quellen); vorher Plan und Freigabe.
+- **Hinweise:**
+  - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
+  - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
+  - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): `api.stlouisfed.org` und `cdn-api.cboe.com` erreichbar (26.09.2026). Für M4: `publicreporting.cftc.gov`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `www.finra.org` und der Host des Shiller-Datensatzes.
+  - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
+- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 außer L-5 (Abschnitt 5).
+- **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---
 
@@ -612,15 +655,15 @@ Stand 25.09.2026, erprobt in der Claude-Code-Cloud-Umgebung. Die Umgebung ist ei
    docker run --rm -v "$PWD":/src fever-devtest pytest -q -p no:cacheprovider
    ```
    Antwortet Docker Hub mit „429 Too Many Requests“ (anonyme Abrufe gedrosselt, so am 26.09.2026), das Basis-Image über den Spiegel holen und umbenennen: `docker pull mirror.gcr.io/library/python:3.14-slim-trixie && docker tag mirror.gcr.io/library/python:3.14-slim-trixie python:3.14-slim-trixie`.
-5. **Build-Probe** (seit E-21 für x86_64, ohne Emulation; in dieser Form noch nicht ausgeführt, Stand 26.09.2026): Kopie des Dockerfiles mit den zwei Zertifikatszeilen nach `FROM`, sonst unverändert:
+5. **Build-Probe** (seit E-21 für x86_64, ohne Emulation; ausgeführt am 26.09.2026, 42 s): Kopie des Dockerfiles mit den zwei Zertifikatszeilen nach `FROM`, sonst unverändert:
    ```bash
    sed '/^FROM /a COPY --from=proxyca ca-bundle.crt /tmp/proxy-ca.crt\nENV PIP_CERT=/tmp/proxy-ca.crt' \
      Dockerfile > <scratch>/Dockerfile.probe
    docker buildx build -f <scratch>/Dockerfile.probe \
      --build-context proxyca=/root/.ccr --network host \
-     --build-arg HTTPS_PROXY --build-arg HTTP_PROXY --load -t fever:probe .
+     --build-arg HTTPS_PROXY --build-arg HTTP_PROXY --load -t fever:local .
    ```
-6. **Compose prüfen ohne `.env`** (die echte `.env` wird nie gelesen): eine Testdatei mit Platzhaltern im Scratchpad anlegen und `docker compose --env-file <scratch>/probe.env config` aufrufen.
+6. **Compose prüfen ohne `.env`** (die echte `.env` wird nie gelesen): eine Testdatei mit Platzhaltern im Scratchpad anlegen (`FEVER_DATA_DIR` auf einen Ordner mit Eigentümer 568:568) und `docker compose -f compose.dockge.yaml --env-file <scratch>/probe.env -p fever-probe config` aufrufen; mit `up -d`, `logs worker`, `stop` und `down` läuft der Stack wie in Dockge. Die Bau-Datei: `docker compose -f docker-compose.yml config`.
 7. **Echte Abrufe in Containern** (Teil B): Proxy-Variablen, Zertifikat und Schlüssel durchreichen, ohne ihn anzuzeigen:
    ```bash
    docker run --rm --network host -e HTTPS_PROXY -e HTTP_PROXY -e FRED_API_KEY -e PYTHONPATH=/src \

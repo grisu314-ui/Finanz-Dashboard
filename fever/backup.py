@@ -13,7 +13,7 @@ import os
 import re
 import sqlite3
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from fever import log
@@ -57,6 +57,18 @@ def run_backup(directory: Path, kind: str, now: datetime) -> Path:
     os.replace(partial, target)
     _apply_retention(backup_dir, kind)
     return target
+
+
+def has_backup(directory: Path, kind: str, day: date) -> bool:
+    """True if backup/ holds a backup of this kind stamped on the given UTC day."""
+    backup_dir = directory / "backup"
+    if not backup_dir.is_dir():
+        return False
+    prefix = f"fever-{day:%Y%m%d}T"
+    return any(
+        (match := _BACKUP_NAME.fullmatch(path.name)) and match.group(1) == kind and path.name.startswith(prefix)
+        for path in backup_dir.iterdir()
+    )
 
 
 def _verify(path: Path) -> None:

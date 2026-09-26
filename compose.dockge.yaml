@@ -1,0 +1,42 @@
+# Fieberthermometer: runtime stack for Dockge on TrueNAS (decisions E-21, E-28 to E-33).
+# Copy this file as compose.yaml into the Dockge stack and fill the stack's .env from
+# .env.example (docs/einrichtung.md). It never builds: the image fever:local comes from
+# docker-compose.yml in the project directory.
+# The web service follows in milestone M6 (port FEVER_WEB_PORT, O-3/E-4).
+
+x-service: &service
+  image: fever:local
+  pull_policy: never
+  restart: unless-stopped
+  # E-29: the containers run as TrueNAS "apps", the owner of the data directory.
+  user: "${FEVER_UID:?FEVER_UID fehlt in .env (siehe docs/einrichtung.md)}:${FEVER_GID:?FEVER_GID fehlt in .env (siehe docs/einrichtung.md)}"
+  volumes:
+    # A missing host directory must be an error, not silently created (as root) and
+    # filled. Compose 5.1.1 creates it unless create_host_path is false (tested 25.09.2026).
+    - type: bind
+      source: ${FEVER_DATA_DIR:?FEVER_DATA_DIR fehlt in .env (siehe docs/einrichtung.md)}
+      target: /data
+      bind:
+        create_host_path: false
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  worker:
+    <<: *service
+    command: ["python", "-m", "fever.worker"]
+    environment:
+      FEVER_DATA: /data
+      FRED_API_KEY: ${FRED_API_KEY:?FRED_API_KEY fehlt in .env (siehe docs/einrichtung.md)}
+    # The worker stops between two series; an interrupted write is rolled back by SQLite.
+    stop_grace_period: 30s
+    healthcheck:
+      # E-33: unhealthy once the heartbeat is older than 45 minutes (three missed cycles).
+      test: ["CMD", "python", "-c", "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"]
+      interval: 5m
+      timeout: 30s
+      start_period: 2m
+      retries: 1

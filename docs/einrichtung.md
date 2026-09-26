@@ -1,144 +1,122 @@
-# Einrichtung und Betrieb auf dem Raspberry Pi
+# Einrichtung und Betrieb auf TrueNAS mit Dockge
 
-> **Überholt seit 26.09.2026 (E-21):** Das Dashboard läuft auf TrueNAS als Dockge-Stack statt auf dem Pi. Diese Anleitung wird in Meilenstein M3 neu geschrieben. Bis dahin nicht danach einrichten; auch der vorbelegte Datenordner in `.env.example` gilt noch für den Pi.
-
-Stand: 25.09.2026 · Für: dich als Anwender · Status: **M1 erledigt.** Image, `.env`-Vorlage, Datenbank anlegen, Backup und Wiederherstellung funktionieren; das ist in der Entwicklungsumgebung mit dem arm64-Image geprüft, auf einem Pi noch nicht. Datenabruf und Dauerbetrieb folgen mit Meilenstein M3 (siehe `docs/umsetzungsplan.md`).
+Stand: 26.09.2026 · Für: dich als Anwender · Status: **M3 umgesetzt, Einrichtung auf TrueNAS steht aus.** Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Auf TrueNAS ist noch nichts ausgeführt. Die Oberfläche folgt mit Meilenstein M6 (siehe `docs/umsetzungsplan.md`).
 
 Markierungen:
 - ✅ geprüft: ausgeführt, mit Datum und Ort
-- ⏳ geplant oder ungeprüft: Der Befehl steht fest, wurde aber noch nicht gegen den fertigen Code bzw. auf deinem Pi ausgeführt
+- ⏳ geplant oder ungeprüft: Der Befehl steht fest, wurde aber noch nicht auf deinem TrueNAS ausgeführt
 
-Festgelegt (E-11 vom 26.09.2026):
-- Datenordner `/home/dirk/volumes/fever`
+Festgelegt (Entscheidungen E-21, E-28 bis E-33 vom 26.09.2026):
 
-Beispielwerte, die du anpassen kannst:
-- Web-Port `8050`
-- Projektordner `~/Finanz-Dashboard`
+| Was | Wert |
+|---|---|
+| TrueNAS | 25.10.7 „Goldeye“ |
+| Projektverzeichnis (Dataset, Git-Klon, Build) | `/mnt/Daten-Z1/apps/feewer` |
+| Datenordner (Kind-Dataset, von Git ignoriert) | `/mnt/Daten-Z1/apps/feewer/data` |
+| Benutzer der Container | `apps`, UID/GID 568:568 |
+| Branch | `claude-testing` |
+| Web-Port (ab M6) | 8003 |
+| Dockge-Stack | Name `fever` (Vorschlag; die Containernamen unten setzen ihn voraus) |
 
-Befehle stehen in grauen Kästen. Was nach `#` folgt, ist ein Kommentar und wird nicht mit eingegeben.
+Befehle stehen in grauen Kästen. Was nach `#` folgt, ist ein Kommentar und wird nicht mit eingegeben. Die Befehle laufen in der TrueNAS-Shell als `admin`.
 
 ---
 
 ## 0. Überblick
 
-Das Dashboard läuft als zwei Docker-Container auf dem Pi:
-- `worker` holt alle 15 Minuten Marktdaten, speichert sie und rechnet die Scores.
-- `web` zeigt die Oberfläche im Browser.
+- **Build:** Das Image `fever:local` wird im Projektverzeichnis mit `docker-compose.yml` gebaut (Bau-Datei, startet nichts).
+- **Betrieb:** Dockge startet den Stack `fever` aus einer Kopie von `compose.dockge.yaml`. Einstellungen und der FRED-Schlüssel stehen in der `.env` dieses Stacks.
+- **Container:**
+  - `worker` holt Marktdaten nach Veröffentlichungsplan (America/New_York), speichert sie, schreibt alle 15 Minuten ein Lebenszeichen und legt täglich ein Backup an.
+  - `web` (die Oberfläche) folgt mit M6.
+- **Daten:** SQLite-Datei, Rohantworten und Backups im Datenordner `data/`.
+- **Zugang:** nur aus dem Heimnetz, ohne Passwort (O-3).
 
-Die Daten liegen in einer SQLite-Datei in deinem Datenordner. Zugang: nur aus dem Heimnetz, ohne Passwort (Entscheidung O-3 vom 25.09.2026).
+```
+/mnt/Daten-Z1/apps/feewer/        Dataset: Projektverzeichnis (git clone, Build)
+├── fever/, config/, Dockerfile, docker-compose.yml, compose.dockge.yaml, …
+└── data/                         Kind-Dataset, Eigentümer apps (568:568)
+    ├── fever.sqlite3             Datenbank (daneben im Betrieb -wal und -shm)
+    ├── raw/                      Rohantworten der Quellen (gzip)
+    └── backup/                   Backups
+```
+
+> **Warnung:** Im Projektverzeichnis nie `git clean -fdx` ausführen. `-x` löscht auch von Git ignorierte Ordner, also Datenbank und Backups zugleich. Das lokale Archiv der ICE-Spreads ist nicht wiederbeschaffbar. `git pull` und `git status` sind unbedenklich.
 
 ## 1. Was du brauchst
 
-- Raspberry Pi mit **64-Bit**-Raspberry-Pi-OS (Modell und RAM sind noch offen: O-2)
-- SSD statt SD-Karte für den Datenordner (empfohlen; eine SD-Karte verschleißt durch dauernde Schreibzugriffe)
+- TrueNAS mit Dockge (läuft bei dir bereits)
+- Shell-Zugang als `admin` mit `sudo`
 - einen kostenlosen FRED-API-Schlüssel (Schritt 4)
-- Zugang zum Pi per Terminal (direkt oder per `ssh`)
 
-## 2. Pi vorbereiten ⏳
+## 2. TrueNAS prüfen ⏳
 
-### 2.1 64-Bit prüfen
-
-```bash
-uname -m                     # erwartet: aarch64
-dpkg --print-architecture    # erwartet: arm64
-```
-
-Entscheidend ist die zweite Zeile. Zeigt sie `armhf`, läuft ein 32-Bit-System (auch wenn `uname -m` `aarch64` meldet). Dann den Pi mit dem Raspberry Pi Imager neu mit „Raspberry Pi OS (64-bit)“ aufsetzen. Docker Engine 28 ist laut Docker-Doku die letzte Hauptversion mit Paketen für 32-Bit-Raspberry-Pi-OS.
-
-### 2.2 System aktualisieren
+### 2.1 Werkzeuge
 
 ```bash
-sudo apt update && sudo apt full-upgrade -y
+git --version          # erwartet: git version 2.…
+sudo docker version    # erwartet: Abschnitte "Client" und "Server"
+sudo docker compose version    # erwartet: Docker Compose version v2.… oder neuer
 ```
 
-### 2.3 Uhrzeit prüfen
+Ob `git` im TrueNAS-Grundsystem enthalten ist, war nicht zu belegen. Meldet der erste Befehl `command not found`, übernimmt ein Container die Rolle von Git. Dann in allen folgenden Git-Befehlen `git` durch `$GIT` ersetzen:
 
-Das Dashboard entscheidet anhand der Uhrzeit, ob ein Wert veraltet ist. Die Uhr muss synchronisiert sein.
+```bash
+GIT="sudo docker run --rm -u $(id -u):$(id -g) -v /mnt/Daten-Z1/apps/feewer:/git -w /git alpine/git"
+$GIT --version    # erwartet: git version 2.…
+```
+
+`$GIT` gilt nur in der aktuellen Shell; nach einem neuen Login die erste Zeile erneut ausführen.
+
+### 2.2 Uhrzeit
+
+Das Dashboard entscheidet anhand der Uhrzeit, ob ein Wert veraltet ist, und plant die Abrufe danach.
 
 ```bash
 timedatectl    # erwartet: "System clock synchronized: yes"
 ```
 
-Steht dort `no`:
+Steht dort `no`: in TrueNAS unter System → General → NTP-Server prüfen.
+
+## 3. Projekt holen und Datenordner anlegen ⏳
+
+### 3.1 Projektverzeichnis beschreibbar machen
+
+Das Dataset gehört `root`. `admin` braucht Schreibrechte für den Klon:
 
 ```bash
-sudo timedatectl set-ntp true
+sudo chown admin:admin /mnt/Daten-Z1/apps/feewer
+ls -ld /mnt/Daten-Z1/apps/feewer    # erwartet: … admin admin … /mnt/Daten-Z1/apps/feewer
 ```
 
-### 2.4 Datenordner anlegen
+### 3.2 Klonen (Branch `claude-testing`, E-30)
 
-Der Datenordner ist `/home/dirk/volumes/fever` (E-11). Darin legt das Dashboard selbst an: `fever.sqlite3` (Datenbank), `raw/` (Rohantworten der Quellen) und `backup/`. Führe die Befehle als Benutzer `dirk` aus, **ohne** `sudo`; dann gehört der Ordner automatisch dir.
+Das Repository ist öffentlich; es braucht keine Zugangsdaten. Das Verzeichnis muss für den Klon leer sein, deshalb kommt das Dataset `data` erst danach.
 
 ```bash
-mkdir -p /home/dirk/volumes/fever
-ls -ld /home/dirk/volumes/fever                  # Eigentümer und Gruppe: dirk dirk
-id -u; id -g                                     # meist 1000 und 1000; für Schritt 6 notieren
-df -T /home/dirk/volumes/fever                   # Spalte "Type": ext4 o. Ä., NICHT nfs oder cifs
-findmnt -no SOURCE -T /home/dirk/volumes/fever   # Gerät, auf dem der Ordner liegt
+cd /mnt/Daten-Z1/apps/feewer
+git clone -b claude-testing https://github.com/grisu314-ui/Finanz-Dashboard.git .
+git status    # erwartet: "On branch claude-testing" und "nothing to commit, working tree clean"
 ```
 
-So liest du die letzte Ausgabe:
-- `/dev/mmcblk0p2` o. Ä.: **SD-Karte.** Der Worker schreibt regelmäßig, eine SD-Karte verschleißt dabei. Dann besser den Pi von einer SSD starten; das Speichermedium ist noch offen (O-2).
-- `/dev/sda2`, `/dev/nvme0n1p2` o. Ä.: SSD oder USB-Datenträger. Gut.
+### 3.3 Kind-Dataset `data` anlegen (E-28)
 
-Der Datenordner muss auf einem **lokalen** Dateisystem liegen, nicht auf einer Netzwerkfreigabe (NFS/SMB), weil die Datenbank dort nicht zuverlässig funktioniert.
+In der TrueNAS-Oberfläche:
+1. Datasets → `Daten-Z1/apps/feewer` auswählen → „Add Dataset“.
+2. Name `data`, als Preset „Apps“ oder „Generic“ → Speichern.
+3. `data` auswählen → Permissions → Edit: Owner User `apps`, Owner Group `apps` → Speichern.
 
-**Wichtig für Schritt 6:** `FEVER_UID` und `FEVER_GID` müssen die Werte von `dirk` sein (Ausgabe von `id -u` und `id -g` oben). Der Container läuft mit dieser Benutzer-ID. Zeigt `ls -ld /home/dirk` die Rechte `drwx------`, kommt nur `dirk` in das Home-Verzeichnis; ein Container mit anderer ID könnte den Datenordner dann nicht erreichen.
-
-Der Ordner muss **vor** dem ersten Start existieren. Compose legt ihn bewusst nicht an, damit bei einem Tippfehler im Pfad keine Daten in einem falschen, neu angelegten Ordner landen.
-
-### 2.5 IP-Adresse des Pi
+Prüfen in der Shell:
 
 ```bash
-hostname -I    # die erste Adresse, z. B. 192.168.178.23
+zfs list -o name,mountpoint Daten-Z1/apps/feewer/data
+#   erwartet: Daten-Z1/apps/feewer/data  /mnt/Daten-Z1/apps/feewer/data
+stat -c '%u:%g %n' /mnt/Daten-Z1/apps/feewer/data
+#   erwartet: 568:568 /mnt/Daten-Z1/apps/feewer/data
+cd /mnt/Daten-Z1/apps/feewer && git status --short    # erwartet: keine Ausgabe (data/ ist ignoriert)
 ```
 
-Empfehlung: Im Router eine feste IP-Adresse (DHCP-Reservierung) für den Pi einrichten, damit das Lesezeichen im Browser gültig bleibt. Wie das geht, hängt vom Router ab.
-
-## 3. Docker installieren ⏳
-
-Quelle: offizielle Docker-Anleitung für Debian, die für 64-Bit-Raspberry-Pi-OS gilt (`github.com/docker/docs`, Datei `content/manuals/engine/install/debian.md`, abgerufen 25.09.2026).
-
-```bash
-# Docker-Paketquelle einrichten
-sudo apt update
-sudo apt install ca-certificates curl
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-
-sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
-Types: deb
-URIs: https://download.docker.com/linux/debian
-Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
-Components: stable
-Architectures: $(dpkg --print-architecture)
-Signed-By: /etc/apt/keyrings/docker.asc
-EOF
-
-sudo apt update
-
-# Docker installieren
-sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-# Test
-sudo docker run hello-world    # erwartet u. a.: "Hello from Docker!"
-```
-
-Docker ohne `sudo` nutzen:
-
-```bash
-sudo usermod -aG docker $USER
-```
-
-Danach ab- und wieder anmelden (bzw. die SSH-Verbindung neu aufbauen), dann prüfen:
-
-```bash
-docker run --rm hello-world
-docker compose version
-```
-
-Hinweis aus der Docker-Doku: Die Gruppe `docker` gewährt Rechte auf Root-Niveau. Nimm nur deinen eigenen Benutzer auf.
+Zeigt `stat` andere Zahlen, ersatzweise: `sudo chown 568:568 /mnt/Daten-Z1/apps/feewer/data`.
 
 ## 4. FRED-API-Schlüssel beantragen
 
@@ -146,214 +124,168 @@ FRED (Federal Reserve Bank of St. Louis) liefert einen Großteil der Daten. Der 
 
 1. Unter https://fredaccount.stlouisfed.org/ ein Konto anlegen und die E-Mail-Adresse bestätigen.
 2. Unter https://fredaccount.stlouisfed.org/apikeys auf „Request API Key“ klicken, den Zweck kurz beschreiben (z. B. „private dashboard, personal use“) und den Nutzungsbedingungen zustimmen.
-3. Den Schlüssel sicher notieren. Er kommt in Schritt 6 in die Datei `.env` und nirgendwo sonst hin: nicht in Chats, nicht in Git.
+3. Den Schlüssel sicher notieren. Er kommt in Schritt 7 in die `.env` des Dockge-Stacks und nirgendwo sonst hin: nicht in Chats, nicht in Git.
 
-Quelle der Schritte: FRED-Dokumentation zum API-Schlüssel, per Websuche am 25.09.2026 ermittelt. Die FRED-Seite selbst war aus der Entwicklungsumgebung nicht abrufbar. Weicht die Seite ab, gilt die Seite.
+Quelle der Schritte: FRED-Dokumentation zum API-Schlüssel, per Websuche am 25.09.2026 ermittelt. Weicht die Seite ab, gilt die Seite.
 
-## 5. Projekt auf den Pi holen ⏳
+## 5. Image bauen
 
-```bash
-cd ~
-git clone https://github.com/grisu314-ui/Finanz-Dashboard.git
-cd Finanz-Dashboard
-```
-
-Welcher Branch auf dem Pi läuft, wird bei M3 festgelegt; bis dahin gibt es nichts Lauffähiges.
-
-**Falls das Repository privat ist:** GitHub akzeptiert beim Klonen über HTTPS kein Passwort. Einfachster Weg ist ein nur lesender Deploy-Key für genau dieses Repository:
+✅ 26.09.2026, Entwicklungsumgebung: Build desselben Dockerfiles (x86_64, 42 s), Image 125 MB, Benutzer `fever`. ⏳ auf TrueNAS.
 
 ```bash
-ssh-keygen -t ed25519 -C "fever-pi" -f ~/.ssh/fever_deploy    # ohne Passphrase: zweimal Enter
-cat ~/.ssh/fever_deploy.pub                                    # Ausgabe kopieren
+cd /mnt/Daten-Z1/apps/feewer
+sudo docker compose build
+sudo docker image ls fever    # erwartet: fever   local   …
 ```
 
-Auf GitHub: Repository → Settings → Deploy keys → „Add deploy key“ → Ausgabe einfügen, „Allow write access“ **nicht** anhaken. Dann:
+`sudo docker compose up` in diesem Verzeichnis startet nichts, es gibt nur den Hinweis „Nur zum Bauen …“ aus (✅ Entwicklungsumgebung 26.09.2026).
+
+## 6. Datenbank anlegen
+
+✅ 26.09.2026, Entwicklungsumgebung (als UID 568). ⏳ auf TrueNAS.
+
+Einmalig vor dem ersten Start. Der Hilfsbefehl `$RUN` startet einen Einmal-Container mit dem Datenordner. Er wird unten mehrfach verwendet; nach einem neuen Login in der Shell muss er neu gesetzt werden:
 
 ```bash
-GIT_SSH_COMMAND="ssh -i ~/.ssh/fever_deploy" git clone git@github.com:grisu314-ui/Finanz-Dashboard.git
-cd Finanz-Dashboard
-git config core.sshCommand "ssh -i ~/.ssh/fever_deploy"    # damit spätere "git pull" den Schlüssel nutzen
+RUN='sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v /mnt/Daten-Z1/apps/feewer/data:/data fever:local'
+$RUN alembic upgrade head
+#   erwartet u. a.: Running upgrade  -> 0001, Initial schema: …
+$RUN alembic current
+#   erwartet: 0001 (head)
 ```
 
-## 6. Konfiguration `.env` anlegen ⏳ (Vorlage `.env.example` existiert seit M0)
+Ohne diesen Schritt startet der Worker nicht, sondern meldet im Log „Datenbank fehlt …“.
+
+## 7. Dockge-Stack anlegen und starten
+
+✅ 26.09.2026, Entwicklungsumgebung mit `docker compose` statt Dockge: Start, Backup, Healthcheck „gesund“, Stopp in unter 1 s. ⏳ mit Dockge auf TrueNAS.
+
+1. In Dockge „+ Compose“, Stack-Name `fever`.
+2. Als `compose.yaml` den Inhalt von `compose.dockge.yaml` einfügen:
+   ```bash
+   cat /mnt/Daten-Z1/apps/feewer/compose.dockge.yaml
+   ```
+3. Im `.env`-Bereich des Stacks den Inhalt von `.env.example` einfügen und nur `FRED_API_KEY=` ergänzen (Schlüssel aus Schritt 4). Die übrigen Werte sind vorbelegt:
+   ```bash
+   cat /mnt/Daten-Z1/apps/feewer/.env.example
+   ```
+4. Speichern und „Deploy“ bzw. „Start“.
+
+| Variable | Bedeutung | Fehlt sie … |
+|---|---|---|
+| `FRED_API_KEY` | FRED-Schlüssel (Schritt 4) | Start bricht mit „FRED_API_KEY fehlt in .env“ ab |
+| `FEVER_DATA_DIR` | Datenordner `/mnt/Daten-Z1/apps/feewer/data` | Start bricht mit „FEVER_DATA_DIR fehlt in .env“ ab |
+| `FEVER_UID`, `FEVER_GID` | Benutzer der Container, 568 (`apps`) | Start bricht mit „FEVER_UID fehlt in .env“ bzw. „FEVER_GID fehlt …“ ab |
+| `FEVER_WEB_PORT` | Port des Dashboards (ab M6), 8003 | – |
+
+Ein fehlender Datenordner ist ein Fehler und wird nicht stillschweigend angelegt.
+
+Prüfen:
 
 ```bash
-cd ~/Finanz-Dashboard
-cp .env.example .env
-chmod 600 .env    # nur du darfst die Datei lesen
-nano .env         # speichern: Strg+O, Enter; beenden: Strg+X
+sudo docker logs --tail 20 fever-worker-1
+#   erwartet u. a.: INFO __main__: Worker gestartet: 23 Reihen, Takt 15 Minuten
+#                   INFO __main__: Tägliches Backup erstellt und geprüft: fever-…-daily.sqlite3
+sudo docker exec fever-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"
+#   erwartet: gesund: letzter Heartbeat vor 0 Minuten
 ```
 
-Die Vorlage enthält schon alle nicht geheimen Werte (E-12). Einzutragen ist nur der FRED-Schlüssel; `FEVER_UID`/`FEVER_GID` änderst du nur, wenn `id -u`/`id -g` aus Schritt 2.4 nicht 1000 ergeben. So sieht die fertige Datei aus (`<…>` durch deinen Wert ersetzen, keine Leerzeichen um `=`):
+Dockge zeigt den Worker nach spätestens rund 5 Minuten als „healthy“; vorher steht dort „starting“.
 
-```ini
-FRED_API_KEY=<dein Schlüssel aus Schritt 4>
-FEVER_DATA_DIR=/home/dirk/volumes/fever
-FEVER_UID=1000
-FEVER_GID=1000
-FEVER_WEB_PORT=8050
-```
-
-| Variable | Bedeutung | Pflicht | leer bedeutet |
-|---|---|---|---|
-| `FRED_API_KEY` | FRED-API-Schlüssel (Schritt 4) | ja | Abbruch mit Fehlermeldung |
-| `FEVER_DATA_DIR` | Datenordner: `/home/dirk/volumes/fever` (Schritt 2.4) | ja | Abbruch mit Fehlermeldung |
-| `FEVER_UID`, `FEVER_GID` | Ausgabe von `id -u` bzw. `id -g` (Schritt 2.4) | nein | 1000 |
-| `FEVER_WEB_PORT` | Port des Dashboards im Heimnetz | nein | 8050 |
-
-Prüfen, ohne dass der Schlüssel auf dem Bildschirm erscheint (`-q` gibt bei Erfolg nichts aus):
-
-```bash
-docker compose config -q && echo "Konfiguration ok"
-```
-
-Mögliche Fehlermeldungen (Verhalten ✅ geprüft am 25.09.2026 in der Entwicklungsumgebung, noch nicht auf dem Pi):
-- `required variable FEVER_DATA_DIR is missing a value: FEVER_DATA_DIR fehlt in .env …` bzw. dasselbe für `FRED_API_KEY`: Wert in `.env` eintragen.
-- Beim Start `bind source path does not exist: …`: Der Datenordner aus Schritt 2.4 fehlt oder der Pfad in `.env` ist falsch.
-
-## 7. Ersteinrichtung und Start
-
-### 7.1 Image bauen und Datenbank anlegen ✅ (25.09.2026, Entwicklungsumgebung mit arm64-Image; auf dem Pi noch nicht)
-
-```bash
-cd ~/Finanz-Dashboard
-docker compose build                                   # dauert auf dem Pi einige Minuten
-docker compose run --rm worker alembic upgrade head    # legt die Datenbank an
-```
-
-Erwartete letzte Zeile:
-
-```text
-INFO  [alembic.runtime.migration] Running upgrade  -> 0001, Initial schema: observation (append-only), source_status, heartbeat.
-```
-
-Danach liegt im Datenordner die Datei `fever.sqlite3` (Eigentümer: deine UID/GID). Bei der Ersteinrichtung entfallen „stoppen“ und „Backup“ aus dem Migrationsablauf, weil es noch keine Datenbank gibt (Umsetzungsplan W-7). Ein Backup vorher würde mit „Keine Datenbank vorhanden“ abbrechen.
-
-### 7.2 Dienste starten ⏳ (ab M3)
-
-```bash
-docker compose up -d
-docker compose ps                                      # nach etwa 1–2 Minuten: beide Dienste "(healthy)"
-```
-
-Der Worker beginnt sofort mit dem Abruf. Die erste Rückfüllung der Historien kann dauern; den Fortschritt siehst du mit:
-
-```bash
-docker compose logs -f worker    # beenden mit Strg+C, der Worker läuft weiter
-```
+**Wann die ersten Daten kommen:** Der Worker ruft jede Reihe an New-Yorker Werktagen ab ihrer Veröffentlichungszeit ab (E-31); an Wochenenden ruft er nichts ab. Als Erstes kommt SOFR um 08:15 New York (derzeit 14:15 Uhr deutscher Zeit). Im Log steht dann z. B. `INFO fever.sources.update: sofr: 2118 neue Zeilen (Erstabruf)`. Das lokale ICE-Archiv beginnt mit dem ersten Abruf der ICE-Reihen um 10:15 New York (derzeit 16:15 Uhr).
 
 ## 8. Dashboard aufrufen ⏳ (ab M6)
 
-Im Browser eines Geräts im Heimnetz: `http://<IP-aus-Schritt-2.5>:8050`, z. B. `http://192.168.178.23:8050`.
+Im Browser eines Geräts im Heimnetz: `http://<IP-von-TrueNAS>:8003`.
 
-Sicherheit (Entscheidungen E-3/E-4 vom 25.09.2026):
-- Es gibt **kein Passwort**. Jedes Gerät in deinem Heimnetz (auch Gäste-Handys im selben WLAN) kann das Dashboard öffnen. Es zeigt nur öffentliche Marktdaten, keine Kontodaten.
+- Es gibt **kein Passwort**. Jedes Gerät in deinem Heimnetz kann das Dashboard öffnen. Es zeigt nur öffentliche Marktdaten, keine Kontodaten.
 - **Keine Portweiterleitung** im Router einrichten; sonst wäre das Dashboard aus dem Internet erreichbar.
-- Docker-Portfreigaben umgehen die Regeln der Firewall `ufw` (Docker-Doku, Abschnitt „Firewall limitations“). Eine ufw-Regel schützt den Port also nicht.
 
 ## 9. Update auf eine neue Version ⏳
 
-Standardablauf. Er schadet nie; gibt es keine neue Migration, ist `alembic upgrade head` wirkungslos. Stand der Datenbank prüfen: `docker compose run --rm worker alembic current` zeigt z. B. `0001 (head)`; steht dort `(head)`, ist sie aktuell.
+Standardablauf. Er schadet nie; gibt es keine neue Migration, ist `alembic upgrade head` wirkungslos. `$RUN` wie in Schritt 6.
 
 ```bash
-cd ~/Finanz-Dashboard
+cd /mnt/Daten-Z1/apps/feewer
 git pull
-docker compose build
-docker compose stop
-docker compose run --rm worker python -m fever.backup    # Sicherung vor der Migration
-docker compose run --rm worker alembic upgrade head
-docker compose up -d
-docker compose ps
+git diff --stat HEAD@{1} -- compose.dockge.yaml .env.example    # Ausgabe? Dann Schritt 7.2/7.3 wiederholen
+sudo docker compose build
+# in Dockge: Stack "fever" stoppen
+$RUN python -m fever.backup        # Sicherung vor der Migration
+$RUN alembic upgrade head
+# in Dockge: Stack "fever" starten
 ```
 
-Kurzform, nur wenn sicher keine Migration dabei ist (steht dann im Umsetzungsplan bzw. in der Commit-Nachricht):
+## 10. Backup und Wiederherstellung
 
-```bash
-cd ~/Finanz-Dashboard && git pull && docker compose up -d --build
-```
+### 10.1 Backup
 
-## 10. Backup, Kopie außerhalb des Pi, Wiederherstellung
+✅ 25.09.2026 (manuell) und 26.09.2026 (täglich durch den Worker), Entwicklungsumgebung. ⏳ auf TrueNAS.
 
-### 10.1 Backup ✅ (25.09.2026, Entwicklungsumgebung mit arm64-Image; auf dem Pi noch nicht)
-
-Backups liegen in `/home/dirk/volumes/fever/backup/` und werden vor dem Ablegen auf Fehlerfreiheit geprüft (`integrity_check`).
+Backups liegen in `/mnt/Daten-Z1/apps/feewer/data/backup/` und werden vor dem Ablegen auf Fehlerfreiheit geprüft (`integrity_check`). Ein weiteres Ziel außerhalb gibt es nicht (E-22).
 
 | Art | Dateiname (Zeit in UTC) | entsteht | aufbewahrt (E-8) |
 |---|---|---|---|
-| täglich | `fever-20260925T031500Z-daily.sqlite3` | automatisch durch den Worker (ab M3) | die neuesten 14 |
+| täglich | `fever-20260926T105602Z-daily.sqlite3` | automatisch durch den Worker, einmal pro UTC-Tag | die neuesten 14 |
 | manuell | `fever-20260925T203329Z-manual.sqlite3` | mit dem Befehl unten, auch vor jeder Migration | die neuesten 5 |
 
-Andere Dateien in `backup/` werden nie gelöscht. Sofortiges Backup:
+Andere Dateien in `backup/` werden nie gelöscht. Sofortiges Backup bei laufendem Stack:
 
 ```bash
-cd ~/Finanz-Dashboard
-docker compose run --rm worker python -m fever.backup
-ls -lh /home/dirk/volumes/fever/backup/
+sudo docker exec fever-worker-1 python -m fever.backup
+#   erwartet: … INFO __main__: Backup erstellt und geprüft: /data/backup/fever-…-manual.sqlite3
+sudo ls -lh /mnt/Daten-Z1/apps/feewer/data/backup/
 ```
 
-Erwartete Ausgabe (der Pfad `/data` ist dein Datenordner, von innen gesehen):
+Bei gestopptem Stack stattdessen `$RUN python -m fever.backup`. Bei einem Fehler endet der Befehl mit Exit-Code 2 und einer Meldung, z. B. `Keine Datenbank vorhanden: /data/fever.sqlite3`.
 
-```text
-… INFO __main__: Backup erstellt und geprüft: /data/backup/fever-20260925T203329Z-manual.sqlite3
-```
+### 10.2 Wiederherstellung
 
-Bei einem Fehler endet der Befehl mit Exit-Code 2 und einer Meldung, z. B. `Keine Datenbank vorhanden: /data/fever.sqlite3`.
+✅ 25.09.2026, Entwicklungsumgebung: Backup zurückgespielt, Werte identisch. ⏳ auf TrueNAS.
 
-### 10.2 Kopie außerhalb des Pi ⏳
-
-**Wichtig:** Die lokal archivierten ICE-BofA-Spreads (HY-OAS u. a.) lassen sich nicht wieder beschaffen; FRED liefert seit April 2026 nur noch drei Jahre. Stirbt die SSD, sind sie ohne externe Kopie verloren. Ein automatisches Ziel außerhalb des Pi ist noch nicht entschieden (O-4). Bis dahin von Zeit zu Zeit manuell kopieren, z. B. von deinem PC oder Mac aus:
+Nie eine laufende Datenbank überschreiben. Die Datenbank heißt `fever.sqlite3`. Nach einem Absturz können daneben `fever.sqlite3-wal` und `fever.sqlite3-shm` liegen; sie gehören zur alten Datei und müssen mit weg. Die Kopie läuft über `$RUN`, damit sie `apps` gehört.
 
 ```bash
-scp dirk@<IP-des-Pi>:/home/dirk/volumes/fever/backup/<backup-datei> .
+# in Dockge: Stack "fever" stoppen
+D=/mnt/Daten-Z1/apps/feewer/data
+sudo ls -l $D $D/backup                        # was liegt da? gewünschtes Backup aussuchen
+ALT=$D/alt-$(date +%F)
+sudo mkdir -p "$ALT"
+sudo mv $D/fever.sqlite3 "$ALT"/
+sudo sh -c "mv $D/fever.sqlite3-* '$ALT'/ 2>/dev/null; true"
+$RUN cp /data/backup/<backup-datei> /data/fever.sqlite3
+$RUN alembic current                           # erwartet: "0001 (head)" oder neuer
+# in Dockge: Stack "fever" starten
 ```
 
-Die Daten nur für dich selbst verwenden, nicht weitergeben (ICE-Lizenz).
-
-### 10.3 Wiederherstellung ✅ (25.09.2026, Entwicklungsumgebung: Backup in neuen Ordner zurückgespielt, Werte identisch; auf dem Pi noch nicht)
-
-Nie eine laufende Datenbank überschreiben. Die Datenbank heißt `fever.sqlite3`. Nach einem Absturz können daneben `fever.sqlite3-wal` und `fever.sqlite3-shm` liegen; sie gehören zur alten Datei und müssen mit weg. Nach sauberem Stoppen fehlen sie normalerweise.
-
-```bash
-cd ~/Finanz-Dashboard
-docker compose stop
-ls -l /home/dirk/volumes/fever/                                  # was liegt da?
-ls /home/dirk/volumes/fever/backup/                              # gewünschtes Backup aussuchen
-ALT=/home/dirk/volumes/fever/alt-$(date +%F)
-mkdir -p "$ALT"
-mv /home/dirk/volumes/fever/fever.sqlite3 "$ALT"/
-ls /home/dirk/volumes/fever/fever.sqlite3-* 2>/dev/null && mv /home/dirk/volumes/fever/fever.sqlite3-* "$ALT"/
-cp /home/dirk/volumes/fever/backup/<backup-datei> /home/dirk/volumes/fever/fever.sqlite3
-docker compose run --rm worker alembic current          # erwartet: "0001 (head)" oder neuer
-docker compose up -d
-```
-
-Den Ordner `alt-…` erst löschen, wenn das Dashboard wieder korrekt läuft. Zeigt `alembic current` kein `(head)`, stammt das Backup von vor einer Migration: dann `docker compose run --rm worker alembic upgrade head` ausführen.
+Den Ordner `alt-…` erst löschen, wenn wieder alles korrekt läuft. Zeigt `alembic current` kein `(head)`, stammt das Backup von vor einer Migration: dann `$RUN alembic upgrade head` ausführen.
 
 ## 11. Fehlersuche ⏳
 
 | Symptom | Prüfen |
 |---|---|
-| Seite lädt nicht | `docker compose ps` (läuft `web`?), `ping <IP-des-Pi>` von deinem Gerät, richtige Portnummer? |
-| Banner „Keine Verbindung zum Pi“ | wie oben; die angezeigten Werte sind eingefroren |
-| Banner „Worker ohne Lebenszeichen“ | `docker compose ps`, `docker compose logs --tail 100 worker` |
-| Einzelne Quelle veraltet | Ansicht „Datenstand“ im Dashboard: letzter Erfolg, letzter Versuch, letzter Fehler je Quelle |
-| Dienst „unhealthy“ | `docker compose ps` zeigt den Containernamen; dann `docker inspect --format '{{json .State.Health}}' <containername>` |
-| Speicher voll | `df -h /home/dirk/volumes/fever` |
+| Worker startet immer wieder neu | `sudo docker logs --tail 50 fever-worker-1`. „Datenbank fehlt“: Schritt 6. „Datenordner fehlt“ oder „Permission denied“: Schritt 3.3 |
+| Worker „unhealthy“ | Das Lebenszeichen ist älter als 45 Minuten (E-33). `sudo docker inspect --format '{{json .State.Health}}' fever-worker-1`, dazu das Log |
+| Keine neuen Werte | Wochenende oder US-Feiertag? Sonst Log: Zeilen mit „Nichts gespeichert“ oder „verworfen“ nennen Reihe und Grund |
+| Einzelne Quelle veraltet | ab M6 Ansicht „Datenstand“: letzter Erfolg, letzter Versuch, letzter Fehler je Quelle |
+| Speicher | `zfs list -o name,used,avail Daten-Z1/apps/feewer/data` |
 | Im Log steht `api_key=***` | Gewollt: Der FRED-Schlüssel wird in Logs und Fehlermeldungen nie ausgegeben |
-| Log-Zeilen „Abruf fehlgeschlagen …, Versuch 1/3“ | Einzelne Aussetzer sind normal; der Abruf wird bis zu dreimal versucht. Erst „nach 3 Versuchen“ ist ein echter Fehler, sichtbar im Datenstand |
-| Werte fälschlich „veraltet“ | Uhrzeit: `timedatectl` (Schritt 2.3) |
+| Log-Zeilen „Abruf fehlgeschlagen …, Versuch 1/3“ | Einzelne Aussetzer sind normal. Erst „nach 3 Versuchen“ ist ein echter Fehler; der Worker versucht es nach einer Stunde erneut |
+| Werte fälschlich „veraltet“ | Uhrzeit: Schritt 2.2 |
 
-Logs werden in der Größe begrenzt (Compose-Einstellung), damit sie die SSD nicht füllen.
+Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
 
 ## 12. Befehlsübersicht
 
+`$RUN` wie in Schritt 6; Containername bei Stack-Name `fever`.
+
 | Zweck | Befehl | Status |
 |---|---|---|
-| Start / Update ohne Migration | `docker compose up -d --build` | ⏳ ab M3 |
-| Status | `docker compose ps` | ⏳ ab M3 |
-| Worker-Log live | `docker compose logs -f worker` | ⏳ ab M3 |
-| Datenbank anlegen / migrieren | `docker compose run --rm worker alembic upgrade head` | ✅ Entwicklungsumgebung 25.09.2026 |
-| Stand der Datenbank | `docker compose run --rm worker alembic current` | ✅ Entwicklungsumgebung 25.09.2026 |
-| Sofort-Backup | `docker compose run --rm worker python -m fever.backup` | ✅ Entwicklungsumgebung 25.09.2026 |
-| Migration (Ablauf) | `docker compose stop` → Backup → `docker compose run --rm worker alembic upgrade head` → `docker compose up -d` | ⏳ `up -d` ab M3 |
-| Stoppen | `docker compose stop` | ⏳ ab M3 |
+| Image bauen | `cd /mnt/Daten-Z1/apps/feewer && sudo docker compose build` | ✅ Dockerfile-Build Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
+| Datenbank anlegen / migrieren | `$RUN alembic upgrade head` | ✅ Entwicklungsumgebung 26.09.2026 (UID 568) |
+| Stand der Datenbank | `$RUN alembic current` | ✅ Entwicklungsumgebung 25.09.2026 |
+| Start, Stopp | Dockge, Stack `fever` | ✅ mit `docker compose` Entwicklungsumgebung 26.09.2026, ⏳ Dockge |
+| Worker-Log | `sudo docker logs -f fever-worker-1` | ⏳ |
+| Healthcheck von Hand | `sudo docker exec fever-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"` | ✅ Entwicklungsumgebung 26.09.2026 |
+| Sofort-Backup | `sudo docker exec fever-worker-1 python -m fever.backup` (Stack gestoppt: `$RUN python -m fever.backup`) | ✅ Entwicklungsumgebung 25.09.2026 |
+| Migration (Ablauf) | Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten | ⏳ |

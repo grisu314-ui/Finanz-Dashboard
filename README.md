@@ -6,13 +6,13 @@ Zweck ist Regime- und Risikoanzeige, **keine Crash-Prognose, keine Handelssignal
 
 ## Status
 
-Stand 26.09.2026: **M0, M1 und M2 erledigt**: Projektgerüst, Docker-Image, Datenbank mit geschütztem Archiv, Backup und Wiederherstellung, abgesicherter HTTP-Client, 23 Datenreihen von Cboe und FRED mit Prüfung und Veröffentlichungszeitpunkt. Noch nicht lauffähig: Dauerbetrieb des Datenabrufs (ab M3) und Oberfläche (ab M6). Die Einrichtung auf TrueNAS entsteht mit M3. Fortschritt: `docs/umsetzungsplan.md`, Abschnitt 1.
+Stand 26.09.2026: **M0 bis M2 erledigt, M3 umgesetzt**: Docker-Image, Datenbank mit geschütztem Archiv, Backup und Wiederherstellung, 23 Datenreihen von Cboe und FRED mit Prüfung und Veröffentlichungszeitpunkt, Worker mit Abrufplan und Healthcheck. Offen in M3: die Einrichtung auf TrueNAS nach [`docs/einrichtung.md`](docs/einrichtung.md). Die Oberfläche folgt ab M6. Fortschritt: `docs/umsetzungsplan.md`, Abschnitt 1.
 
 ## Dokumentation
 
 | Du willst … | Lies |
 |---|---|
-| das Dashboard einrichten, aktualisieren, sichern (beschreibt noch den Pi; Neufassung für TrueNAS in M3) | [`docs/einrichtung.md`](docs/einrichtung.md) |
+| das Dashboard auf TrueNAS mit Dockge einrichten, aktualisieren, sichern | [`docs/einrichtung.md`](docs/einrichtung.md) |
 | verstehen, was das Dashboard zeigt und wie man es bedient | [`docs/bedienung.md`](docs/bedienung.md) |
 | wissen, was gebaut wird, was entschieden und was offen ist | [`docs/umsetzungsplan.md`](docs/umsetzungsplan.md) |
 | die fachliche Grundlage (Indikatoren, Methodik, Quellen) | [`docs/recherche.md`](docs/recherche.md) |

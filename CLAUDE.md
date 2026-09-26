@@ -59,10 +59,13 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
 
 - `pytest -q`: alle Tests (Python 3.14 mit `requirements-dev.txt`; Cloud-Umgebung: `docs/umsetzungsplan.md`, Abschn. 10)
 - `docker build .`: Build-Probe auf dem Entwicklungsrechner (x86_64 wie TrueNAS; Cloud-Umgebung: `docs/umsetzungsplan.md`, Abschn. 10)
-- Start und Update auf TrueNAS: Image im Projektverzeichnis bauen, Stack in Dockge starten; genaue Befehle folgen in M3 (E-21)
-- `docker compose run --rm worker python -m fever.backup`: sofortiges Backup
-- Migration, auch bei der Ersteinrichtung: `docker compose stop` → Backup → `docker compose run --rm worker alembic upgrade head` → `docker compose up -d`; Stand: `… alembic current`
-- `docker compose logs -f worker`
+- Betrieb auf TrueNAS (Details: `docs/einrichtung.md`); Projektverzeichnis `/mnt/Daten-Z1/apps/feewer`, Datenordner dort `data/`:
+  - Build: `sudo docker compose build` im Projektverzeichnis (Bau-Datei `docker-compose.yml`, E-32)
+  - Start, Stopp, Update: Dockge-Stack `fever` aus einer Kopie von `compose.dockge.yaml` mit eigener `.env`
+  - Einmal-Container: `RUN='sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v /mnt/Daten-Z1/apps/feewer/data:/data fever:local'`
+  - Migration, auch bei der Ersteinrichtung: Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten; Stand: `$RUN alembic current`
+  - Sofort-Backup bei laufendem Stack: `sudo docker exec fever-worker-1 python -m fever.backup`
+  - Log: `sudo docker logs -f fever-worker-1`
 
 ## Architektur
 
@@ -163,8 +166,8 @@ Ein falscher Score fällt nicht auf, bis die Ampel eine falsche Lage zeigt.
 ## TrueNAS und Docker
 
 - Nur Abhängigkeiten mit Wheels für linux/amd64, nichts, was beim Build kompiliert; vor der Aufnahme prüfen.
-- Ein Image für `web` und `worker`, `restart: unless-stopped`, Nicht-root-Benutzer (UID/GID per Build-Arg, Standard 1000).
-- Datenordner als Bind-Mount auf einem Dataset des TrueNAS-Hosts selbst (kein NFS/SMB, auch nicht von einem anderen Rechner eingebunden: SQLite-WAL funktioniert dort nicht), Host-Pfad aus `.env` (Festlegung in M3). Ins Image wird nie geschrieben.
+- Ein Image für `web` und `worker`, `restart: unless-stopped`, Nicht-root-Benutzer: im Image `fever` (1000), im Betrieb `apps` (568:568) über `user:` aus der `.env` des Stacks (E-29).
+- Datenordner als Bind-Mount auf einem Dataset des TrueNAS-Hosts selbst (kein NFS/SMB, auch nicht von einem anderen Rechner eingebunden: SQLite-WAL funktioniert dort nicht), Host-Pfad aus `.env`: das Kind-Dataset `/mnt/Daten-Z1/apps/feewer/data` im Projektverzeichnis, von Git und Docker-Build ignoriert (`data*/`, E-28). Nie `git clean -x` im Projektverzeichnis. Ins Image wird nie geschrieben.
 - Logs nur auf stdout, in Compose begrenzt (`json-file` mit `max-size` und `max-file`), um das Speichermedium zu schonen.
 - Healthchecks ohne Zusatzpakete (`python -c …`): `web` per HTTP-Endpunkt, `worker` per Alter des Heartbeats.
 - Secrets nur in `.env` (wie `data*/` in `.gitignore`); im Repo liegt `.env.example`: Secrets leer, nicht geheime Werte vorbelegt (E-12). Nie loggen, nie ins Image. `.env` liest du nicht. Einziges Secret derzeit: der FRED-API-Schlüssel.
@@ -192,7 +195,7 @@ Vor der Umsetzung des betroffenen Teils klären; Entschiedenes hier mit Antwort 
 | Nr. | Frage | Bis zur Entscheidung |
 |---|---|---|
 | O-1 | Kursquelle für ETFs und Indexmitglieder (RSP/SPY, Sektor- und Größenverhältnisse, Breite). FRED `SP500` reicht nur 10 Jahre zurück, genügt aber für VRP und Aktien-Anleihen-Korrelation | VRP und Korrelation aus FRED `SP500`; übrige Indikatoren weglassen, keine Quelle selbst wählen |
-| O-2 | Zielsystem, RAM, Speichermedium, Pfad des Datenordners | **Entschieden 26.09.2026 (E-21):** TrueNAS statt Pi (Pi: CM4 mit 1,8 GiB RAM, SD-Karte mit 2,6 GB frei). Pfad, UID/GID und Dockge-Stack werden in M3 festgelegt; E-11 (Pfad auf dem Pi) ist überholt |
+| O-2 | Zielsystem, RAM, Speichermedium, Pfad des Datenordners | **Entschieden 26.09.2026 (E-21, E-28, E-29):** TrueNAS 25.10.7 statt Pi (Pi: CM4 mit 1,8 GiB RAM, SD-Karte mit 2,6 GB frei). Projekt `/mnt/Daten-Z1/apps/feewer`, Datenordner Kind-Dataset `data/`, Container als `apps` 568:568, Dockge-Stack `fever`, Betrieb vom Branch `claude-testing` (E-30) |
 | O-3 | Zugang: nur Heimnetz oder Tailscale, ggf. mit Basic-Auth-Pforte | **Entschieden 25.09.2026:** nur Heimnetz, kein Passwort; Port an `0.0.0.0`; keine Portweiterleitung im Router |
 | O-4 | Backup-Ziel außerhalb des Servers | **Entschieden 26.09.2026 (E-22):** Backups bleiben im Datenordner auf TrueNAS, kein weiteres Ziel; Aufwand für Backups gering halten |
 | O-5 | ICE-Spreads: drei Jahre Historie bei fünf Jahren Mindesthistorie; betrifft Kreditblock und Rot-Regel. Optionen: BAA10Y (FRED, täglich ab 1986, Moody's-Lizenz) als langer Ersatz, Lizenz direkt bei ICE, befristete Ausnahme mit Kennzeichnung | archivieren und anzeigen, nicht in den Score |

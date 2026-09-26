@@ -2,7 +2,8 @@
 # One image for both services (web, worker). Python minor version pinned.
 FROM python:3.14-slim-trixie
 
-# Non-root user; UID/GID should match the owner of the data directory on the host.
+# Non-root default user. In operation the Dockge stack sets the user from .env
+# (compose.dockge.yaml, `user:`; E-29), so the image needs no rebuild for another UID.
 ARG UID=1000
 ARG GID=1000
 
@@ -14,7 +15,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Wheels only: the build fails instead of compiling anything on the Pi.
+# Wheels only: the build fails instead of compiling anything on the host.
 COPY requirements.txt .
 RUN pip install --only-binary=:all: -r requirements.txt
 

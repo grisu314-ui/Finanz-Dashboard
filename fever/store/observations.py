@@ -10,7 +10,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, datetime
 
-from sqlalchemy import insert, select
+from sqlalchemy import func, insert, select
 from sqlalchemy.engine import Connection
 
 from fever.store.tables import observation
@@ -70,6 +70,11 @@ def latest_values(conn: Connection, series_id: str) -> list[StoredObservation]:
             row.obs_date, row.value, row.vintage, row.vintage_estimated, row.retrieved_at
         )
     return list(latest.values())
+
+
+def latest_obs_date(conn: Connection, series_id: str) -> date | None:
+    """Most recent observation date stored for the series, None if there is none."""
+    return conn.execute(select(func.max(observation.c.obs_date)).where(observation.c.series_id == series_id)).scalar()
 
 
 def _check(series_id: str, rows: list[NewObservation], retrieved_at: datetime) -> None:

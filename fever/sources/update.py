@@ -33,6 +33,7 @@ class UpdateResult:
     added: int  # rows stored
     rejected: int  # values dropped by the checks
     error: str | None  # message written to source_status; None if everything was fine
+    fetched: bool = True  # False if the fetch or the format check failed and nothing was read
 
 
 def _utcnow() -> datetime:
@@ -61,7 +62,7 @@ def update_series(
         logger.error("Nichts gespeichert: %s", message)
         with engine.begin() as conn:
             record_error(conn, series.source, clock(), message)
-        return UpdateResult(0, 0, message)
+        return UpdateResult(0, 0, message, fetched=False)
 
     valid, problems = check(rows, series, fetched.retrieved_at)
     message = None

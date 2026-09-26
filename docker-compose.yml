@@ -1,48 +1,13 @@
-# Fieberthermometer: one image, two services.
-# Settings come from .env (template: .env.example, instructions: docs/einrichtung.md).
-# Status: the worker becomes runnable in milestone M3, the web service in M6
-# (docs/umsetzungsplan.md). Healthchecks are added with those milestones.
-name: fever
-
-x-service: &service
-  image: fever:local
-  restart: unless-stopped
-  volumes:
-    # A missing host directory must be an error, not silently created (as root) and
-    # filled. Compose 5.1.1 creates it unless create_host_path is false (tested 25.09.2026).
-    - type: bind
-      source: ${FEVER_DATA_DIR:?FEVER_DATA_DIR fehlt in .env (siehe docs/einrichtung.md)}
-      target: /data
-      bind:
-        create_host_path: false
-  logging:
-    driver: json-file
-    options:
-      max-size: "10m"
-      max-file: "3"
+# Build file (decision E-32): builds the image fever:local in the project directory.
+#   sudo docker compose build
+# Operation runs as a Dockge stack from compose.dockge.yaml (docs/einrichtung.md).
+# This file starts nothing: `up` only prints a hint and exits.
+name: fever-build
 
 services:
-  worker:
-    <<: *service
-    # Only this service builds; web reuses the same image.
+  fever:
+    image: fever:local
     build:
       context: .
-      args:
-        UID: ${FEVER_UID:-1000}
-        GID: ${FEVER_GID:-1000}
-    command: ["python", "-m", "fever.worker"]
-    environment:
-      FEVER_DATA: /data
-      FRED_API_KEY: ${FRED_API_KEY:?FRED_API_KEY fehlt in .env (siehe docs/einrichtung.md)}
-
-  web:
-    <<: *service
-    pull_policy: never
-    environment:
-      FEVER_DATA: /data
-    # No depends_on: web must keep running (and show a banner) when the worker is down.
-    # Worker count (1-2) is revisited in M6 once the Pi model is known (O-2).
-    command: ["gunicorn", "--bind", "0.0.0.0:8050", "--workers", "2", "fever.web.app:server"]
-    ports:
-      # O-3, decided 25.09.2026: home network only, no password, all interfaces.
-      - "0.0.0.0:${FEVER_WEB_PORT:-8050}:8050"
+    restart: "no"
+    command: ["python", "-c", "print('Nur zum Bauen. Betrieb über den Dockge-Stack, siehe docs/einrichtung.md.')"]
