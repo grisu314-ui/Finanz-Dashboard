@@ -1,11 +1,16 @@
-"""Fetch one raw series, check it and store new or changed values.
+"""Fetch raw series, check them and store new or changed values.
 
-Order: attempt -> fetch -> raw archive -> parse -> checks -> vintage -> append -> status.
-Decisions (docs/umsetzungsplan.md): E-14 vintage, E-15 a value outside the bounds
-is dropped while the rest is stored, E-24 start date, E-25 lead_days.
+Order per download group (E-36): attempt -> fetch once -> raw archive -> per series:
+parse -> checks -> vintage -> append -> status. Decisions (docs/umsetzungsplan.md):
+E-14 vintage, E-15 a value outside the bounds is dropped while the rest is stored,
+E-24 start date, E-25 lead_days.
+
+`python -m fever.sources.update` fetches every series once, independent of the
+worker's schedule (one-off fetch, docs/einrichtung.md).
 """
 
 import logging
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
@@ -14,15 +19,17 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.engine import Engine
 
-from fever.config import Series
-from fever.http import FetchError, HttpClient
-from fever.sources import Row, SourceError, cboe, fred
+from fever import log
+from fever.config import ConfigError, Series, group_members, series_catalog
+from fever.http import FetchError, Fetched, HttpClient
+from fever.sources import Row, SourceError, cboe, ecb, fed, fred, ofr
+from fever.store.db import DataDirError, data_dir, make_engine
 from fever.store.observations import NewObservation, append_observations, latest_values
 from fever.store.raw import archive_raw
 from fever.store.status import record_attempt, record_error, record_success
 
 NEW_YORK = ZoneInfo("America/New_York")
-MODULES = {"cboe": cboe, "fred": fred}
+MODULES = {"cboe": cboe, "fred": fred, "ecb": ecb, "ofr": ofr, "fed": fed}
 MAX_LISTED_PROBLEMS = 5
 
 logger = logging.getLogger(__name__)
@@ -48,39 +55,64 @@ def update_series(
     *,
     clock: Callable[[], datetime] = _utcnow,
 ) -> UpdateResult:
-    """Fetch, check and store one series. Source problems are logged and recorded, not raised."""
-    module = MODULES[series.source]
+    """Fetch, check and store one series (a group of one)."""
+    return update_group(engine, data_dir, client, [series], clock=clock)[0]
+
+
+def update_group(
+    engine: Engine,
+    data_dir: Path,
+    client: HttpClient,
+    members: list[Series],
+    *,
+    clock: Callable[[], datetime] = _utcnow,
+) -> list[UpdateResult]:
+    """Fetch the group's download once and store every member. Problems are logged and recorded, not raised."""
+    first = members[0]
+    module = MODULES[first.source]
     with engine.begin() as conn:
-        record_attempt(conn, series.source, clock())
+        record_attempt(conn, first.source, clock())
     try:
-        fetched = module.fetch(client, series)
+        fetched = module.fetch(client, first)
         # Archived before parsing, so a changed format can be inspected afterwards.
-        archive_raw(data_dir, series.source, series.id, fetched.content, fetched.retrieved_at)
-        rows = module.parse(fetched.content, series, fetched.retrieved_at)
+        archive_raw(data_dir, first.source, first.group, fetched.content, fetched.retrieved_at)
     except (FetchError, SourceError) as exc:
-        message = f"{series.id}: {exc}"
+        message = f"{first.group}: {exc}"
         logger.error("Nichts gespeichert: %s", message)
         with engine.begin() as conn:
-            record_error(conn, series.source, clock(), message)
-        return UpdateResult(0, 0, message, fetched=False)
+            record_error(conn, first.source, clock(), message)
+        return [UpdateResult(0, 0, message, fetched=False) for _ in members]
 
+    results = [_store(engine, module, series, fetched) for series in members]
+    messages = [result.error for result in results if result.error]
+    with engine.begin() as conn:
+        now = clock()
+        # Success means at least one readable series; dropped values are reported next to it (E-15).
+        if any(result.fetched for result in results):
+            record_success(conn, first.source, now)
+        if messages:
+            record_error(conn, first.source, now, " | ".join(messages))
+    return results
+
+
+def _store(engine: Engine, module, series: Series, fetched: Fetched) -> UpdateResult:
+    try:
+        rows = module.parse(fetched.content, series, fetched.retrieved_at)
+    except SourceError as exc:
+        message = f"{series.id}: {exc}"
+        logger.error("Nichts gespeichert: %s", message)
+        return UpdateResult(0, 0, message, fetched=False)
     valid, problems = check(rows, series, fetched.retrieved_at)
     message = None
     if problems:
         listed = "; ".join(problems[:MAX_LISTED_PROBLEMS])
         more = f" (und {len(problems) - MAX_LISTED_PROBLEMS} weitere)" if len(problems) > MAX_LISTED_PROBLEMS else ""
         message = f"{series.id}: {len(problems)} Wert(e) verworfen: {listed}{more}"
+        logger.error("%s", message)
     with engine.begin() as conn:
         backfill = not latest_values(conn, series.id)
         new = [_observation(row, series, fetched.retrieved_at, backfill) for row in valid]
         added = append_observations(conn, series.id, new, retrieved_at=fetched.retrieved_at)
-        now = clock()
-        # Success means a readable response; dropped values are reported next to it (E-15).
-        record_success(conn, series.source, now)
-        if message:
-            record_error(conn, series.source, now, message)
-    if message:
-        logger.error("%s", message)
     logger.info("%s: %d neue Zeilen%s", series.id, added, " (Erstabruf)" if backfill else "")
     return UpdateResult(added, len(problems), message)
 
@@ -125,3 +157,26 @@ def _observation(row: Row, series: Series, retrieved_at: datetime, backfill: boo
 
 def _number(value: float) -> str:
     return f"{value:.12g}".replace(".", ",")
+
+
+def main() -> int:
+    """One-off fetch of every series; exit code 1 if any series reported a problem."""
+    log.setup()
+    try:
+        directory = data_dir()
+        engine = make_engine(directory)
+        catalog = series_catalog()
+    except (DataDirError, ConfigError) as exc:
+        logger.error("Abruf nicht gestartet: %s", exc)
+        return 2
+    client = HttpClient()
+    problems = 0
+    for members in group_members(catalog).values():
+        problems += sum(1 for result in update_group(engine, directory, client, members) if result.error)
+    engine.dispose()
+    logger.info("Sofort-Abruf beendet: %d Reihen, %d mit Problemen", len(catalog), problems)
+    return 1 if problems else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

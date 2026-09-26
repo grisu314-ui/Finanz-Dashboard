@@ -66,12 +66,12 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
   - Migration, auch bei der Ersteinrichtung: Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten; Stand: `$RUN alembic current`
   - Sofort-Backup bei laufendem Stack: `sudo docker exec finanz-dashboard-worker-1 python -m fever.backup`
   - Log: `sudo docker logs -f finanz-dashboard-worker-1`
-  - Sofort-Abruf aller Reihen (unabhängig vom Abrufplan): `docs/einrichtung.md`, Schritt 7
+  - Sofort-Abruf aller Reihen (unabhängig vom Abrufplan): `sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update`
 
 ## Architektur
 
 ```
-fever/sources/     je Quelle ein Modul (fetch, parse); update.py prüft, datiert (Vintage) und speichert
+fever/sources/     je Quelle ein Modul (fetch, parse); update.py lädt je Abrufgruppe einmal, prüft, datiert (Vintage) und speichert
 fever/store/       Tabellen (SQLAlchemy Core), Lese- und Schreibfunktionen
 fever/scoring/     reine Berechnung, importiert nichts aus web/ oder store/
 fever/worker.py    Abrufschleife, Scoring-Lauf, Heartbeat

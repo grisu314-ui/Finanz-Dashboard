@@ -17,6 +17,11 @@
 #   license         optional licence note
 #   start           optional: observations before this date are ignored (E-24)
 #   lead_days       optional: observations may be dated up to this many days after today (E-25)
+#   group           optional: series sharing one download (E-36); they must share source,
+#                   frequency, release_time and lag_days. Default: the series id.
+#
+# Series ids: FRED and Cboe use their own identifier in lower case (E-16); all other sources
+# use "<source>_<short name>" with the exact identifier in source_id (E-35).
 
 # --- Cboe daily index closes (CSV). Licence: personal, non-commercial use (E-26) ---
 
@@ -298,3 +303,177 @@ lag_days = 0
 tolerance_days = 3
 bounds = [100, 100000]
 license = "S&P Dow Jones Indices LLC (Copyright): nur private Nutzung, keine Weitergabe"
+
+# --- ECB Data Portal (M4a). Reuse free with the note "Source: ECB statistics." ---
+
+[series.ecb_ciss]
+source = "ecb"
+source_id = "CISS/D.U2.Z0Z.4F.EC.SS_CIN.IDX"
+name = "EZB CISS: Composite Indicator of Systemic Stress (Euroraum)"
+unit = "Index (0 bis 1)"
+frequency = "daily"
+release_time = "06:15"
+lag_days = 1
+tolerance_days = 3
+bounds = [0, 1]
+license = "Quelle: EZB-Statistik (Source: ECB statistics.)"
+
+[series.ecb_exr_usd]
+source = "ecb"
+source_id = "EXR/D.USD.EUR.SP00.A"
+name = "EZB-Referenzkurs US-Dollar je Euro"
+unit = "USD je EUR"
+frequency = "daily"
+release_time = "11:15"
+lag_days = 0
+tolerance_days = 3
+bounds = [0.3, 5]
+license = "Quelle: EZB-Statistik (Source: ECB statistics.)"
+
+[series.ecb_exr_jpy]
+source = "ecb"
+source_id = "EXR/D.JPY.EUR.SP00.A"
+name = "EZB-Referenzkurs Yen je Euro"
+unit = "JPY je EUR"
+frequency = "daily"
+release_time = "11:15"
+lag_days = 0
+tolerance_days = 3
+bounds = [20, 800]
+license = "Quelle: EZB-Statistik (Source: ECB statistics.)"
+
+# --- OFR Financial Stress Index (M4a): one CSV, group ofr_fsi ---
+
+[series.ofr_fsi]
+source = "ofr"
+source_id = "OFR FSI"
+group = "ofr_fsi"
+name = "OFR Financial Stress Index (gesamt)"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_credit]
+source = "ofr"
+source_id = "Credit"
+group = "ofr_fsi"
+name = "OFR FSI: Kategorie Kredit"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_equity_valuation]
+source = "ofr"
+source_id = "Equity valuation"
+group = "ofr_fsi"
+name = "OFR FSI: Kategorie Aktienbewertung"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_safe_assets]
+source = "ofr"
+source_id = "Safe assets"
+group = "ofr_fsi"
+name = "OFR FSI: Kategorie sichere Anlagen"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_funding]
+source = "ofr"
+source_id = "Funding"
+group = "ofr_fsi"
+name = "OFR FSI: Kategorie Refinanzierung"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_volatility]
+source = "ofr"
+source_id = "Volatility"
+group = "ofr_fsi"
+name = "OFR FSI: Kategorie Volatilität"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_united_states]
+source = "ofr"
+source_id = "United States"
+group = "ofr_fsi"
+name = "OFR FSI: Region USA"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_other_advanced]
+source = "ofr"
+source_id = "Other advanced economies"
+group = "ofr_fsi"
+name = "OFR FSI: Region andere Industrieländer"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+[series.ofr_fsi_emerging_markets]
+source = "ofr"
+source_id = "Emerging markets"
+group = "ofr_fsi"
+name = "OFR FSI: Region Schwellenländer"
+unit = "Index"
+frequency = "daily"
+release_time = "10:30"
+lag_days = 4
+tolerance_days = 3
+bounds = [-50, 150]
+
+# --- Federal Reserve Board: excess bond premium (M4a): one CSV, group fed_ebp ---
+
+[series.fed_ebp]
+source = "fed"
+source_id = "ebp"
+group = "fed_ebp"
+name = "Excess Bond Premium (Gilchrist/Zakrajšek)"
+unit = "Prozentpunkte"
+frequency = "monthly"
+release_time = "10:15"
+lag_days = 38
+tolerance_days = 10
+bounds = [-10, 30]
+
+[series.fed_gz_spread]
+source = "fed"
+source_id = "gz_spread"
+group = "fed_ebp"
+name = "GZ-Kreditspread (Gilchrist/Zakrajšek)"
+unit = "Prozentpunkte"
+frequency = "monthly"
+release_time = "10:15"
+lag_days = 38
+tolerance_days = 10
+bounds = [-10, 50]

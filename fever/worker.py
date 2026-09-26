@@ -26,9 +26,9 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from fever import log
 from fever.backup import BackupError, has_backup, run_backup
-from fever.config import ConfigError, Series, series_catalog
+from fever.config import ConfigError, Series, group_members, series_catalog
 from fever.http import HttpClient
-from fever.sources.update import estimated_release, update_series
+from fever.sources.update import estimated_release, update_group
 from fever.store.db import DataDirError, data_dir, make_engine
 from fever.store.observations import latest_obs_date
 from fever.store.status import read_heartbeat, record_error, record_heartbeat
@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SeriesState:
-    """What the running worker remembers per series; empty after a restart."""
+    """What the running worker remembers per download group; empty after a restart."""
 
     last_success_day: date | None = None  # New York date of the last successful fetch
     last_attempt: datetime | None = None  # UTC
@@ -91,27 +91,30 @@ def run_cycle(
 ) -> None:
     _heartbeat(engine, clock())
     _daily_backup(directory, clock())
-    for series in catalog.values():
+    for group, members in group_members(catalog).items():
         if stop.is_set():
             return
         now = clock()
+        # Members share the schedule (checked in the catalogue); the oldest member decides
+        # whether the value expected by now is still missing.
         with engine.connect() as conn:
-            latest = latest_obs_date(conn, series.id)
-        state = states[series.id]
-        if not is_due(series, state, now, latest):
+            latests = [latest_obs_date(conn, series.id) for series in members]
+        latest = None if None in latests else min(latests)
+        state = states[group]
+        if not is_due(members[0], state, now, latest):
             continue
         # Also before every fetch: a cycle with many slow retries must not look like a dead worker.
         _heartbeat(engine, now)
         state.last_attempt = now
         try:
-            result = update_series(engine, directory, client, series, clock=clock)
-        except Exception as exc:  # one broken series must not stop the others (ICE archive)
-            logger.exception("Unerwarteter Fehler bei %s", series.id)
+            results = update_group(engine, directory, client, members, clock=clock)
+        except Exception as exc:  # one broken group must not stop the others (ICE archive)
+            logger.exception("Unerwarteter Fehler bei %s", group)
             with engine.begin() as conn:
-                message = log.mask(f"{series.id}: interner Fehler: {type(exc).__name__}: {exc}")
-                record_error(conn, series.source, clock(), message)
+                message = log.mask(f"{group}: interner Fehler: {type(exc).__name__}: {exc}")
+                record_error(conn, members[0].source, clock(), message)
             continue
-        if result.fetched:
+        if any(result.fetched for result in results):
             state.last_success_day = now.astimezone(NEW_YORK).date()
 
 
@@ -126,7 +129,7 @@ def serve(
     cycle: timedelta = CYCLE,
 ) -> None:
     """Run cycles until `stop` is set; a cycle starts every `cycle` after the previous start."""
-    states = {series_id: SeriesState() for series_id in catalog}
+    states = {group: SeriesState() for group in group_members(catalog)}
     while not stop.is_set():
         started = time.monotonic()
         run_cycle(engine, directory, client, catalog, states, stop, clock=clock)
@@ -190,7 +193,10 @@ def main() -> int:
     except (DataDirError, ConfigError) as exc:
         logger.error("Worker nicht gestartet: %s", exc)
         return 2
-    logger.info("Worker gestartet: %d Reihen, Takt %d Minuten", len(catalog), CYCLE.total_seconds() // 60)
+    logger.info(
+        "Worker gestartet: %d Reihen in %d Abrufgruppen, Takt %d Minuten",
+        len(catalog), len(group_members(catalog)), CYCLE.total_seconds() // 60,
+    )
     serve(engine, directory, HttpClient(), catalog, stop)
     engine.dispose()
     logger.info("Worker beendet")

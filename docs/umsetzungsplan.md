@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3: Worker läuft auf TrueNAS** · Nächster Schritt: erste Werktags-Abrufe prüfen (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3: Worker läuft auf TrueNAS, M4a erledigt** · Nächster Schritt: M4b (CFTC) planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -20,7 +20,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M1 | Speicher, Migrationen, Backup | ☑ 25.09.2026 | M0, Schema-Freigabe, W-5 | erteilt 25.09.2026 |
 | M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ☑ 26.09.2026 | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B erteilt 26.09.2026 |
 | M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ◐ läuft auf TrueNAS seit 26.09.2026, ICE-Archiv ab Beobachtung 26.09.2023; offen: erste Werktags-Abrufe, Schritt 9 | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
-| M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, FINRA, VX-Futures | ☐ | M3 | ja |
+| M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, FINRA, VX-Futures | ◐ M4a ☑ 26.09.2026; M4b–M4d offen (E-37) | M3 | M4a erteilt 26.09.2026 |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☐ | M4, L-1 bis L-12 | ja (Scoring) |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☐ | M1 (Lesen), M3 (Heartbeat) | ja |
 | M7 | Ansichten 1–7 | ☐ | M5, M6, L-13 | ja |
@@ -69,6 +69,10 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-32 | Compose-Dateien | Zwei Dateien (Empfehlung war eine): `docker-compose.yml` nur zum Bauen im Projektverzeichnis, `compose.dockge.yaml` für den Betrieb in Dockge | Beide nutzen `fever:local`; ein Test prüft Image, Build-Freiheit der Laufzeit-Datei und die `.env`-Variablen. Die Kopie in Dockge muss nach Änderungen an `compose.dockge.yaml` von Hand nachgezogen werden |
 | 26.09.2026 | E-33 | Healthcheck-Grenze des Workers | 45 Minuten Heartbeat-Alter (drei Takte) | Gilt ab M6 auch für den Hinweis „Worker ohne Lebenszeichen“ |
 | 26.09.2026 | E-34 | Namen auf TrueNAS | Bleiben wie angelegt: Dataset `feewer`, Dockge-Stack `finanz-dashboard` (Container `finanz-dashboard-worker-1`) | Anleitung, `CLAUDE.md` und Befehle auf diese Namen umgestellt |
+| 26.09.2026 | E-35 | Serien-IDs für Quellen ohne einfache Kennung (EZB-Schlüssel, Spaltennamen) | `<quelle>_<kurzname>`, z. B. `ecb_ciss`, `ofr_fsi_credit`, `fed_ebp`; die exakte Kennung steht in `source_id`. FRED und Cboe behalten E-16 | Der Katalog prüft das Präfix und dass keine Quellkennung doppelt vorkommt. Die Namen sind dauerhaft |
+| 26.09.2026 | E-36 | Mehrere Reihen aus einer Datei | Gemeinsamer Abruf: Katalogfeld `group`; eine Datei wird je Takt einmal geladen und einmal im Rohdatenarchiv abgelegt (`raw/<quelle>/<gruppe>/`) | Mitglieder einer Gruppe müssen Quelle, Frequenz, `release_time` und `lag_days` teilen. Der Worker plant je Gruppe; das älteste Mitglied entscheidet über das Nachfassen |
+| 26.09.2026 | E-37 | Zuschnitt von M4 | Vier Teile mit je eigener Freigabe: M4a EZB/OFR/EBP, M4b CFTC, M4c Shiller/FINRA, M4d VX-Futures | M4a enthält 14 Reihen; die Rezessionswahrscheinlichkeit `est_prob` der EBP-Datei wird nicht archiviert (ungenutzt) |
+| 26.09.2026 | E-38 | Parameter der M4a-Reihen | Wie vorgeschlagen (Tabelle unter M4, „Ergebnis M4a“) | OFR: Verzug 4 Kalendertage wegen „two business days“ über das Wochenende. EBP erscheint sofort als veraltet, weil das September-Update der Fed fehlt |
 
 ---
 
@@ -421,6 +425,51 @@ Für jeden Meilenstein gilt die Definition of Done:
 
 **Tests:** Parser gegen Fixtures; Formatänderung der Quelle führt zu einem sichtbaren Fehler, nicht zu stillem Ausfall.
 
+**Aufteilung (E-37):** M4a EZB, OFR, EBP · M4b CFTC COT · M4c Shiller-CAPE, FINRA · M4d VX-Futures. Jeder Teil hat einen eigenen Plan und eine eigene Freigabe.
+
+**Befunde für alle Teile (26.09.2026, echte Abrufe):**
+
+| Quelle | Endpoint | Befund |
+|---|---|---|
+| EZB CISS | `data-api.ecb.europa.eu/service/data/CISS/D.U2.Z0Z.4F.EC.SS_CIN.IDX` | täglich ab 03.01.1980 |
+| EZB Referenzkurse | `…/EXR/D.USD.EUR.SP00.A`, `…/EXR/D.JPY.EUR.SP00.A` | täglich ab 04.01.1999; leere Werte an TARGET-Feiertagen bis 2012 |
+| OFR FSI | `www.financialresearch.gov/financial-stress-index/data/fsi.csv` | täglich ab 03.01.2000; Gesamtwert, 5 Kategorien, 3 Regionen; die OFR-API (`data.financialresearch.gov/v1`) enthält den FSI nicht |
+| Fed EBP | `www.federalreserve.gov/econres/notes/feds-notes/ebp_csv.csv` | monatlich ab 01/1973; Spalten `gz_spread`, `ebp`, `est_prob` |
+| CFTC COT (M4b) | Socrata `publicreporting.cftc.gov/resource/6dca-aqww.json` (Legacy, Futures Only), `gpe5-46if` (TFF) | VIX-Futures `1170E1` ab 27.07.2004 (1114 Berichte); E-mini S&P 500 `13874A` |
+| Shiller (M4c) | `shillerdata.com` verlinkt `img1.wsimg.com/…/ie_data.xls` (Pfad mit Kennung) | `.xls` (Binärformat), Blatt „Data“, Datum als `JJJJ.MM` (Oktober = `2026.1`), Spalten CAPE, TR CAPE, Excess CAPE Yield; laufender Monat vorläufig |
+| FINRA (M4c) | `www.finra.org/sites/default/files/2021-03/margin-statistics.xlsx` | `.xlsx`, Debit Balances in Mio. USD, neueste Zeile zuerst |
+| Cboe VX (M4d) | Kontraktliste `www.cboe.com/us/futures/market_statistics/historical_data/product/list/VX/` (JSON), CSV je Kontrakt auf `cdn.cboe.com/data/us/futures/…/VX/VX_<Verfall>.csv` | Spalten u. a. Settle, Open Interest; Monats- und Wochenkontrakte |
+
+- **Excel-Leser für M4c:** `xlrd` 2.0.2 (für `.xls` nötig) und `openpyxl` 3.1.5 mit `et_xmlfile` 2.0.0 sind reine Python-Wheels (`py3-none-any`). Die Auswahl wird in M4c entschieden.
+- **Nutzungsbedingungen:**
+  - EZB: Weiterverwendung frei mit der Quellenangabe „Source: ECB statistics.“ (Pflichthinweis in M6).
+  - FINRA (Stand 09.11.2023): nur „own non-commercial personal or professional use“; untersagt sind „data mining, scraping or harvesting tools (including robots)“ und „stored for subsequent use“ ohne Zustimmung. Ein automatischer Abruf widerspräche `CLAUDE.md` (kein Scraping gegen AGB); die Klärung erfolgt in M4c.
+  - Shiller: in der Datei nur ein Haftungsausschluss.
+  - OFR: keine Einschränkung für eigene Daten genannt, nur ein Haftungsausschluss.
+
+**Ergebnis M4a (26.09.2026, erledigt):**
+- **Umgesetzt wie freigegeben:**
+  - `fever/sources/ecb.py`, `ofr.py`, `fed.py`; gemeinsame CSV-Spaltenfunktion `csv_column` in `fever/sources/__init__.py`
+  - Gruppenabruf (E-36): `update_group` in `fever/sources/update.py`, Worker plant je Gruppe
+  - Katalogfelder `group`, ID-Regel E-35; Allowlist um `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`
+  - 14 Reihen in `config/series.toml`; Fixtures aus gekürzten echten Antworten (nicht lizenziert)
+- **Zusätzlich:** Sofort-Abruf als Kommando `python -m fever.sources.update` (vorher Einzeiler); Exit-Code 1, wenn eine Reihe ein Problem meldet.
+- **Parameter (E-38):**
+
+  | Reihen | Verzug | Uhrzeit ET | Beleg |
+  |---|---|---|---|
+  | `ecb_ciss` | 1 | 06:15 | Datei am Fr 25.09. um 09:00 UTC geändert, letzter Wert Do 24.09.; Einzelbeobachtung. Annahme: feste MEZ-Uhrzeit, daher auch in den Umstellungswochen passend |
+  | `ecb_exr_usd`, `ecb_exr_jpy` | 0 | 11:15 | Datei am 25.09. um 13:57 UTC mit dem Wert desselben Tages; gegen 16:00 MEZ = 10:00 ET, in Umstellungswochen 11:00 ET |
+  | `ofr_fsi` und 8 Teilindizes | 4 | 10:30 | „two business days prior“; Freitagswert erst am Dienstag; Datei am 25.09. um 10:00 EDT |
+  | `fed_ebp`, `fed_gz_spread` | 38 | 10:15 | 4. Geschäftstag des Folgemonats nach 10:00 ET; Monatserster + 38 Tage deckt späte Fälle ab; Datei 06.08. um 10:00 EDT für Juli |
+
+  Grenzen: CISS 0–1 (per Konstruktion), USD 0,3–5, JPY 20–800, OFR −50 bis 150, EBP −10 bis 30, GZ −10 bis 50. Toleranz überall nach E-10.
+- **Belege:**
+  - `pytest -q`: 214 passed (36 neu)
+  - `python -m fever.sources.update` gegen `data-dev/`: Lauf 1 mit 14 neuen Reihen und 92 327 Zeilen, 0 Probleme; Lauf 2 ohne neue Zeilen. OFR und EBP je einmal geladen und archiviert
+  - Gegenprobe mit 14 absichtlich eingebauten Fehlern, alle erkannt (drei erst nach drei zusätzlichen Tests): CSV-Leerzelle, CSV-Kopfzeile, fremde EZB-Reihe, leerer EZB-Wert, Monatserster, Rohdaten je Reihe statt je Gruppe, Erfolg ohne lesbare Reihe, Fehler einzelner Reihen nicht gemeldet, Gruppenplan, Präfixregel, doppelte Quellkennung, Worker je Reihe statt je Gruppe, jüngstes statt ältestes Gruppenmitglied, Allowlist ohne OFR
+- **Nicht geprüft:** Abruf auf TrueNAS (nach dem Update, `docs/einrichtung.md`, Schritt 9); Veröffentlichungszeiten von CISS nur einmal beobachtet (Prüfung wie M3, Schritt 9).
+
 ### M5 – Scoring (Schritte 1–6, Stufe 1)
 
 **Voraussetzung:** L-1 bis L-12 entschieden (L-10 seit E-13 hier); `scoring.toml` mit Startwerten aus Bericht 4.3 und den Entscheidungen; Freigabe.
@@ -453,7 +502,7 @@ Für jeden Meilenstein gilt die Definition of Done:
 - `fever/web/pages/`: Übersicht, Themen-Ansichten, Visualisierung, Datenstand, Erklärungen, `/kennzahl/<id>`
 - `assets/`: `base.css` (Tokens hell/dunkel, Layout), `tooltip.css`, `print.css`, `fullscreen.js`, `theme.js`
 
-**Schritte:** Abschnitt 7 umsetzen. Dienst `web` in `compose.dockge.yaml` ergänzen (Port `0.0.0.0:${FEVER_WEB_PORT}` nach E-4, Anzahl der gunicorn-Prozesse 1–2 festlegen) mit Healthcheck. Pflichthinweis nach den FRED-Nutzungsbedingungen auf jeder Seite, z. B. in der Fußzeile: „This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.“
+**Schritte:** Abschnitt 7 umsetzen. Quellenhinweis „Source: ECB statistics.“ neben dem FRED-Hinweis. Dienst `web` in `compose.dockge.yaml` ergänzen (Port `0.0.0.0:${FEVER_WEB_PORT}` nach E-4, Anzahl der gunicorn-Prozesse 1–2 festlegen) mit Healthcheck. Pflichthinweis nach den FRED-Nutzungsbedingungen auf jeder Seite, z. B. in der Fußzeile: „This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.“
 
 **Tests:**
 - Smoke-Test: App startet, `/_dash-layout` und Health-Endpunkt liefern 200
@@ -617,16 +666,17 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (26.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt (178 Tests grün): Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-34.
+  - Entscheidungen bis E-38; M4a (EZB, OFR, EBP; 14 Reihen) umgesetzt, 214 Tests grün.
   - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“). Erstabruf aller 23 Reihen am 26.09.2026 per Sofort-Abruf; das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
-  1. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen (Nutzer schickt Ausgaben).
-  2. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit.
-  3. Danach M4 (weitere Quellen); vorher Plan und Freigabe.
+  1. Auf TrueNAS M4a einspielen: `git pull`, Build, Stack neu starten, Sofort-Abruf (`docs/einrichtung.md`, Schritt 9).
+  2. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen (Nutzer schickt Ausgaben); dann M3 abschließen (geplant in der Woche ab 28.09.2026).
+  3. M4b (CFTC COT) planen: Frage, ob neben VIX-Futures auch E-mini S&P 500 archiviert wird.
+  4. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
-  - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): `api.stlouisfed.org` und `cdn-api.cboe.com` erreichbar (26.09.2026). Für M4: `publicreporting.cftc.gov`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `www.finra.org` und der Host des Shiller-Datensatzes.
+  - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com`, `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
 - **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 außer L-5 (Abschnitt 5).
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
@@ -675,5 +725,5 @@ Stand 25.09.2026, erprobt in der Claude-Code-Cloud-Umgebung. Die Umgebung ist ei
    ```
    `data-dev/` vorher anlegen und migrieren: `mkdir -p data-dev && docker run --rm -e FEVER_DATA=/src/data-dev -v "$PWD":/src fever-devtest alembic upgrade head`.
    `requests` nutzt sonst sein eigenes Zertifikatsbündel und scheitert am Proxy. Große Antworten erst in eine Datei schreiben und nur Anfang und Ende ansehen (`CLAUDE.md`).
-8. **Nach einem Neustart der Cloud-Umgebung** sind Docker-Daemon und Hilfs-Images weg. Die Schritte 1 und 4 wiederholen.
+8. **Nach einem Neustart der Cloud-Umgebung** sind Docker-Daemon und Hilfs-Images weg. Die Schritte 1 und 4 wiederholen. Der Daemon stoppte am 26.09.2026 auch zwischendurch ohne Neustart der Umgebung („Cannot connect to the Docker daemon“); dann nur Schritt 1.
 9. **Abhängigkeiten ändern:** im Container (linux/amd64) mit `pip install --only-binary=:all: -r <direkte Pakete>` auflösen, `pip freeze` übernehmen, direkte Pakete mit Zweckkommentar oben in `requirements.txt`, transitive darunter.

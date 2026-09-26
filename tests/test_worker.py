@@ -29,18 +29,19 @@ class Clock:
 
 
 class FakeUpdate:
-    """Stands in for update_series; returns planned results or raises planned exceptions."""
+    """Stands in for update_group; returns planned results or raises planned exceptions."""
 
     def __init__(self, results=None):
         self.results = dict(results or {})
         self.calls = []
 
-    def __call__(self, engine, directory, client, series, *, clock):
-        self.calls.append((series.id, clock()))
-        result = self.results.get(series.id, UpdateResult(1, 0, None))
+    def __call__(self, engine, directory, client, members, *, clock):
+        group = members[0].group
+        self.calls.append((group, clock()))
+        result = self.results.get(group, UpdateResult(1, 0, None))
         if isinstance(result, Exception):
             raise result
-        return result
+        return [result for _ in members]
 
 
 @pytest.fixture
@@ -57,7 +58,7 @@ def subset(*ids):
 
 
 def test_cycle_writes_heartbeat_and_one_daily_backup_per_utc_day(engine, migrated_dir, monkeypatch):
-    monkeypatch.setattr(worker, "update_series", FakeUpdate())
+    monkeypatch.setattr(worker, "update_group", FakeUpdate())
     clock = Clock(WEDNESDAY)
     cycle(engine, migrated_dir, {}, {}, clock)
     with engine.connect() as conn:
@@ -74,7 +75,7 @@ def test_cycle_writes_heartbeat_and_one_daily_backup_per_utc_day(engine, migrate
 
 def test_due_series_are_fetched_once_and_success_is_remembered(engine, migrated_dir, monkeypatch):
     fake = FakeUpdate()
-    monkeypatch.setattr(worker, "update_series", fake)
+    monkeypatch.setattr(worker, "update_group", fake)
     catalog = subset("nfci", "vix")  # VIX is not due before 22:00 New York
     states = {series_id: worker.SeriesState() for series_id in catalog}
     clock = Clock(WEDNESDAY)
@@ -88,7 +89,7 @@ def test_due_series_are_fetched_once_and_success_is_remembered(engine, migrated_
 
 def test_failed_fetch_is_not_a_success_and_is_retried_an_hour_later(engine, migrated_dir, monkeypatch):
     fake = FakeUpdate({"nfci": UpdateResult(0, 0, "nfci: HTTP 503", fetched=False)})
-    monkeypatch.setattr(worker, "update_series", fake)
+    monkeypatch.setattr(worker, "update_group", fake)
     catalog = subset("nfci")
     states = {"nfci": worker.SeriesState()}
     clock = Clock(WEDNESDAY)
@@ -105,7 +106,7 @@ def test_failed_fetch_is_not_a_success_and_is_retried_an_hour_later(engine, migr
 
 def test_dropped_values_still_count_as_fetched(engine, migrated_dir, monkeypatch):
     fake = FakeUpdate({"nfci": UpdateResult(5, 1, "nfci: 1 Wert(e) verworfen: …")})
-    monkeypatch.setattr(worker, "update_series", fake)
+    monkeypatch.setattr(worker, "update_group", fake)
     states = {"nfci": worker.SeriesState()}
     cycle(engine, migrated_dir, subset("nfci"), states, Clock(WEDNESDAY))
     assert states["nfci"].last_success_day == date(2026, 9, 30)
@@ -114,7 +115,7 @@ def test_dropped_values_still_count_as_fetched(engine, migrated_dir, monkeypatch
 def test_unexpected_error_is_logged_recorded_masked_and_the_next_series_runs(engine, migrated_dir, monkeypatch, caplog):
     monkeypatch.setenv("FRED_API_KEY", KEY)
     fake = FakeUpdate({"sofr": RuntimeError(f"kaputt bei ?api_key={KEY}")})
-    monkeypatch.setattr(worker, "update_series", fake)
+    monkeypatch.setattr(worker, "update_group", fake)
     catalog = subset("sofr", "nfci")
     states = {series_id: worker.SeriesState() for series_id in catalog}
     with caplog.at_level(logging.ERROR):
@@ -136,7 +137,7 @@ def test_stop_ends_the_cycle_and_serve_without_waiting(engine, migrated_dir, mon
             return super().__call__(*args, **kwargs)
 
     fake = StoppingUpdate()
-    monkeypatch.setattr(worker, "update_series", fake)
+    monkeypatch.setattr(worker, "update_group", fake)
     worker.serve(engine, migrated_dir, None, subset("sofr", "nfci"), stop, clock=Clock(WEDNESDAY))
     assert [series_id for series_id, _ in fake.calls] == ["sofr"]  # returned instead of waiting 15 minutes
 
@@ -191,3 +192,28 @@ def test_heartbeat_is_overwritten_and_latest_obs_date_is_the_maximum(engine):
     with engine.connect() as conn:
         assert read_heartbeat(conn, "worker") == WEDNESDAY + timedelta(minutes=15)
         assert latest_obs_date(conn, "nfci") == date(2026, 9, 18)
+
+
+def test_a_download_group_is_fetched_once_per_cycle(engine, migrated_dir, monkeypatch):
+    fake = FakeUpdate()
+    monkeypatch.setattr(worker, "update_group", fake)
+    catalog = subset("ofr_fsi", "ofr_fsi_credit", "ofr_fsi_funding")
+    states = {"ofr_fsi": worker.SeriesState()}
+    at = datetime(2026, 9, 30, 14, 45, tzinfo=timezone.utc)  # Wednesday 10:45 EDT, after 10:30
+    cycle(engine, migrated_dir, catalog, states, Clock(at))
+    assert [group for group, _ in fake.calls] == ["ofr_fsi"]
+    assert states["ofr_fsi"].last_success_day == date(2026, 9, 30)
+
+
+def test_the_oldest_member_decides_whether_a_group_is_followed_up(engine, migrated_dir, monkeypatch):
+    fake = FakeUpdate()
+    monkeypatch.setattr(worker, "update_group", fake)
+    catalog = subset("ofr_fsi", "ofr_fsi_credit")
+    # Wednesday 30.09.2026, 11:45 EDT: with lag 4 the value of Friday 25.09. is expected by now.
+    now = datetime(2026, 9, 30, 15, 45, tzinfo=timezone.utc)
+    with engine.begin() as conn:
+        append_observations(conn, "ofr_fsi", [NewObservation(date(2026, 9, 25), 1.0, now, False)], retrieved_at=now)
+        append_observations(conn, "ofr_fsi_credit", [NewObservation(date(2026, 9, 24), 1.0, now, False)], retrieved_at=now)
+    states = {"ofr_fsi": worker.SeriesState(last_success_day=date(2026, 9, 30), last_attempt=now - timedelta(hours=1))}
+    cycle(engine, migrated_dir, catalog, states, Clock(now))
+    assert [group for group, _ in fake.calls] == ["ofr_fsi"]  # credit still lacks 25.09.
