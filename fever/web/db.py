@@ -1,5 +1,6 @@
 """Read-only database access for the interface: every connection sets PRAGMA query_only."""
 
+import calendar
 from datetime import date, datetime
 from functools import cache
 
@@ -7,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.engine import Engine
 
 from fever.store.db import data_dir, make_engine
+from fever.store.observations import latest_values
 from fever.store.status import read_heartbeat, read_status
 from fever.store.tables import composite_score, indicator_score, observation
 
@@ -58,6 +60,33 @@ def series_freshness() -> dict[str, dict]:
     ).group_by(observation.c.series_id)
     with engine().connect() as conn:
         return {row.series_id: dict(row._mapping) for row in conn.execute(query)}
+
+
+RECESSION_SERIES = "usrec"
+
+
+def recessions() -> tuple[tuple[date, date], ...]:
+    """US recessions (E-56) as (first day of the first month, last day of the last month).
+
+    Consecutive months with USREC = 1 form one period (trough method, as on FRED graphs).
+    """
+    with engine().connect() as conn:
+        rows = latest_values(conn, RECESSION_SERIES)
+    periods, start, previous = [], None, None
+    for row in rows:
+        if row.value == 1 and start is None:
+            start = row.obs_date
+        elif row.value != 1 and start is not None:
+            periods.append((start, _month_end(previous)))
+            start = None
+        previous = row.obs_date
+    if start is not None:
+        periods.append((start, _month_end(previous)))
+    return tuple(periods)
+
+
+def _month_end(day: date) -> date:
+    return day.replace(day=calendar.monthrange(day.year, day.month)[1])
 
 
 def sources() -> list[dict]:

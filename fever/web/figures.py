@@ -21,10 +21,12 @@ PALETTE = {
     "light": {
         "surface": "#fcfcfb", "ink": "#0b0b0b", "secondary": "#52514e", "muted": "#898781",
         "grid": "#e1e0d9", "axis": "#c3c2b7", "series": ["#2a78d6", "#eb6834"],
+        "recession": "rgba(137, 135, 129, 0.18)",
     },
     "dark": {
         "surface": "#1a1a19", "ink": "#ffffff", "secondary": "#c3c2b7", "muted": "#898781",
         "grid": "#2c2c2a", "axis": "#383835", "series": ["#3987e5", "#d95926"],
+        "recession": "rgba(195, 194, 183, 0.14)",
     },
 }
 FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif'
@@ -82,6 +84,7 @@ class Chart:
     retrieved: datetime | None = None  # newest retrieval behind the chart
     y_range: tuple[float, float] | None = None
     y_ticks: dict[float, str] = field(default_factory=dict)  # fixed tick labels, e.g. traffic light levels
+    recessions: tuple[tuple[date, date], ...] = ()  # grey bars behind the lines (E-56)
 
 
 def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go.Figure, dict]:
@@ -104,9 +107,15 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go
         "rangeslider": {"visible": False}, "tickformatstops": DATE_FORMATS, "hoverformat": "%d.%m.%Y",
         "tickangle": 0,  # rotated labels would run into the dating lines on a narrow screen
     }
+    shapes = []
     if last is not None:
         first = min(min(line.x) for line in chart.lines if line.x)
         xaxis["range"] = [max(first, _years_before(last, INITIAL_YEARS)), last]
+        shapes = [
+            {"type": "rect", "xref": "x", "yref": "paper", "x0": start, "x1": end, "y0": 0, "y1": 1,
+             "fillcolor": palette["recession"], "line": {"width": 0}, "layer": "below"}
+            for start, end in chart.recessions if end >= first and start <= last
+        ]
     yaxis = {"title": {"text": chart.y_title}, "fixedrange": False}
     if chart.y_range is not None:
         yaxis["range"] = list(chart.y_range)
@@ -115,19 +124,27 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go
     figure.update_layout(
         template=f"fever_{mode}", separators=",.", uirevision=chart.kennzahl_id,
         title={"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
-        margin={"l": 56, "r": 16, "t": 124 if len(chart.lines) > 1 else 84, "b": 104}, hovermode="x unified",
+        margin={"l": 56, "r": 16, "t": 124 if len(chart.lines) > 1 else 84, "b": 120 if chart.recessions else 104},
+        hovermode="x unified",
         showlegend=len(chart.lines) > 1,
         # own row between title and range buttons, so it never covers them on a narrow screen
         legend={"orientation": "h", "x": 0, "xanchor": "left", "y": 1.15, "yanchor": "bottom"},
-        xaxis=xaxis, yaxis=yaxis,
+        xaxis=xaxis, yaxis=yaxis, shapes=shapes,
         annotations=[{
-            "text": stamp(chart.source, chart.observed, chart.retrieved), "showarrow": False,
-            "xref": "paper", "yref": "paper", "x": 0, "y": -0.14, "xanchor": "left", "yanchor": "top", "align": "left",
+            "text": stamp(chart.source, chart.observed, chart.retrieved, recessions=bool(chart.recessions)),
+            "showarrow": False,
+            # fixed pixel offset below the axis: a paper fraction grows with the plot and pushed the
+            # lines out of the full-screen view
+            "xref": "paper", "yref": "paper", "x": 0, "y": 0, "yshift": -28, "xanchor": "left", "yanchor": "top",
+            "align": "left",
             "font": {"size": 11, "color": palette["muted"]},
         }],
     )
     config = {
         "displaylogo": False, "scrollZoom": False, "responsive": True,
+        # plotly.js 4 shows "Share chart..." by default, which uploads the chart with its data to
+        # Plotly Cloud: no licensed data leaves the house, the browser talks only to this server
+        "showSendToCloud": False,
         "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
         "toImageButtonOptions": {"format": "png", "scale": 2,
                                  "filename": f"{chart.kennzahl_id}_{(today or date.today()):%d-%m-%Y}"},
@@ -135,12 +152,13 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go
     return figure, config
 
 
-def stamp(source: str, observed: date | None, retrieved: datetime | None) -> str:
+def stamp(source: str, observed: date | None, retrieved: datetime | None, *, recessions: bool = False) -> str:
     """The dating lines inside every chart: an exported or printed image is never timeless.
 
-    Three short lines (<br> is the only markup, set here) so the stamp fits a 390 px screen.
+    Short lines (<br> is the only markup, set here) so the stamp fits a 390 px screen.
     """
-    return f"Quelle: {source}<br>Stand: {fmt.day(observed)}<br>Abruf: {fmt.berlin(retrieved)}"
+    text = f"Quelle: {source}<br>Stand: {fmt.day(observed)}<br>Abruf: {fmt.berlin(retrieved)}"
+    return text + ("<br>Grau: US-Rezessionen nach NBER (über FRED)" if recessions else "")
 
 
 def _years_before(day: date, years: int) -> date:

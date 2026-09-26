@@ -234,6 +234,21 @@ lag_days = 1
 tolerance_days = 3
 bounds = [-5, 30]
 
+# Display only (E-56): grey recession bars in every time series chart, like FRED's own graphs
+# (trough method). Not an input of any indicator or score. NBER dates its turning points months
+# later, so a recession under way shows up only after its announcement.
+[series.usrec]
+source = "fred"
+source_id = "USREC"
+name = "US-Rezessionen nach NBER (Trough-Methode wie FRED-Grafiken)"
+unit = "1 = Rezession"
+frequency = "monthly"
+release_time = "19:15"
+lag_days = 31
+tolerance_days = 10
+bounds = [0, 1]
+license = "NBER-Konjunkturdatierung über FRED (St. Louis Fed); Quellenangabe"
+
 [series.sofr]
 source = "fred"
 source_id = "SOFR"

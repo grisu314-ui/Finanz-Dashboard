@@ -18,8 +18,10 @@ Details, Begründungen und Entscheidungsprotokoll (E-1 bis E-7): `docs/umsetzung
 - Jeder Chart entsteht über die Fabrikfunktion in `fever/web/figures.py`.
 - Zoom, Verschieben und Doppelklick-Reset (Plotly-Standard); `scrollZoom` aus.
 - Zeitreihen haben Zeitraum-Buttons „1 M, 6 M, 1 J, 5 J, Max“, keinen Rangeslider.
-- PNG-Export über die Modebar (`scale=2`, Dateiname mit Kennzahl und Datum), `displaylogo=False`.
-- Titel, Quelle, letztes Beobachtungsdatum und Abrufzeit stehen als Annotation im Chart selbst, damit exportierte Bilder datiert sind.
+- PNG-Export über die Modebar (`scale=2`, Dateiname mit Kennzahl und Datum), `displaylogo=False`, `showSendToCloud=False` (Plotly.js 4 lädt sonst per „Share chart…“ Chart und Daten zu Plotly Cloud hoch).
+- Titel, Quelle, letztes Beobachtungsdatum und Abrufzeit stehen als Annotation im Chart selbst, damit exportierte Bilder datiert sind; Abstand zur Achse in Pixeln (`yshift`), nicht als Anteil der Plot-Höhe.
+- US-Rezessionen (FRED `USREC`, E-56) als graue Flächen hinter den Linien in allen Zeitreihen-Charts, mit Hinweis in der Datierung; nur Anzeige.
+- Der Graph steckt in `.chart-box` mit fester Höhe (`responsive` ohne Elternhöhe fällt nach einem Relayout auf 0 px); Vollbild-Button in eigener Zeile über dem Chart, nie über der Modebar.
 - Vollbild per CSS-Overlay (ohne Fullscreen-API), Druck/PDF per `assets/print.css`, immer hell druckbar.
 - `uirevision` fest setzen, damit die 5-Minuten-Aktualisierung den Zoom nicht zurücksetzt.
 - `connectgaps=False`; veraltete Abschnitte sichtbar absetzen, nie interpolieren.

@@ -60,7 +60,10 @@ def chart_card(graph_id: str, chart: Chart, theme: str) -> html.Div:
     figure, config = time_series(chart, theme)
     return html.Div(className="card chart-card", children=[
         html.Button("Vollbild", className="fullscreen-toggle", type="button", **{"aria-label": "Chart im Vollbild zeigen"}),
-        dcc.Graph(id=graph_id, figure=figure, config=config, responsive=True, className="chart"),
+        # The box has the height; the responsive graph fills it (dcc.Graph sets height: 100% inline,
+        # which collapses to 0 after a relayout inside a box without a height).
+        html.Div(className="chart-box", children=dcc.Graph(
+            id=graph_id, figure=figure, config=config, responsive=True, className="chart", style={"height": "100%"})),
     ])
 
 

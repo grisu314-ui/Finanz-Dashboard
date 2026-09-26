@@ -46,7 +46,7 @@ Die genauen Schwellenwerte stehen bewusst nicht hier, sondern in der App auf den
   - Steckbrief (Quelle, Frequenz, Verzug, Historie)
   - „Schwellen und Farben“: ab wann „erhöht“ bzw. welche Ampelregel gilt
   - Quellen
-- Die Seite „Erklärungen“ listet alle Kennzahlen nach Block, dazu die Konzepte Perzentil, Ampel, Konfidenz und Veraltung.
+- Die Seite „Erklärungen“ listet alle Kennzahlen nach Block, dazu die Konzepte Perzentil, Ampel, Konfidenz, Veraltung und Rezessionsbalken.
 
 ## 5. Aktualität: Wie alt ist, was ich sehe?
 
@@ -69,7 +69,8 @@ Die genauen Schwellenwerte stehen bewusst nicht hier, sondern in der App auf den
 | Zeitraum | Buttons „1 M“, „6 M“, „1 J“, „5 J“, „Max“ über dem Chart |
 | Werte ablesen | Maus über die Linie bzw. antippen |
 | Bild speichern | Kamera-Symbol in der Chart-Leiste lädt ein PNG herunter; Titel, Quelle und Datenstand sind im Bild enthalten |
-| Vollbild | Vollbild-Button an der Chart-Karte; ESC oder Button schließt |
+| Vollbild | Button „Vollbild“ oben rechts über dem Chart; ESC oder „Schließen“ beendet es |
+| Graue Flächen | US-Rezessionen nach der NBER-Datierung, wie in den FRED-Grafiken; nur zur Orientierung, kein Teil eines Scores. Erklärung: Seite „Erklärungen“ → „Rezessionsbalken“ |
 | Ganze Ansicht als PDF | Browser → Drucken → „Als PDF speichern“; die Druckansicht ist hell und ohne Bedienelemente |
 
 Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar bleibt.

@@ -90,12 +90,14 @@ h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
 .facts td { padding: 0.25rem 0; }
 .text p, .text li { max-width: 48rem; }
 
-.chart-card { position: relative; margin-bottom: 12px; }
-.chart { height: 360px; }
-.fullscreen-toggle { position: absolute; top: 8px; right: 8px; z-index: 5; font: inherit; font-size: 0.8rem; padding: 0.2rem 0.6rem;
+.chart-card { margin-bottom: 12px; }
+.chart-box { height: 450px; }  /* the height Plotly used by default before (M6) */
+/* Own row above the graph, so it never covers Plotly's mode bar (zoom in/out, reset axes). */
+.fullscreen-toggle { display: block; margin: 0 0 4px auto; font: inherit; font-size: 0.8rem; padding: 0.2rem 0.6rem;
   border: 1px solid var(--axis); border-radius: 6px; background: var(--surface); color: var(--ink-2); cursor: pointer; }
 /* Full screen as a CSS overlay, without the Fullscreen API (7.1). */
-.chart-card.is-fullscreen { position: fixed; inset: 0; z-index: 1000; margin: 0; border-radius: 0; padding: 12px; }
-.chart-card.is-fullscreen .chart { height: calc(100vh - 24px); }
+.chart-card.is-fullscreen { position: fixed; inset: 0; z-index: 1000; margin: 0; border-radius: 0; padding: 12px;
+  display: flex; flex-direction: column; }
+.chart-card.is-fullscreen .chart-box { flex: 1; height: auto; min-height: 0; }
 
 .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--grid); color: var(--muted); font-size: 0.75rem; }

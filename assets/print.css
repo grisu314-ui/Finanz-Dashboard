@@ -5,6 +5,7 @@
     --muted: #52514e; --grid: #e1e0d9; --axis: #c3c2b7; --border: #c3c2b7; --link: #0b0b0b; }
   .nav, .fullscreen-toggle, .modebar-container, .banner-connection, .rangeselector { display: none !important; }
   .card, .chart-card { break-inside: avoid; }
-  .chart-card.is-fullscreen { position: static; }
+  .chart-card.is-fullscreen { position: static; display: block; }
+  .chart-card.is-fullscreen .chart-box { height: 450px; }
   body { background: #ffffff; }
 }

@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2 und M4 bis M6 erledigt (M6 noch nicht auf TrueNAS), M3: Worker läuft auf TrueNAS mit 60 Reihen und Scoring** · Nächster Schritt: M6 auf TrueNAS einspielen (Compose-Kopie in Dockge erneuern), M7 planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 und M4 bis M6 erledigt, M3: Worker und Dashboard laufen auf TrueNAS; Rezessionsbalken (E-56) umgesetzt, noch nicht auf TrueNAS** · Nächster Schritt: Update mit Rezessionsbalken einspielen, M7 planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -22,7 +22,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ◐ läuft auf TrueNAS seit 26.09.2026, ICE-Archiv ab Beobachtung 26.09.2023; offen: erste Werktags-Abrufe, Schritt 9 | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
 | M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ☑ 26.09.2026 (M4a bis M4d, E-37) | M3 | M4a bis M4d erteilt 26.09.2026 |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026) | M4, L-1 bis L-12 | erteilt 26.09.2026 |
-| M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☑ 26.09.2026 (auf TrueNAS ⏳) | M1 (Lesen), M3 (Heartbeat) | erteilt 26.09.2026 |
+| M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026; Nachtrag Rezessionsbalken E-56 dort ⏳) | M1 (Lesen), M3 (Heartbeat) | erteilt 26.09.2026 |
 | M7 | Ansichten 1–7 | ☐ | M5, M6, L-13 | ja |
 | M8 | Erklärtexte je Kennzahl | ☐ | parallel zu M6/M7 | ja (Texte prüfen) |
 | M9 | Abnahme Phase 1 | ☐ | M0–M8 | – |
@@ -90,6 +90,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-53 | Umfang der Ansicht „Datenstand“ | Je Quelle (letzter Erfolg, Versuch, Fehler, dazu Worker und Scoring) und je Reihe (letzte Beobachtung, Abruf, Alter, „veraltet“ nach E-10) | Veraltete Reihen stehen oben |
 | 26.09.2026 | E-54 | gunicorn-Prozesse | 1 Prozess | 4 Threads im Prozess, damit parallele Callbacks nicht warten; wenig Speicher |
 | 26.09.2026 | E-55 | Farbsystem | Validierte Referenzpalette des Dataviz-Skills: Ampel in vier Statusfarben immer mit Text, Perzentile als blaue Einfarbskala (E-1), hell und dunkel je eigene Stufen | Linienfarben mit dem Validator geprüft; Systemschriften, keine Webfonts |
+| 26.09.2026 | E-56 | Rezessionsbalken in den Charts (Nutzerwunsch) | FRED `USREC` (NBER-Datierung, Trough-Methode wie in den FRED-Grafiken) als graue Flächen hinter den Linien in allen Zeitreihen-Charts; Hinweis in der Datierung jedes Charts; Konzeptseite „Rezessionsbalken“ | Nur Anzeige, in keinem Indikator und keinem Score; eine laufende Rezession erscheint erst nach der NBER-Datierung, Monate später |
 
 ---
 
@@ -683,7 +684,25 @@ Für jeden Meilenstein gilt die Definition of Done:
   - Sichtprüfung mit Playwright und Chromium (390 px und 1440 px, hell und dunkel, fünf Seiten): keine Konsolenfehler, keine Anfrage an fremde Hosts, kein horizontales Scrollen; Druck aus dem Dunkelmodus hell ohne Navigation und Knöpfe; Tooltip per Fokus; Vollbild und ESC. Behoben nach der Sichtprüfung: Legende über den Zeitraum-Buttons, abgeschnittene Datierung, schräge Achsenbeschriftung bei 390 px
   - Build-Probe; Dienst `web` über `compose.dockge.yaml` als 568:568: „healthy“, `0.0.0.0:8003`, Seiten 200
   - Farben: Linienfarben mit dem Validator des Dataviz-Skills geprüft (hell und dunkel, alle Prüfungen bestanden)
-- **Nicht geprüft:** Betrieb auf TrueNAS; echte Geräte (nur Chromium-Emulation); Perzentilbänder im Verlauf fehlen noch (brauchen gespeicherte Bänder, M7).
+- **Nicht geprüft:** echte Geräte (nur Chromium-Emulation); Perzentilbänder im Verlauf fehlen noch (brauchen gespeicherte Bänder, M7). Auf TrueNAS läuft das Dashboard seit 26.09.2026 (Rückmeldung des Nutzers).
+
+**Nachtrag M6 (26.09.2026): Rezessionsbalken (E-56) und Korrekturen aus der Sichtprüfung**
+- **Umgesetzt:**
+  - `config/series.toml`: Reihe `usrec` (FRED `USREC`, monatlich, Verzug 31 Tage wie die übrigen Monatsreihen, Grenzen 0 bis 1); damit 61 Reihen in 33 Abrufgruppen. Kein `[indicator.*]`, also in keinem Score.
+  - `fever/web/db.py`: `recessions()` fasst aufeinanderfolgende Monate mit Wert 1 zu Zeiträumen (Monatserster bis Monatsletzter) zusammen, je Beobachtung der neueste Stand.
+  - `fever/web/figures.py`: graue Flächen (`layer: below`, eigene Stufe für hell und dunkel) nur im Datenbereich des Charts; Datierungszeile „Grau: US-Rezessionen nach NBER (über FRED)“; `views.py` übergibt die Zeiträume an alle Zeitreihen-Charts.
+  - Konzeptseite `fever/web/texts/recessions.md` mit Steckbrief aus `series.toml`; Fußzeile nennt die NBER-Rezessionsdatierung.
+- **Korrigiert (Fehler seit M6, bei dieser Sichtprüfung gefunden):**
+  1. Nach einem Klick auf einen Zeitraum-Button fiel die Chart-Karte auf 0 px Höhe zusammen: `dcc.Graph` mit `responsive` setzt `height: 100%`, der Container hatte keine Höhe. Jetzt steckt der Graph in `.chart-box` mit 450 px, der Höhe, die Plotly vorher als Standard nutzte.
+  2. Plotly.js 4.1.1 (in Plotly 7.1.0) zeigt standardmäßig den Modebar-Button „Share chart…“, der den Chart samt Daten nach einer Bestätigung zu Plotly Cloud hochlädt (Standard `plotlyServerURL`: `https://cloud.plotly.com/newchart`, geprüft im Quelltext von `plotly.min.js`). Das widerspricht „keine Weitergabe lizenzierter Daten“ und „der Browser spricht nur mit dem eigenen Server“. Abgeschaltet mit `showSendToCloud: False`; ein Test sichert es.
+  3. Im Vollbild rutschten die Datierungszeilen aus dem Bild, weil ihr Abstand ein Anteil der Plot-Höhe war. Jetzt fester Abstand in Pixeln (`yshift`).
+  4. Der Vollbild-Button verdeckte die Modebar-Buttons „Zoom in“, „Zoom out“ und „Reset axes“. Er steht jetzt in einer eigenen Zeile über dem Chart; im Vollbild füllt der Chart den Rest der Höhe.
+- **Belege (Entwicklungsumgebung, 26.09.2026):**
+  - `pytest -q`: 362 passed (neu: Rezessionszeiträume aus `USREC`, Flächen und Datierungszeile, Chart-Container mit Höhe; erweitert: `showSendToCloud`, Pixelabstand der Datierung).
+  - Messung mit Playwright/Chromium, Seite Stress, 1440 px: Karte/Plot vor dem Fix nach „Max“ 26/0 px, danach 507/450 px; Vollbild 900 px, unterste Datierungszeile endet bei 853 px (390 × 844: 797 px); ESC stellt 507/450 px wieder her. Kein Modebar-Button unter dem Vollbild-Button (1440 und 390 px); kein „Share chart“ im DOM. Keine Konsolenfehler.
+  - Screenshots 390 und 1440 px, hell und dunkel, dazu Druckmedien-Emulation: Flächen 1990/91, 2001, 2008/09 und 2020 hinter den Linien.
+  - Scores gegen `data-dev/` neu berechnet: unverändert (Stress 37,8, Fallhöhe 79,9, Ampel Grün, Konfidenz 90,0 %); `/_dash-layout` und `/health` 200.
+- **Nicht geprüft:** TrueNAS; der echte Druckdialog (nur Druckmedien-Emulation, dabei läuft `beforeprint` nicht).
 
 ### M7 – Ansichten 1–7
 
@@ -770,9 +789,10 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 - **Eine Fabrikfunktion** in `fever/web/figures.py` erzeugt Figure und Config. Kein Chart wird an ihr vorbei gebaut, damit Standard und Test an einer Stelle hängen.
 - **Zoom und Verschieben:** Plotly-Standard (Rahmen aufziehen, Verschieben über die Modebar, Doppelklick setzt zurück). `scrollZoom` aus, weil sonst das Scrollen der Seite auf dem Smartphone im Chart hängen bleibt.
 - **Zeitraum-Buttons (E-2):** `xaxis.rangeselector` mit „1 M“, „6 M“, „1 J“, „5 J“, „Max“. Kein Rangeslider; er kostet auf dem Smartphone zu viel Höhe.
-- **Bildexport:** Modebar-Button „Download als PNG“ über `toImageButtonOptions` (`format="png"`, `scale=2`, Dateiname `<kennzahl>_<TT-MM-JJJJ>`), `displaylogo=False`. Die Bilderzeugung läuft im Browser, ohne Server-Bibliothek; geprüft am Quelltext von Dash 4.4.1 (`dcc.Graph`, Prop `config`).
-- **Datenstand im Bild:** Titel, Quelle, letztes Beobachtungsdatum und Abrufzeitpunkt stehen als Annotation *im* Chart. Ein exportiertes oder ausgedrucktes Bild darf nie zeitlos wirken.
-- **Vollbild (E-2):** ein Button je Chart-Karte, der die Karte per CSS-Klasse als Overlay über den ganzen Bildschirm legt (`position: fixed; inset: 0`); Plotly passt sich über `responsive` an. Bewusst ohne Fullscreen-API, damit das Verhalten nicht vom Browser abhängt. ESC oder Button schließt.
+- **Bildexport:** Modebar-Button „Download als PNG“ über `toImageButtonOptions` (`format="png"`, `scale=2`, Dateiname `<kennzahl>_<TT-MM-JJJJ>`), `displaylogo=False`. `showSendToCloud=False`: Plotly.js 4 zeigt sonst „Share chart…“ und lädt damit Chart und Daten zu Plotly Cloud hoch. Die Bilderzeugung läuft im Browser, ohne Server-Bibliothek; geprüft am Quelltext von Dash 4.4.1 (`dcc.Graph`, Prop `config`).
+- **Datenstand im Bild:** Titel, Quelle, letztes Beobachtungsdatum und Abrufzeitpunkt stehen als Annotation *im* Chart, mit festem Pixelabstand unter der Achse. Ein exportiertes oder ausgedrucktes Bild darf nie zeitlos wirken.
+- **Rezessionsbalken (E-56):** US-Rezessionen aus FRED `USREC` als graue Flächen hinter den Linien in allen Zeitreihen-Charts, mit Hinweiszeile in der Datierung. Nur Anzeige.
+- **Vollbild (E-2):** ein Button je Chart-Karte, in eigener Zeile über dem Chart (über der Modebar verdeckte er deren Buttons), der die Karte per CSS-Klasse als Overlay über den ganzen Bildschirm legt (`position: fixed; inset: 0`); Plotly passt sich über `responsive` an. Der Graph steckt in `.chart-box` mit fester Höhe, im Vollbild füllt die Box den Rest der Karte. Bewusst ohne Fullscreen-API, damit das Verhalten nicht vom Browser abhängt. ESC oder Button schließt.
 - **Druck-/PDF-Ansicht (E-2):** `assets/print.css` blendet Navigation, Modebar und Buttons aus, druckt hell, bricht nicht mitten in einer Karte um. Nutzung: Browser → Drucken → „Als PDF speichern“. Risiko: Plotly setzt Farben inline im SVG, deshalb im Browser prüfen, ob ein dunkler Chart hell druckt; sonst beim Drucken per `beforeprint` auf das helle Template umschalten.
 - **Auto-Aktualisierung ohne Zoomverlust:** `uirevision` je Chart fest setzen.
 - **Ehrliche Darstellung:** `connectgaps=False`. Veraltete Abschnitte werden abgesetzt, nicht interpoliert. Keine geglättete Linie ohne Hinweis auf die Glättung.
@@ -791,7 +811,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
   5. erzeugter „Steckbrief“ aus `series.toml`: Quelle, Serien-ID, Frequenz, Veröffentlichung und Verzug, Toleranz, Historie ab, Orientierung, Block bzw. Fallhöhe, Transformation, Mindesthistorie, Lizenzhinweis
   6. erzeugter Abschnitt „Schwellen und Farben“ aus `scoring.toml`
   7. Quellen
-- **Übersichtsseite „Erklärungen“:** alle Kennzahlen nach Block gruppiert, dazu die Konzeptseiten „Perzentil“, „Ampel“, „Konfidenz“, „Veraltung“.
+- **Übersichtsseite „Erklärungen“:** alle Kennzahlen nach Block gruppiert, dazu die Konzeptseiten „Perzentil“, „Ampel“, „Konfidenz“, „Veraltung“, „Rezessionsbalken“ (E-56).
 
 ### 7.3 Aktualität
 
@@ -839,13 +859,13 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 ## 9. Übergabe an die nächste Sitzung
 
 - **Stand (26.09.2026):**
-  - M0 bis M2 erledigt, M3 umgesetzt (178 Tests grün): Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-55; M4 vollständig (60 Reihen in 32 Abrufgruppen), M5 auf TrueNAS seit 26.09.2026 (Scores identisch mit der Entwicklungsumgebung, 6,5 s).
-  - M6 umgesetzt: Dash-Oberfläche mit Übersicht, Datenstand, Erklärungen und Erklärseiten, Dienst `web` auf Port 8003; 359 Tests grün. Noch nicht auf TrueNAS eingespielt.
-  - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“). Erstabruf aller 23 Reihen am 26.09.2026 per Sofort-Abruf; das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
+  - M0 bis M2 erledigt, M3 umgesetzt: Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
+  - Entscheidungen bis E-56; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026 (Scores identisch mit der Entwicklungsumgebung; Dashboard auf Port 8003 läuft laut Nutzer).
+  - Nachtrag M6: Rezessionsbalken (E-56, Reihe `usrec`, jetzt 61 Reihen in 33 Abrufgruppen) und vier Korrekturen aus der Sichtprüfung (Chart-Höhe nach Zeitraum-Button, „Share chart…“ zu Plotly Cloud abgeschaltet, Datierung im Vollbild, Vollbild-Button über der Modebar); 362 Tests grün. Noch nicht auf TrueNAS eingespielt.
+  - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“); das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
-  1. M6 auf TrueNAS einspielen: `git pull`, Build, Compose-Kopie in Dockge durch den neuen Inhalt von `compose.dockge.yaml` ersetzen (Dienst `web`), Stack neu starten, `http://<IP-von-TrueNAS>:8003` öffnen (`docs/einrichtung.md`, Schritte 8 und 9).
-  2. Nutzer prüft die sechs Texte aus E-52 inhaltlich.
+  1. Update auf TrueNAS: `git pull`, Build, Stack in Dockge neu starten (Compose unverändert, keine Migration), Sofort-Abruf; erwartet „61 Reihen, 0 mit Problemen“ (`docs/einrichtung.md`, Schritt 9).
+  2. Nutzer prüft die sechs Texte aus E-52 und `recessions.md` inhaltlich.
   3. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen; dann M3 abschließen (Woche ab 28.09.2026).
   4. M7 planen (Ansichten 1–7): Ampelmatrix, Themen-Ansichten, Visualisierung; vorher L-13 (Krisenmarken) und die Speicherung der Perzentilbänder klären.
   5. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe während der US-Handelszeit (Indizes und VX-Dateien), CFTC nach dem ersten Freitag, Shiller nach dem Oktober-Upload.

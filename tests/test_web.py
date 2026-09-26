@@ -1,6 +1,7 @@
 """Web interface (M6): smoke test, local resources only, chart standard, texts, formats."""
 
 import json
+from dataclasses import replace
 import re
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -88,12 +89,15 @@ def test_chart_factory_sets_the_standard():
     figure, config = time_series(chart, "dark", today=date(2026, 9, 26))
     layout = figure.layout
     assert config["displaylogo"] is False and config["scrollZoom"] is False
+    assert config["showSendToCloud"] is False  # no upload of chart data to Plotly Cloud
     assert config["toImageButtonOptions"] == {"format": "png", "scale": 2, "filename": "vix_26-09-2026"}
     assert [b.label for b in layout.xaxis.rangeselector.buttons] == ["1 M", "6 M", "1 J", "5 J", "Max"]
     assert layout.xaxis.rangeslider.visible is False
     assert layout.uirevision == "vix" and layout.separators == ",." and layout.template.layout.paper_bgcolor == "#1a1a19"
     assert figure.data[0].connectgaps is False
     assert layout.annotations[0].text == "Quelle: Cboe<br>Stand: 25.09.2026<br>Abruf: 26.09.2026, 14:47 MESZ"
+    # pixel offset, not a paper fraction: stays inside the margin at any chart height (full screen)
+    assert layout.annotations[0].y == 0 and layout.annotations[0].yshift == -28
     assert layout.xaxis.hoverformat == "%d.%m.%Y"
 
 
@@ -161,3 +165,48 @@ def test_german_formats():
     assert fmt.age(now, now) == "gerade eben"
     assert fmt.age(datetime(2026, 9, 26, 9, 0, tzinfo=timezone.utc), now) == "vor 3 Std."
     assert fmt.age(datetime(2026, 9, 23, 12, 0, tzinfo=timezone.utc), now) == "vor 3 Tagen"
+
+
+# --- recession bars (E-56) ------------------------------------------------------------------------------
+
+
+def test_recession_periods_from_usrec(migrated_dir, monkeypatch):
+    engine = make_engine(migrated_dir)
+    months = [date(2007, 11, 1), date(2007, 12, 1), date(2008, 1, 1), date(2008, 2, 1), date(2020, 2, 1),
+              date(2020, 3, 1), date(2020, 4, 1), date(2020, 5, 1), date(2026, 7, 1), date(2026, 8, 1)]
+    values = [0, 1, 1, 0, 0, 1, 1, 0, 0, 1]
+    with engine.begin() as conn:
+        append_observations(conn, "usrec", [NewObservation(m, float(v), NOW, True) for m, v in zip(months, values)], retrieved_at=NOW)
+    monkeypatch.setenv("FEVER_DATA", str(migrated_dir))
+    web_db.engine.cache_clear()
+    try:
+        assert web_db.recessions() == (
+            (date(2007, 12, 1), date(2008, 1, 31)),
+            (date(2020, 3, 1), date(2020, 4, 30)),
+            (date(2026, 8, 1), date(2026, 8, 31)),  # still running at the end of the series
+        )
+    finally:
+        web_db.engine.cache_clear()
+
+
+def test_charts_draw_grey_bars_behind_the_lines_and_say_so():
+    periods = ((date(2008, 1, 1), date(2009, 6, 30)), (date(2020, 3, 1), date(2020, 4, 30)), (date(1990, 8, 1), date(1991, 3, 31)))
+    chart = Chart("vix", "VIX", "Cboe", [Line("VIX", [date(2005, 1, 3), date(2026, 9, 25)], [12.0, 15.0])], "Punkte",
+                  recessions=periods)
+    figure, _ = time_series(chart, "light", today=date(2026, 9, 26))
+    shapes = figure.layout.shapes
+    assert [(s.x0, s.x1) for s in shapes] == [periods[0], periods[1]]  # 1990 lies before the data
+    assert all(s.layer == "below" and s.yref == "paper" for s in shapes)
+    assert figure.layout.annotations[0].text.endswith("Grau: US-Rezessionen nach NBER (über FRED)")
+    plain, _ = time_series(replace(chart, recessions=()), "light")
+    assert not plain.layout.shapes and "Rezession" not in plain.layout.annotations[0].text
+
+
+def test_chart_card_gives_the_responsive_graph_a_box_with_a_height():
+    """Regression: without a sized box the graph collapsed to 0 px after a range button click."""
+    from fever.web.components import chart_card
+    card = chart_card("g", Chart("vix", "VIX", "Cboe", [Line("VIX", [date(2026, 9, 25)], [15.0])], "Punkte"), "light")
+    box = card.children[1]
+    assert box.className == "chart-box" and box.children.responsive is True and box.children.style == {"height": "100%"}
+    css = (REPO / "assets" / "base.css").read_text(encoding="utf-8")
+    assert re.search(r"\.chart-box \{ height: \d+px; \}", css)

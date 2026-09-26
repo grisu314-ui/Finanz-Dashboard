@@ -6,7 +6,7 @@ Zweck ist Regime- und Risikoanzeige, **keine Crash-Prognose, keine Handelssignal
 
 ## Status
 
-Stand 26.09.2026: **M0 bis M2 und M4 bis M6 erledigt, M3 in Betrieb**: Docker-Image, Datenbank mit geschütztem Archiv, Backup und Wiederherstellung, 60 Datenreihen von Cboe (Indizes und VX-Futures), FRED, EZB, OFR, Fed, CFTC und Shiller mit Prüfung und Veröffentlichungszeitpunkt, Worker mit Abrufplan und Healthcheck; der Worker läuft auf TrueNAS. Das Scoring (M5) berechnet Stress, Fallhöhe und Ampel; die Oberfläche (M6) zeigt sie mit Datenstand und Erklärseiten unter Port 8003, die Themen-Ansichten folgen in M7. Fortschritt: `docs/umsetzungsplan.md`, Abschnitt 1.
+Stand 26.09.2026: **M0 bis M2 und M4 bis M6 erledigt, M3 in Betrieb**: Docker-Image, Datenbank mit geschütztem Archiv, Backup und Wiederherstellung, 61 Datenreihen von Cboe (Indizes und VX-Futures), FRED, EZB, OFR, Fed, CFTC und Shiller mit Prüfung und Veröffentlichungszeitpunkt, Worker mit Abrufplan und Healthcheck; der Worker läuft auf TrueNAS. Das Scoring (M5) berechnet Stress, Fallhöhe und Ampel; die Oberfläche (M6) zeigt sie mit Datenstand, Erklärseiten und US-Rezessionen als graue Flächen unter Port 8003, die Themen-Ansichten folgen in M7. Fortschritt: `docs/umsetzungsplan.md`, Abschnitt 1.
 
 ## Dokumentation
 

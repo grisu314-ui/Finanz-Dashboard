@@ -193,7 +193,7 @@ Prüfen:
 
 ```bash
 sudo docker logs --tail 20 finanz-dashboard-worker-1
-#   erwartet u. a.: INFO __main__: Worker gestartet: 60 Reihen in 32 Abrufgruppen, Takt 15 Minuten
+#   erwartet u. a.: INFO __main__: Worker gestartet: 61 Reihen in 33 Abrufgruppen, Takt 15 Minuten
 #                   INFO __main__: Tägliches Backup erstellt und geprüft: fever-…-daily.sqlite3
 sudo docker exec finanz-dashboard-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"
 #   erwartet: gesund: letzter Heartbeat vor 0 Minuten
@@ -208,16 +208,16 @@ Dockge zeigt den Worker nach spätestens rund 5 Minuten als „healthy“; vorhe
 ```bash
 sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
 #   erwartet je Reihe eine Zeile, z. B.: INFO __main__: ecb_ciss: 12199 neue Zeilen (Erstabruf)
-#   am Ende: INFO __main__: Sofort-Abruf beendet: 60 Reihen, 0 mit Problemen   (Exit-Code 0)
+#   am Ende: INFO __main__: Sofort-Abruf beendet: 61 Reihen, 0 mit Problemen   (Exit-Code 0)
 #   der erste Abruf der VX-Futures (Gruppe cfe_vx) lädt rund 175 Dateien und dauert etwa 3 Minuten
 #   ein zweiter Lauf meldet je Reihe "0 neue Zeilen"
 ```
 
-✅ 26.09.2026, TrueNAS nach den Updates auf M4b (41 Reihen) und M4c (44 Reihen), jeweils 0 mit Problemen. Mit M4d (60 Reihen): ✅ TrueNAS 26.09.2026 („60 Reihen, 0 mit Problemen“); ✅ Entwicklungsumgebung (Worker-Startzeile ebenfalls; Shiller dort nur mit Proxy-Abbrüchen der Cloud-Umgebung). Meldet es „mit Problemen“ (Exit-Code 1), nennen die `ERROR`-Zeilen darüber Reihe und Grund.
+✅ 26.09.2026, TrueNAS nach den Updates auf M4b (41 Reihen) und M4c (44 Reihen), jeweils 0 mit Problemen. Mit M4d (60 Reihen): ✅ TrueNAS 26.09.2026 („60 Reihen, 0 mit Problemen“); ✅ Entwicklungsumgebung (Worker-Startzeile ebenfalls; Shiller dort nur mit Proxy-Abbrüchen der Cloud-Umgebung). Mit der Rezessionsreihe `usrec` (61 Reihen, 33 Abrufgruppen): ✅ Entwicklungsumgebung 26.09.2026 (Zählung aus Katalog und Abrufgruppen, Abruf von `USREC`); ⏳ TrueNAS. Meldet es „mit Problemen“ (Exit-Code 1), nennen die `ERROR`-Zeilen darüber Reihe und Grund.
 
 ## 8. Dashboard aufrufen
 
-✅ 26.09.2026, Entwicklungsumgebung: Dienst `web` über `compose.dockge.yaml` als 568:568, „healthy“, `0.0.0.0:8003`; `/health`, `/`, `/datenstand` liefern 200. ⏳ TrueNAS.
+✅ 26.09.2026, Entwicklungsumgebung: Dienst `web` über `compose.dockge.yaml` als 568:568, „healthy“, `0.0.0.0:8003`; `/health`, `/`, `/datenstand` liefern 200. ✅ 26.09.2026, TrueNAS: Dashboard läuft (Rückmeldung des Nutzers).
 
 Der Stack enthält seit M6 zwei Dienste, `worker` und `web`. Nach dem Update auf M6 muss die Kopie in Dockge den neuen Inhalt von `compose.dockge.yaml` bekommen (Schritt 7.2), sonst startet nur der Worker.
 

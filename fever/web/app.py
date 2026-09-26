@@ -24,7 +24,8 @@ NOTICES = [
     "This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.",
     "Source: ECB statistics.",
     "Quellen: Cboe Global Markets (nur private, nicht kommerzielle Nutzung), Board of Governors of the Federal Reserve "
-    "System, Office of Financial Research, CFTC Commitments of Traders, Robert J. Shiller (Online Data); über FRED "
+    "System, Office of Financial Research, CFTC Commitments of Traders, Robert J. Shiller (Online Data), "
+    "NBER-Rezessionsdatierung (über FRED); über FRED "
     "auch ICE Data Indices und S&P Dow Jones Indices (nur private Nutzung, keine Weitergabe).",
     "Regime- und Risikoanzeige, keine Prognose und keine Handelsempfehlung.",
 ]

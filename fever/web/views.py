@@ -90,6 +90,7 @@ def overview(theme: str, now: datetime) -> list:
         [Line("Stress", [r["score_date"] for r in history], [r["stress"] for r in history]),
          Line("Fallhöhe", [r["score_date"] for r in history], [r["vulnerability"] for r in history])],
         "Wert (0–100)", observed=latest["score_date"], retrieved=latest["computed_at"], y_range=(0, 100),
+        recessions=db.recessions(),
     )
     return [html.Div(cards, className="grid"), ui.chart_card("overview-history", chart, theme)]
 
@@ -201,6 +202,8 @@ def kennzahl(kennzahl_id: str | None, theme: str, now: datetime) -> list:
         parts += _score_state(kennzahl_id, theme, now)
     for heading, body in text.sections:
         parts.append(html.Section(className="card card-wide text", children=[html.H2(heading), dcc.Markdown(body, link_target="_blank")]))
+    if kennzahl_id == "recessions":
+        history_from = db.first_observation([db.RECESSION_SERIES])
     facts = texts.steckbrief(kennzahl_id, history_from)
     if facts:
         parts.append(html.Section(className="card card-wide", children=[html.H2("Steckbrief"), ui.facts_table(facts)]))
@@ -237,11 +240,12 @@ def _indicator_state(kennzahl_id, theme, now):
         ui.chart_card(f"chart-{kennzahl_id}-value", Chart(
             kennzahl_id, f"{texts.text(kennzahl_id).title}: Wert", source,
             [Line("Wert", days, [r["value"] if r["status"] in shown else None for r in history], hover_decimals=2, shape="hv")],
-            "Wert", observed=row["obs_date"], retrieved=retrieved), theme),
+            "Wert", observed=row["obs_date"], retrieved=retrieved, recessions=db.recessions()), theme),
         ui.chart_card(f"chart-{kennzahl_id}-percentile", Chart(
             f"{kennzahl_id}-percentile", f"{texts.text(kennzahl_id).title}: Perzentil", source,
             [Line("Perzentil", days, [r["percentile"] if r["status"] == "ok" else None for r in history], hover_decimals=0, shape="hv")],
-            "Perzentil (0–100)", observed=row["obs_date"], retrieved=retrieved, y_range=(0, 100)), theme),
+            "Perzentil (0–100)", observed=row["obs_date"], retrieved=retrieved, y_range=(0, 100),
+            recessions=db.recessions()), theme),
     ]
     return state, charts, db.first_observation([s.id for s in indicator.series])
 
@@ -268,5 +272,5 @@ def _score_state(kennzahl_id, theme, now):
                   [Line(label, [r["score_date"] for r in history], [r[column] for r in history],
                         hover_decimals=0 if ticks else 1, shape="hv" if ticks else "linear")],
                   label, observed=latest["score_date"], retrieved=latest["computed_at"],
-                  y_range=(-0.5, 3.5) if ticks else (0, 100), y_ticks=ticks)
+                  y_range=(-0.5, 3.5) if ticks else (0, 100), y_ticks=ticks, recessions=db.recessions())
     return [state, ui.chart_card(f"chart-{kennzahl_id}", chart, theme)]

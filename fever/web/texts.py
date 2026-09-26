@@ -11,7 +11,9 @@ from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 
-from fever.config import FREQUENCY_DAYS, STRESS_BLOCKS, VULNERABILITY, Indicator, indicator_catalog, scoring_config
+from fever.config import (
+    FREQUENCY_DAYS, STRESS_BLOCKS, VULNERABILITY, Indicator, indicator_catalog, scoring_config, series_catalog,
+)
 
 TEXT_DIR = Path(__file__).resolve().parent / "texts"
 HEADINGS = (
@@ -37,7 +39,7 @@ GROUPS = {
     "concepts": "Begriffe",
 }
 SCORES = ("traffic_light", "stress", "vulnerability", "confidence", "diffusion") + tuple(f"block_{b}" for b in STRESS_BLOCKS)
-CONCEPTS = ("percentile", "staleness")
+CONCEPTS = ("percentile", "staleness", "recessions")
 FREQUENCY_NAMES = {"daily": "täglich", "weekly": "wöchentlich", "monthly": "monatlich", "quarterly": "quartalsweise"}
 LEVEL_NAMES = ("Grün", "Gelb", "Orange", "Rot")
 
@@ -129,6 +131,12 @@ _TRANSFORMS = {
 def steckbrief(kennzahl_id: str, history_from=None) -> list[tuple[str, str]]:
     """Facts from series.toml and scoring.toml; `history_from` is the first observation (database)."""
     config = scoring_config()
+    if kennzahl_id == "recessions":
+        series = series_catalog()["usrec"]
+        return [("Reihe", f"{series.name} (fred: {series.source_id})"), ("Frequenz", FREQUENCY_NAMES[series.frequency]),
+                ("Verwendung", "nur Anzeige als graue Flächen, in keinem Indikator und keinem Score"),
+                ("Historie ab", "–" if history_from is None else f"{history_from:%d.%m.%Y}"),
+                ("Lizenz", series.license or "–")]
     if kennzahl_id in CONCEPTS:
         return []
     if kennzahl_id in SCORES:
@@ -203,6 +211,8 @@ def thresholds(kennzahl_id: str) -> list[str]:
         return ["Keine Schwelle; eine niedrige Konfidenz heißt, dass die Ampel auf dünner Datenbasis steht."]
     if kennzahl_id == "percentile":
         return [f"Fenster {c.window_years} Jahre, Mindesthistorie {c.min_history_years} Jahre.", f"Markierung „erhöht“ über Perzentil {_n(c.yellow_diffusion_percentile)}."]
+    if kennzahl_id == "recessions":
+        return ["Keine Schwelle; die Flächen sind reine Anzeige und gehen in keinen Score ein."]
     if kennzahl_id == "staleness":
         return [f"{FREQUENCY_NAMES[f]}: veraltet nach mehr als {FREQUENCY_DAYS[f]} Tagen plus Toleranz der Reihe seit der erwarteten Veröffentlichung." for f in FREQUENCY_DAYS]
     if kennzahl_id.startswith("block_"):
