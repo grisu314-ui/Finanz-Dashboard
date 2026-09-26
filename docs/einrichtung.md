@@ -223,16 +223,22 @@ Im Browser eines Geräts im Heimnetz: `http://<IP-von-TrueNAS>:8003`.
 
 ## 9. Update auf eine neue Version ⏳
 
-Standardablauf. Er schadet nie; gibt es keine neue Migration, ist `alembic upgrade head` wirkungslos. `$RUN` wie in Schritt 6.
+Standardablauf, alles in der SSH-Shell auf TrueNAS; nur Stopp und Start des Stacks in Dockge. Er schadet nie: Gibt es keine neue Migration, ändert `alembic upgrade head` nichts, und die Sicherung davor ist nur eine zusätzliche Kopie. Ob eine neue Migration dabei ist, zeigt die dritte Zeile.
 
 ```bash
 cd /mnt/Daten-Z1/apps/feewer
 git pull
 git diff --stat HEAD@{1} -- compose.dockge.yaml .env.example    # Ausgabe? Dann Schritt 7.2/7.3 wiederholen
+git diff --stat HEAD@{1} -- migrations/                          # Ausgabe = neue Migration
 sudo docker compose build
 # in Dockge: Stack "finanz-dashboard" stoppen
+RUN='sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v /mnt/Daten-Z1/apps/feewer/data:/data fever:local'    # wie Schritt 6, gilt bis zum Abmelden
 $RUN python -m fever.backup        # Sicherung vor der Migration
+#   erwartet: INFO __main__: Backup erstellt und geprüft: /data/backup/fever-…-manual.sqlite3
 $RUN alembic upgrade head
+#   erwartet ohne neue Migration nur zwei Zeilen "INFO [alembic.runtime.migration] …", kein "Running upgrade"
+$RUN alembic current
+#   erwartet: die neueste Nummer mit "(head)", derzeit 0001 (head)
 # in Dockge: Stack "finanz-dashboard" starten
 sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update    # nur wenn neue Reihen dazukamen (Schritt 7)
 ```
