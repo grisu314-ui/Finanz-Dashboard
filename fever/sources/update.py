@@ -22,14 +22,14 @@ from sqlalchemy.engine import Engine
 from fever import log
 from fever.config import ConfigError, Series, group_members, series_catalog
 from fever.http import FetchError, Fetched, HttpClient
-from fever.sources import Row, SourceError, cboe, cftc, ecb, fed, fred, ofr, shiller
+from fever.sources import Row, SourceError, cboe, cfe, cftc, ecb, fed, fred, ofr, shiller
 from fever.store.db import DataDirError, data_dir, make_engine
-from fever.store.observations import NewObservation, append_observations, latest_values
+from fever.store.observations import NewObservation, append_observations, latest_obs_date, latest_values
 from fever.store.raw import archive_raw
 from fever.store.status import record_attempt, record_error, record_success
 
 NEW_YORK = ZoneInfo("America/New_York")
-MODULES = {"cboe": cboe, "fred": fred, "ecb": ecb, "ofr": ofr, "fed": fed, "cftc": cftc, "shiller": shiller}
+MODULES = {"cboe": cboe, "fred": fred, "ecb": ecb, "ofr": ofr, "fed": fed, "cftc": cftc, "shiller": shiller, "cfe": cfe}
 MAX_LISTED_PROBLEMS = 5
 
 logger = logging.getLogger(__name__)
@@ -72,8 +72,11 @@ def update_group(
     module = MODULES[first.source]
     with engine.begin() as conn:
         record_attempt(conn, first.source, clock())
+        latests = [latest_obs_date(conn, series.id) for series in members]
+    # Newest trading day stored for every member; lets a source load only recent files (cfe).
+    since = None if None in latests else min(latests)
     try:
-        fetched = module.fetch(client, first)
+        fetched = module.fetch(client, first, since=since)
         # Archived before parsing, so a changed format can be inspected afterwards.
         archive_raw(data_dir, first.source, first.group, fetched.content, fetched.retrieved_at)
     except (FetchError, SourceError) as exc:

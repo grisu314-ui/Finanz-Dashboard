@@ -5,7 +5,7 @@ download (group "ofr_fsi", E-36). "The FSI publishes with data that is current f
 two business days prior" (financialresearch.gov, checked 26.09.2026).
 """
 
-from datetime import datetime
+from datetime import date, datetime
 
 from fever.config import Series
 from fever.http import Fetched, HttpClient
@@ -14,7 +14,8 @@ from fever.sources import Row, csv_column
 URL = "https://www.financialresearch.gov/financial-stress-index/data/fsi.csv"
 
 
-def fetch(client: HttpClient, series: Series) -> Fetched:
+def fetch(client: HttpClient, series: Series, since: date | None = None) -> Fetched:
+    # `since` is not needed: every request returns the full history.
     return client.get(URL)
 
 

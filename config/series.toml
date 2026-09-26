@@ -3,7 +3,7 @@
 # Parameters decided on 26.09.2026 (E-23); evidence per series in docs/umsetzungsplan.md, M2.
 #
 # Fields per raw series (checked by fever/config.py, series_catalog):
-#   source          one of fever.config.SOURCES ("cboe", "fred", "ecb", "ofr", "fed", "cftc", "shiller")
+#   source          one of fever.config.SOURCES ("cboe", "fred", "ecb", "ofr", "fed", "cftc", "shiller", "cfe")
 #   source_id       identifier at the source; the table key is the same in lower case (E-16)
 #   name, unit      display texts
 #   frequency       "daily", "weekly", "monthly" or "quarterly"
@@ -576,3 +576,214 @@ lag_days = 45
 tolerance_days = 10
 bounds = [-0.5, 0.5]
 license = "Robert J. Shiller, Online Data (enthält S&P-Daten): nur private Nutzung, keine Weitergabe"
+
+# --- Cboe Futures Exchange (M4d): VX futures by rank, group cfe_vx (E-45, E-46). Rank n = n-th monthly
+# --- contract listed and expiring after the trading day; _days = calendar days to its expiry. Licence as Cboe (E-26).
+
+[series.cfe_vx1]
+source = "cfe"
+source_id = "VX1"
+group = "cfe_vx"
+name = "VX-Future Rang 1: Settlement"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 300]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx1_days]
+source = "cfe"
+source_id = "VX1_DAYS"
+group = "cfe_vx"
+name = "VX-Future Rang 1: Tage bis Verfall"
+unit = "Kalendertage"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 400]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx2]
+source = "cfe"
+source_id = "VX2"
+group = "cfe_vx"
+name = "VX-Future Rang 2: Settlement"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 300]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx2_days]
+source = "cfe"
+source_id = "VX2_DAYS"
+group = "cfe_vx"
+name = "VX-Future Rang 2: Tage bis Verfall"
+unit = "Kalendertage"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 400]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx3]
+source = "cfe"
+source_id = "VX3"
+group = "cfe_vx"
+name = "VX-Future Rang 3: Settlement"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 300]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx3_days]
+source = "cfe"
+source_id = "VX3_DAYS"
+group = "cfe_vx"
+name = "VX-Future Rang 3: Tage bis Verfall"
+unit = "Kalendertage"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 400]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx4]
+source = "cfe"
+source_id = "VX4"
+group = "cfe_vx"
+name = "VX-Future Rang 4: Settlement"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 300]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx4_days]
+source = "cfe"
+source_id = "VX4_DAYS"
+group = "cfe_vx"
+name = "VX-Future Rang 4: Tage bis Verfall"
+unit = "Kalendertage"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 400]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx5]
+source = "cfe"
+source_id = "VX5"
+group = "cfe_vx"
+name = "VX-Future Rang 5: Settlement"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 300]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx5_days]
+source = "cfe"
+source_id = "VX5_DAYS"
+group = "cfe_vx"
+name = "VX-Future Rang 5: Tage bis Verfall"
+unit = "Kalendertage"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 400]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx6]
+source = "cfe"
+source_id = "VX6"
+group = "cfe_vx"
+name = "VX-Future Rang 6: Settlement"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 300]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx6_days]
+source = "cfe"
+source_id = "VX6_DAYS"
+group = "cfe_vx"
+name = "VX-Future Rang 6: Tage bis Verfall"
+unit = "Kalendertage"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 400]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx7]
+source = "cfe"
+source_id = "VX7"
+group = "cfe_vx"
+name = "VX-Future Rang 7: Settlement"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 300]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx7_days]
+source = "cfe"
+source_id = "VX7_DAYS"
+group = "cfe_vx"
+name = "VX-Future Rang 7: Tage bis Verfall"
+unit = "Kalendertage"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 400]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx8]
+source = "cfe"
+source_id = "VX8"
+group = "cfe_vx"
+name = "VX-Future Rang 8: Settlement"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 300]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+[series.cfe_vx8_days]
+source = "cfe"
+source_id = "VX8_DAYS"
+group = "cfe_vx"
+name = "VX-Future Rang 8: Tage bis Verfall"
+unit = "Kalendertage"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [1, 400]
+license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"

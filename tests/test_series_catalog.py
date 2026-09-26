@@ -19,6 +19,8 @@ EXPECTED_IDS = {
     "cftc_vx_open_interest", "cftc_vx_noncomm_long", "cftc_vx_noncomm_short", "cftc_vx_noncomm_spread",
     # M4c
     "bogz1fl663067003q", "shiller_cape", "shiller_ecy",
+    # M4d
+    *(f"cfe_vx{n}{suffix}" for n in range(1, 9) for suffix in ("", "_days")),
 }
 
 VALID = """
@@ -148,8 +150,8 @@ def test_repository_groups():
 
     groups = group_members(series_catalog())
     assert len(groups["ofr_fsi"]) == 9 and len(groups["fed_ebp"]) == 2 and len(groups["cftc_vx"]) == 4
-    assert len(groups["shiller"]) == 2
-    assert all(len(members) == 1 for group, members in groups.items() if group not in ("ofr_fsi", "fed_ebp", "cftc_vx", "shiller"))
+    assert len(groups["shiller"]) == 2 and len(groups["cfe_vx"]) == 16
+    assert all(len(members) == 1 for group, members in groups.items() if group not in ("ofr_fsi", "fed_ebp", "cftc_vx", "shiller", "cfe_vx"))
 
 
 def test_group_members_share_the_schedule(tmp_path):

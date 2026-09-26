@@ -31,7 +31,8 @@ _MISSING = ("", "NA")
 _SHOWN = 30  # characters of a broken cell quoted in an error message
 
 
-def fetch(client: HttpClient, series: Series) -> Fetched:
+def fetch(client: HttpClient, series: Series, since: date | None = None) -> Fetched:
+    # `since` is not needed: every request returns the full history.
     page = client.get(PAGE_URL)
     links = {html.unescape(link) for link in _LINK.findall(page.content.decode("utf-8", errors="replace"))}
     if len(links) != 1:

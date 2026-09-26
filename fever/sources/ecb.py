@@ -8,7 +8,7 @@ reference rates until 2012) are missing values. Reuse: free with the source note
 
 import csv
 import io
-from datetime import datetime
+from datetime import date, datetime
 
 from fever.config import Series
 from fever.http import Fetched, HttpClient
@@ -18,7 +18,8 @@ URL = "https://data-api.ecb.europa.eu/service/data/{flow}/{key}"
 _REQUIRED = ("KEY", "TIME_PERIOD", "OBS_VALUE")
 
 
-def fetch(client: HttpClient, series: Series) -> Fetched:
+def fetch(client: HttpClient, series: Series, since: date | None = None) -> Fetched:
+    # `since` is not needed: every request returns the full history.
     flow, key = series.source_id.split("/", 1)
     return client.get(URL.format(flow=flow, key=key), {"format": "csvdata", "detail": "dataonly"})
 

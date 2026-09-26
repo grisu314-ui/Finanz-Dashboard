@@ -5,7 +5,7 @@ source_id is the column name ("ebp", "gz_spread"); both come from one download (
 month" (FEDS Notes, 06.10.2016). Dates are the first day of the month, M/D/YYYY.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 
 from fever.config import Series
 from fever.http import Fetched, HttpClient
@@ -14,7 +14,8 @@ from fever.sources import Row, SourceError, csv_column
 URL = "https://www.federalreserve.gov/econres/notes/feds-notes/ebp_csv.csv"
 
 
-def fetch(client: HttpClient, series: Series) -> Fetched:
+def fetch(client: HttpClient, series: Series, since: date | None = None) -> Fetched:
+    # `since` is not needed: every request returns the full history.
     return client.get(URL)
 
 

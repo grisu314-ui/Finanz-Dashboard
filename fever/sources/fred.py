@@ -7,7 +7,7 @@ skipped, never stored. Terms of use: see docs/umsetzungsplan.md, M2.
 
 import json
 import os
-from datetime import datetime
+from datetime import date, datetime
 
 from fever.config import Series
 from fever.http import Fetched, HttpClient
@@ -17,7 +17,8 @@ URL = "https://api.stlouisfed.org/fred/series/observations"
 _MAX_SHOWN = 40  # characters of a broken field quoted in an error message
 
 
-def fetch(client: HttpClient, series: Series) -> Fetched:
+def fetch(client: HttpClient, series: Series, since: date | None = None) -> Fetched:
+    # `since` is not needed: every request returns the full history.
     key = os.environ.get("FRED_API_KEY")
     if not key:
         raise SourceError("FRED_API_KEY ist nicht gesetzt")
