@@ -50,6 +50,15 @@ def first_observation(series_ids: list[str]) -> date | None:
         return conn.execute(select(func.min(observation.c.obs_date)).where(observation.c.series_id.in_(series_ids))).scalar()
 
 
+def history_start(series_ids: list[str]) -> date | None:
+    """First day on which every input series has an observation: an indicator needs all of them."""
+    query = (select(observation.c.series_id, func.min(observation.c.obs_date))
+             .where(observation.c.series_id.in_(series_ids)).group_by(observation.c.series_id))
+    with engine().connect() as conn:
+        firsts = dict(conn.execute(query).all())
+    return max(firsts.values()) if firsts and set(firsts) == set(series_ids) else None
+
+
 def series_freshness() -> dict[str, dict]:
     """Per series: newest observation date, newest retrieval and number of rows."""
     query = select(

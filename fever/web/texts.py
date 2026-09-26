@@ -14,6 +14,7 @@ from pathlib import Path
 from fever.config import (
     FREQUENCY_DAYS, STRESS_BLOCKS, VULNERABILITY, Indicator, indicator_catalog, scoring_config, series_catalog,
 )
+from fever.scoring.composite import VIX_RATIO_INDICATOR
 
 TEXT_DIR = Path(__file__).resolve().parent / "texts"
 HEADINGS = (
@@ -40,6 +41,9 @@ GROUPS = {
 }
 SCORES = ("traffic_light", "stress", "vulnerability", "confidence", "diffusion") + tuple(f"block_{b}" for b in STRESS_BLOCKS)
 CONCEPTS = ("percentile", "staleness", "recessions")
+# Areas on the overview with their indicators (E-57): the stress blocks with indicators in phase 1, then
+# the vulnerability; each with the Kennzahl that heads it. Breadth and positioning have none yet.
+AREAS = {"volatility": "block_volatility", "credit": "block_credit", "macro": "block_macro", VULNERABILITY: VULNERABILITY}
 FREQUENCY_NAMES = {"daily": "täglich", "weekly": "wöchentlich", "monthly": "monatlich", "quarterly": "quartalsweise"}
 LEVEL_NAMES = ("Grün", "Gelb", "Orange", "Rot")
 
@@ -161,6 +165,46 @@ def steckbrief(kennzahl_id: str, history_from=None) -> list[tuple[str, str]]:
     if licenses:
         facts.append(("Lizenz", "; ".join(licenses)))
     return facts
+
+
+def contribution(indicator_id: str) -> list[str]:
+    """How an indicator enters its area and the scores, step by step, from series.toml and scoring.toml (E-57)."""
+    c = scoring_config()
+    indicator = indicator_catalog()[indicator_id]
+    vulnerability = indicator.block == VULNERABILITY
+    more = "mehr Fallhöhe" if vulnerability else "mehr Stress"
+    direction = f"hoch = {more}" if indicator.orientation == "high" else f"umgedreht, weil ein niedriger Wert {more} bedeutet"
+    lines = [
+        f"Umrechnung: {_TRANSFORMS[indicator.transform](c)}.",
+        f"Perzentil: Rang des Werts unter den eigenen Beobachtungen der letzten {c.window_years} Jahre; {direction}.",
+        f"Gültig nur mit mindestens {c.min_history_years} Jahren Historie und solange der Wert nicht veraltet ist "
+        f"(mehr als {FREQUENCY_DAYS[indicator.frequency] + indicator.tolerance_days} Tage nach der erwarteten "
+        "Veröffentlichung); sonst zählt er nicht und wird nie durch einen Ersatzwert gefüllt.",
+    ]
+    if vulnerability:
+        lines += [
+            f"Fallhöhe: Mittel der Perzentile der gültigen Komponenten, mindestens {c.min_vulnerability}; danach "
+            f"geglättet (Halbwertszeit {_n(c.vulnerability_half_life)} Handelstage).",
+            "Die Fallhöhe geht nicht in den Stress ein; beide wirken nur über die Ampelregeln zusammen.",
+        ]
+    else:
+        lines.append(f"Bereich {GROUPS[indicator.block]}: Median der Perzentile aller gültigen Indikatoren des Bereichs; "
+                     "ohne gültigen Indikator fehlt der Bereich.")
+        if indicator.block == c.fast_block:
+            lines.append(f"Der Bereich wird geglättet (Halbwertszeit {_n(c.fast_block_half_life)} Handelstage), "
+                         "bevor er in den Stress eingeht.")
+        lines += [
+            f"Stress: Mittel der vorhandenen Bereiche, mindestens {c.min_blocks} von {len(STRESS_BLOCKS)}, danach "
+            f"geglättet (Halbwertszeit {_n(c.stress_half_life)} Handelstage).",
+            f"Diffusionsindex: Der Indikator zählt mit, wenn sein Perzentil über {_n(c.yellow_diffusion_percentile)} liegt.",
+        ]
+    if indicator_id == VIX_RATIO_INDICATOR:
+        lines.append(f"Eigene Ampelregel: Rot, wenn der Wert an {c.red_vix_ratio_days} Handelstagen in Folge über "
+                     f"{_n(c.red_vix_ratio, 2)} liegt.")
+    lines.append(f"Konfidenz: Gewicht {indicator.v_score} von 5 (Vorlauf laut Bericht, Tabelle 2), solange der Wert gültig ist.")
+    if indicator.display_window:
+        lines.append(f"Zusätzliches Perzentil über {c.display_window_years} Jahre: nur zur Anzeige, nicht im Score.")
+    return lines
 
 
 def _score_facts(kennzahl_id: str, c) -> list[tuple[str, str]]:

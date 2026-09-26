@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2 und M4 bis M6 erledigt, M3: Worker und Dashboard laufen auf TrueNAS; Rezessionsbalken (E-56) umgesetzt, noch nicht auf TrueNAS** · Nächster Schritt: Update mit Rezessionsbalken einspielen, M7 planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 und M4 bis M6 erledigt, M3: Worker und Dashboard laufen auf TrueNAS; Rezessionsbalken (E-56) und M7a (Bereiche und Einzelreihen, 22 Texte) umgesetzt, beides noch nicht auf TrueNAS** · Nächster Schritt: Update einspielen, Texte prüfen, übriges M7 planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -23,8 +23,8 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ☑ 26.09.2026 (M4a bis M4d, E-37) | M3 | M4a bis M4d erteilt 26.09.2026 |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026) | M4, L-1 bis L-12 | erteilt 26.09.2026 |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026; Nachtrag Rezessionsbalken E-56 dort ⏳) | M1 (Lesen), M3 (Heartbeat) | erteilt 26.09.2026 |
-| M7 | Ansichten 1–7 | ☐ | M5, M6, L-13 | ja |
-| M8 | Erklärtexte je Kennzahl | ☐ | parallel zu M6/M7 | ja (Texte prüfen) |
+| M7 | Ansichten 1–7 | ◐ M7a (Bereiche und Einzelreihen auf der Übersicht, E-57 bis E-60) ☑ 26.09.2026, auf TrueNAS ⏳; übrige Teile ☐ | M5, M6, L-13 | M7a erteilt 26.09.2026 |
+| M8 | Erklärtexte je Kennzahl | ◐ 29 Texte (alle 19 Indikatoren, 3 Blöcke, 4 Scores, 3 Begriffe); Prüfung durch den Nutzer ausstehend | parallel zu M6/M7 | ja (Texte prüfen) |
 | M9 | Abnahme Phase 1 | ☐ | M0–M8 | – |
 
 **Warum diese Reihenfolge:** FRED liefert die ICE-BofA-Spreads seit April 2026 nur noch für drei Jahre (Bericht, TL;DR). Jeder Tag ohne laufenden Worker verschiebt den Anfang des lokalen Archivs um einen Tag nach hinten. Deshalb geht ein minimaler Worker mit FRED und Cboe (M0–M3) in Betrieb, bevor Scoring und Oberfläche entstehen.
@@ -91,6 +91,10 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-54 | gunicorn-Prozesse | 1 Prozess | 4 Threads im Prozess, damit parallele Callbacks nicht warten; wenig Speicher |
 | 26.09.2026 | E-55 | Farbsystem | Validierte Referenzpalette des Dataviz-Skills: Ampel in vier Statusfarben immer mit Text, Perzentile als blaue Einfarbskala (E-1), hell und dunkel je eigene Stufen | Linienfarben mit dem Validator geprüft; Systemschriften, keine Webfonts |
 | 26.09.2026 | E-56 | Rezessionsbalken in den Charts (Nutzerwunsch) | FRED `USREC` (NBER-Datierung, Trough-Methode wie in den FRED-Grafiken) als graue Flächen hinter den Linien in allen Zeitreihen-Charts; Hinweis in der Datierung jedes Charts; Konzeptseite „Rezessionsbalken“ | Nur Anzeige, in keinem Indikator und keinem Score; eine laufende Rezession erscheint erst nach der NBER-Datierung, Monate später |
+| 26.09.2026 | E-57 | Bereiche und Einzelreihen auf der Übersicht (Nutzerwunsch, M7a) | Unter allem Bisherigen vier Bereiche in fester Reihenfolge: Volatilität/Optionen, Kredit/Funding, Makro/Finanzierungsbedingungen, Fallhöhe; je Bereich nur die Indikatoren, die in den Score eingehen (19). Je Indikator ein erzeugter Abschnitt „So fließt der Wert in den Bereich ein“ aus `series.toml` und `scoring.toml` mit der heutigen Rolle aus den gespeicherten Scores | Reine Anzeige-Reihen (HY-OAS, SKEW, Zinskurve, CAPE, VX-Termstruktur) folgen in M7; M7a ersetzt die Themen-Ansichten 2 und 4–6 für die Score-Indikatoren |
+| 26.09.2026 | E-58 | Texte für die neuen Kennzahlen | Alle 22 jetzt (19 Indikatoren, Blöcke Volatilität, Kredit, Makro); E-52 bleibt: keine Kennzahl ohne Text | Fakten aus Bericht Abschn. 1–3 und Primärquellen mit Abrufdatum; der Nutzer prüft die Texte |
+| 26.09.2026 | E-59 | Charts je Indikator | Wert und Perzentil untereinander, beide mit Rezessionsflächen | Keine zweite y-Achse |
+| 26.09.2026 | E-60 | Aufklappen | Zwei Ebenen: Bereich (Verlauf und Indikatorzeilen), darunter jeder Indikator einzeln; Charts entstehen nur für geöffnete Abschnitte | Gemessen: alle 19 Indikatoren auf einmal wären rund 9,4 MB Chart-Daten je Aufruf und Aktualisierung |
 
 ---
 
@@ -716,6 +720,22 @@ Laut Bericht 6.3, soweit Daten vorhanden:
 - **7 Visualisierung:** Heatmap (Perzentilskala nach E-1), Perzentilbänder 10/50/90, Sparklines mit Zeitstempel, Composite-Historie mit Krisenmarken (L-13), Regime-Zeitleiste.
 - Historienansicht mit Hinweis: je Beobachtung zählt der neueste Stand (Phase-1-Ausnahme, `CLAUDE.md`).
 
+**Ergebnis M7a (26.09.2026, umgesetzt; auf TrueNAS ⏳): Bereiche und Einzelreihen (E-57 bis E-60)**
+- **Umgesetzt:**
+  - Übersicht: unter dem Verlauf von Stress und Fallhöhe die vier Bereiche als eigener, statischer Rahmen außerhalb des alle 5 Minuten ersetzten Inhalts, damit geöffnete Abschnitte offen bleiben. Kopf je Bereich: Bereichswert (Volatilität: Median und geglättet; Fallhöhe: ungeglättet und geglättet), Zahl der gültigen Indikatoren, Stand. Aufgeklappt: Verlauf des Bereichs und je Indikator eine Zeile mit Wert, Perzentil, Status und Stand; jede Zeile klappt einzeln auf zu Wert- und Perzentil-Chart und „So fließt der Wert in den Bereich ein“
+  - `fever/web/pages/uebersicht.py`: Callbacks mit Mustern (`ALL` für die Kopfzeilen in einer Datenbankabfrage, `MATCH` für die Charts nur geöffneter Abschnitte); Auf- und Zuklappen im Browser (clientseitiger Callback setzt `hidden` und `aria-expanded` und löst ein `resize` aus, damit Plotly verdeckt gezeichnete Charts anpasst)
+  - `fever/web/texts.py`: `contribution()` erzeugt die Schritte je Indikator aus der Konfiguration (Umrechnung, Perzentilfenster und Richtung, Mindesthistorie und Veraltung, Median im Bereich bzw. Mittel der Fallhöhe, Glättung, Stress, Diffusion, VIX/VIX3M-Regel, Konfidenzgewicht, Anzeigeperzentil); `views._role_today()` nennt den heutigen Anteil aus den gespeicherten Scores
+  - 22 neue Texte (`fever/web/texts/`), dazu Erklärseiten aller 19 Indikatoren und der drei Blöcke; die Erklärseite eines Indikators enthält ebenfalls den Abschnitt „So fließt der Wert in den Bereich ein“
+  - Hinweis unter jedem Verlauf (Übersicht, Bereiche, Erklärseiten): Je Beobachtung zählt der neueste Stand (Phase-1-Ausnahme aus `CLAUDE.md`, fehlte seit M6)
+- **Korrigiert (Fehler seit M6):** „Historie ab“ im Steckbrief nahm bei Indikatoren aus mehreren Reihen das früheste Datum irgendeiner Reihe (VIX/VIX3M zeigte 1990, SOFR − IORB 2018). Jetzt `db.history_start()`: der erste Tag, an dem alle Reihen vorliegen (VIX/VIX3M 18.09.2009, SOFR − IORB 29.07.2021, VRP und Aktien-Anleihen-Korrelation 26.09.2016).
+- **Belege (Entwicklungsumgebung, 26.09.2026):**
+  - `pytest -q`: 373 passed; neu in `tests/test_web.py`: Rahmen mit genau den Indikatoren je Bereich (alle 19, alles zu Beginn geschlossen), Rahmen außerhalb des aktualisierten Inhalts und Callbacks registriert, Charts nur offen, Rezessionsflächen in Bereichs- und Indikator-Charts, Reihenfolge der Kopfzeilen, ohne Scores, Einflussschritte folgen der Konfiguration (geänderte Parameter ändern den Text), heutige Rolle, `history_start`, Erklärseite mit Einfluss, Hinweis zum neuesten Stand
+  - Gegenprobe mit eingebauten Fehlern (`min` statt `max` in `history_start`, Bereich offen statt geschlossen, festes „10 Jahre“ im Text): jeweils ein Test rot
+  - Browser (Chromium, 390 und 1440 px, hell und dunkel): Aufklappen von Bereich und Indikator, simulierte 5-Minuten-Aktualisierung (Abschnitte bleiben offen, 3 Charts bleiben), Zuklappen setzt `hidden`, Wiederaufklappen mit voller Chartbreite (328 bzw. 1218 px); keine Konsolenfehler. Datenmenge: Seitenaufruf 615 KB, Bereich Volatilität 536 KB, ein Indikator 447 KB
+  - Scores unverändert (keine Änderung an Scoring, Schema, Dockerfile oder Compose)
+- **Nicht geprüft:** TrueNAS; echte Geräte; der Druck geöffneter Bereiche (nur Bildschirmansicht geprüft).
+- **Beobachtung:** Die Cboe-Datei des VIX3M beginnt am 18.09.2009; der Bericht nennt als Historienbeginn den 04.12.2007 (Abschn. 6.1). Folge: VIX/VIX3M hat zwei Jahre weniger Historie als im Bericht angenommen.
+
 ### M8 – Erklärtexte
 
 **Ziel:** Für jede Kennzahl eine Datei `fever/web/texts/<id>.md` nach `docs/leitfaden-erklaertexte.md`.
@@ -812,6 +832,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
   6. erzeugter Abschnitt „Schwellen und Farben“ aus `scoring.toml`
   7. Quellen
 - **Übersichtsseite „Erklärungen“:** alle Kennzahlen nach Block gruppiert, dazu die Konzeptseiten „Perzentil“, „Ampel“, „Konfidenz“, „Veraltung“, „Rezessionsbalken“ (E-56).
+- **Einfluss je Indikator (E-57):** erzeugter Abschnitt „So fließt der Wert in den Bereich ein“ auf der Erklärseite und in der Übersicht: die heutige Rolle aus den gespeicherten Scores, dann die Schritte aus `series.toml` und `scoring.toml`. Keine Zahl davon steht im Code.
 
 ### 7.3 Aktualität
 
@@ -860,21 +881,22 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (26.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt: Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-56; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026 (Scores identisch mit der Entwicklungsumgebung; Dashboard auf Port 8003 läuft laut Nutzer).
-  - Nachtrag M6: Rezessionsbalken (E-56, Reihe `usrec`, jetzt 61 Reihen in 33 Abrufgruppen) und vier Korrekturen aus der Sichtprüfung (Chart-Höhe nach Zeitraum-Button, „Share chart…“ zu Plotly Cloud abgeschaltet, Datierung im Vollbild, Vollbild-Button über der Modebar); 362 Tests grün. Noch nicht auf TrueNAS eingespielt.
+  - Entscheidungen bis E-60; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026 (Scores identisch mit der Entwicklungsumgebung; Dashboard auf Port 8003 läuft laut Nutzer).
+  - Nachtrag M6 (Commit `5593fea`): Rezessionsbalken (E-56, Reihe `usrec`, 61 Reihen in 33 Abrufgruppen) und vier Korrekturen aus der Sichtprüfung.
+  - M7a: vier Bereiche mit den 19 Score-Indikatoren auf der Übersicht, zwei Ebenen zum Aufklappen, Einfluss je Indikator, 22 neue Texte; Korrektur „Historie ab“; Hinweis zum neuesten Stand unter jedem Verlauf; 373 Tests grün. Beides noch nicht auf TrueNAS.
   - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“); das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
-  1. Update auf TrueNAS: `git pull`, Build, Stack in Dockge neu starten (Compose unverändert, keine Migration), Sofort-Abruf; erwartet „61 Reihen, 0 mit Problemen“ (`docs/einrichtung.md`, Schritt 9).
-  2. Nutzer prüft die sechs Texte aus E-52 und `recessions.md` inhaltlich.
+  1. Update auf TrueNAS: `git pull`, Build, Stack in Dockge stoppen und starten (Compose unverändert, keine Migration), Sofort-Abruf; erwartet „61 Reihen, 0 mit Problemen“ (`docs/einrichtung.md`, Schritt 9).
+  2. Nutzer prüft die Texte: sechs aus E-52, `recessions.md` und die 22 aus E-58 (M8).
   3. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen; dann M3 abschließen (Woche ab 28.09.2026).
-  4. M7 planen (Ansichten 1–7): Ampelmatrix, Themen-Ansichten, Visualisierung; vorher L-13 (Krisenmarken) und die Speicherung der Perzentilbänder klären.
+  4. Übriges M7 planen: Ampelmatrix, reine Anzeige-Reihen (HY-OAS, SKEW, Zinskurve, CAPE, VX-Termstruktur), Heatmap, Perzentilbänder; vorher L-13 (Krisenmarken) und die Speicherung der Perzentilbänder klären.
   5. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe während der US-Handelszeit (Indizes und VX-Dateien), CFTC nach dem ersten Freitag, Shiller nach dem Oktober-Upload.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-13 (Abschnitt 5, vor M7).
+- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-13 (Abschnitt 5, vor dem übrigen M7).
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---

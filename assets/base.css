@@ -100,4 +100,25 @@ h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
   display: flex; flex-direction: column; }
 .chart-card.is-fullscreen .chart-box { flex: 1; height: auto; min-height: 0; }
 
+/* Areas with their indicators below the overview (E-57 to E-60). */
+.section-title { margin: 20px 0 4px; font-size: 1.15rem; }
+.area { margin-bottom: 12px; }
+.area-summary, .indicator-summary { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; align-items: center; margin-top: 0.35rem; }
+.area-summary .freshness, .indicator-summary .freshness { margin-top: 0; }
+.toggle { display: inline-flex; gap: 0.4rem; align-items: center; margin-top: 0.5rem; font: inherit; font-size: 0.85rem;
+  padding: 0.25rem 0.7rem; border: 1px solid var(--axis); border-radius: 6px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.toggle .chev { display: inline-block; transition: transform 0.15s; }
+.toggle[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.area-body { margin-top: 12px; }
+/* Cards inside an area without their own frame: on a phone every pixel of width goes to the chart. */
+.area .card:not(.is-fullscreen) { border: 0; padding: 0; background: transparent; }
+.area .chart-card:not(.is-fullscreen) { margin: 8px 0 16px; }
+.indicator-row { border-top: 1px solid var(--grid); padding: 10px 0; }
+.indicator-row h3 { font-size: 0.95rem; }
+.indicator-head { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; align-items: center; }
+.indicator-head .toggle { margin-top: 0; }
+.indicator-body { margin-top: 8px; }
+.steps { padding-left: 1.4rem; margin: 0.5rem 0 0; }
+.steps li { margin: 0.2rem 0; max-width: 48rem; }
+
 .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--grid); color: var(--muted); font-size: 0.75rem; }

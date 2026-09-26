@@ -23,7 +23,7 @@ NOW = datetime(2026, 9, 26, 12, 0, tzinfo=timezone.utc)
 
 def rendered(components) -> str:
     """Components as the JSON Dash sends to the browser."""
-    return json.dumps(components, cls=PlotlyJSONEncoder)
+    return json.dumps(components, cls=PlotlyJSONEncoder, ensure_ascii=False)
 
 
 @pytest.fixture
@@ -130,7 +130,7 @@ def test_text_rules_are_enforced(change, message):
 
 def test_every_displayed_kennzahl_has_a_text(data):
     """Render every page; a Kennzahl without text raises in kennzahl_head (rule of 7.2)."""
-    pages = [views.overview("light", NOW), views.data_status(NOW), views.explanations()]
+    pages = [views.overview("light", NOW), views.areas(), views.data_status(NOW), views.explanations()]
     pages += [views.kennzahl(k, "light", NOW) for k in texts.all_ids() if texts.has_text(k)]
     shown = set(re.findall(r"/kennzahl/([a-z0-9_]+)", rendered(pages)))
     assert shown and all(texts.has_text(k) for k in shown)
@@ -210,3 +210,147 @@ def test_chart_card_gives_the_responsive_graph_a_box_with_a_height():
     assert box.className == "chart-box" and box.children.responsive is True and box.children.style == {"height": "100%"}
     css = (REPO / "assets" / "base.css").read_text(encoding="utf-8")
     assert re.search(r"\.chart-box \{ height: \d+px; \}", css)
+
+
+# --- areas with their indicators (M7a, E-57 to E-60) --------------------------------------------------
+
+
+def component_ids(component) -> list:
+    """Ids of all components below `component`, in document order."""
+    found = []
+
+    def walk(node):
+        if isinstance(node, (list, tuple)):
+            for child in node:
+                walk(child)
+        elif hasattr(node, "to_plotly_json"):
+            if getattr(node, "id", None) is not None:
+                found.append(node.id)
+            walk(getattr(node, "children", None))
+
+    walk(component)
+    return found
+
+
+def test_areas_frame_lists_the_four_areas_with_exactly_their_indicators():
+    from fever.config import indicator_catalog
+    frame = views.areas()
+    toggles = [i for i in component_ids(frame) if isinstance(i, dict) and i["type"] == "area-toggle"]
+    assert [t["area"] for t in toggles] == ["volatility", "credit", "macro", "vulnerability"]
+    shown = []
+    for section in (c for c in frame if getattr(c, "className", "") == "card card-wide area"):
+        area = next(i["area"] for i in component_ids(section) if isinstance(i, dict) and i["type"] == "area-toggle")
+        rows = [i["id"] for i in component_ids(section) if isinstance(i, dict) and i["type"] == "indicator-toggle"]
+        assert rows == [k for k, ind in indicator_catalog().items() if ind.block == area], area
+        shown += rows
+    assert sorted(shown) == sorted(indicator_catalog())  # all 19, each once
+    bodies = [c for c in _walk_components(frame) if isinstance(getattr(c, "id", None), dict) and c.id["type"].endswith("-body")]
+    assert bodies and all(body.hidden is True for body in bodies)  # everything starts closed
+    assert "Breite/Internals" in rendered(frame) and "Positionierung/Sentiment" in rendered(frame)
+
+
+def _walk_components(node):
+    if isinstance(node, (list, tuple)):
+        for child in node:
+            yield from _walk_components(child)
+    elif hasattr(node, "to_plotly_json"):
+        yield node
+        yield from _walk_components(getattr(node, "children", None))
+
+
+def test_areas_live_outside_the_refreshed_overview(client):
+    """The 5-minute refresh replaces overview-content only, so open sections stay open."""
+    from fever.web.pages import uebersicht
+    page = uebersicht.layout()
+    assert [c.id for c in page.children[1:]] == ["overview-content", "areas"]
+    assert page.children[1].children is None
+    dependencies = json.dumps(client.get("/_dash-dependencies").get_json())
+    for output in ("area-chart", "indicator-body", "area-summary", "indicator-summary", "aria-expanded"):
+        assert output in dependencies, output
+
+
+def test_sections_build_charts_only_when_open():
+    assert [views.is_open(n) for n in (None, 0, 1, 2, 3)] == [False, False, True, False, True]
+
+
+def test_open_area_and_indicator_charts_carry_recession_bars(data):
+    engine = make_engine(data)
+    with engine.begin() as conn:
+        months = [date(2026, m, 1) for m in range(1, 10)]  # the scores of the fixture cover September 2026
+        append_observations(conn, "usrec", [NewObservation(d, 1.0 if d.month == 9 else 0.0, NOW, True) for d in months],
+                            retrieved_at=NOW)
+    for part in (views.area_chart("volatility", "light", NOW), views.indicator_detail("vix", "light", NOW)):
+        graphs = [c for c in _walk_components(part) if type(c).__name__ == "Graph"]
+        assert graphs and all(g.figure.layout.shapes for g in graphs)
+    detail = rendered(views.indicator_detail("vix", "light", NOW))
+    assert "So fließt der Wert in den Bereich ein" in detail and "Umrechnung: Niveau der Reihe." in detail
+
+
+def test_summaries_follow_the_order_dash_asks_for(data):
+    areas, indicators = views.summaries(["credit", "volatility"], ["vvix", "vix"], NOW)
+    assert len(areas) == 2 and len(indicators) == 2
+    assert "0 von 4 gültig" in rendered(areas[0]) and "Median" in rendered(areas[1])
+    assert "noch kein veröffentlichter Wert" in rendered(indicators[0]) and "Stand 25.09.2026" in rendered(indicators[1])
+
+
+def test_summaries_without_scores(migrated_dir, monkeypatch):
+    monkeypatch.setenv("FEVER_DATA", str(migrated_dir))
+    web_db.engine.cache_clear()
+    areas, indicators = views.summaries(["macro"], ["nfci"], NOW)
+    assert "Noch keine Scores berechnet." in rendered(areas + indicators)
+    web_db.engine.cache_clear()
+
+
+def test_contribution_steps_come_from_the_configuration(monkeypatch):
+    from fever.config import scoring_config
+    config = scoring_config()
+    ratio = " ".join(texts.contribution("vix_vix3m"))
+    assert f"letzten {config.window_years} Jahre" in ratio and f"mindestens {config.min_history_years} Jahren" in ratio
+    assert "Median der Perzentile" in ratio and "Diffusionsindex" in ratio and "Eigene Ampelregel: Rot" in ratio
+    assert "(mehr als 4 Tage" in ratio  # daily: frequency 1 day + tolerance 3
+    vix = " ".join(texts.contribution("vix"))
+    assert "Ampelregel" not in vix and "hoch = mehr Stress" in vix
+    ecy = " ".join(texts.contribution("ecy"))
+    assert "umgedreht, weil ein niedriger Wert mehr Fallhöhe bedeutet" in ecy and "Diffusionsindex" not in ecy
+    assert f"mindestens {config.min_vulnerability}" in ecy and "Mittel der Perzentile" in ecy
+    assert "nur zur Anzeige" in " ".join(texts.contribution("vx_cot_short"))
+    changed = replace(config, window_years=7, min_history_years=4, fast_block_half_life=4, red_vix_ratio_days=6)
+    monkeypatch.setattr(texts, "scoring_config", lambda: changed)
+    ratio = " ".join(texts.contribution("vix_vix3m"))
+    assert "letzten 7 Jahre" in ratio and "mindestens 4 Jahren" in ratio
+    assert "Halbwertszeit 4 Handelstage), bevor" in ratio and "an 6 Handelstagen" in ratio
+
+
+def test_role_today_names_the_share_in_the_area():
+    latest = {"score_date": date(2026, 9, 25), "block_volatility": 28.2, "vulnerability_raw": 82.2}
+    rows = {"vix": {"status": "ok", "percentile": 33.0}, "vvix": {"status": "ok", "percentile": 24.0},
+            "vrp": {"status": "stale", "percentile": None}, "ecy": {"status": "ok", "percentile": 99.6}}
+    assert views._role_today("vix", latest, rows) == (
+        "Stand 25.09.2026: gültig mit Perzentil 33, einer von 2 gültigen Indikatoren im Bereich; Bereichswert (Median) 28,2.")
+    assert views._role_today("vrp", latest, rows) == "Stand 25.09.2026: veraltet; zählt heute nicht, der Bereich rechnet ohne ihn."
+    assert "eine von 1 gültigen Komponenten; Fallhöhe ungeglättet 82,2" in views._role_today("ecy", latest, rows)
+    assert views._role_today("nfci", latest, rows) == "Noch kein berechneter Wert."
+
+
+def test_history_start_needs_every_input(migrated_dir, monkeypatch):
+    engine = make_engine(migrated_dir)
+    with engine.begin() as conn:
+        append_observations(conn, "sofr", [NewObservation(date(2018, 4, 3), 1.8, NOW, True)], retrieved_at=NOW)
+        append_observations(conn, "iorb", [NewObservation(date(2021, 7, 29), 0.15, NOW, True)], retrieved_at=NOW)
+    monkeypatch.setenv("FEVER_DATA", str(migrated_dir))
+    web_db.engine.cache_clear()
+    assert web_db.history_start(["sofr", "iorb"]) == date(2021, 7, 29)
+    assert web_db.history_start(["sofr", "vix"]) is None
+    web_db.engine.cache_clear()
+
+
+def test_indicator_page_explains_its_contribution(data):
+    page = rendered(views.kennzahl("vix", "light", NOW))
+    assert "So fließt der Wert in den Bereich ein" in page and "Steckbrief" in page
+
+
+def test_every_history_view_names_the_latest_vintage_rule(data):
+    """CLAUDE.md: in phase 1 the newest vintage counts per observation, and the history view says so."""
+    for page in (views.overview("light", NOW), views.areas(), views.kennzahl("vix", "light", NOW),
+                 views.kennzahl("stress", "light", NOW)):
+        assert views.HISTORY_NOTE in rendered(page)

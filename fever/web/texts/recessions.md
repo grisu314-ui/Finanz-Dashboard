@@ -4,7 +4,7 @@
 Graue Flächen in den Verlaufs-Charts: Zeiträume von US-Rezessionen nach der NBER-Datierung, wie in FRED-Grafiken. Nur Anzeige, kein Teil eines Scores.
 
 ## Was die Kennzahl misst
-Die Flächen zeigen die US-Rezessionen, wie sie das National Bureau of Economic Research (NBER) datiert, ein privates Forschungsinstitut, auf dessen Konjunkturdatierung die FRED-Reihen beruhen (FRED, Reihe USREC). Grundlage ist die FRED-Reihe USREC: Sie ist für jeden Monat 1, wenn er zu einer Rezession gehört, sonst 0. FRED legt dabei die Trough-Methode an: Eine Rezession beginnt im Monat nach dem Konjunkturhoch und endet mit dem Monat des Tiefs. Genauso schattiert FRED seine eigenen Grafiken (FRED, Reihe USREC, abgerufen 26.09.2026).
+Die Flächen zeigen die US-Rezessionen nach der Datierung des National Bureau of Economic Research (NBER), eines privaten Forschungsinstituts. Grundlage ist die FRED-Reihe USREC: Sie ist für jeden Monat 1, wenn er zu einer Rezession gehört, sonst 0. FRED legt dabei die Trough-Methode an: Eine Rezession beginnt im Monat nach dem Konjunkturhoch und endet mit dem Monat des Tiefs. Genauso schattiert FRED seine eigenen Grafiken (FRED, Reihe USREC, abgerufen 26.09.2026).
 
 ## Warum sie für Marktstress oder Fallhöhe zählt
 Viele Stressmaße steigen in Rezessionen, manche laufen ihnen voraus, andere hinken nach. Die Flächen machen dieses Zusammenspiel im Verlauf sichtbar: etwa, ob ein Indikator vor einer Rezession anzog oder erst mittendrin. Der Bericht unterscheidet genau diese Vorlauf-Horizonte (docs/recherche.md, Abschn. 2 und 3).

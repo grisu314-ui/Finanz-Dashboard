@@ -67,6 +67,12 @@ def chart_card(graph_id: str, chart: Chart, theme: str) -> html.Div:
     ])
 
 
+def toggle(toggle_id: dict, label: str) -> html.Button:
+    """Open/close button; a clientside callback sets `hidden` on the section and aria-expanded here (E-60)."""
+    return html.Button([html.Span("▸", className="chev", **{"aria-hidden": "true"}), html.Span(label)],
+                       id=toggle_id, n_clicks=0, type="button", className="toggle", **{"aria-expanded": "false"})
+
+
 def note(text: str) -> html.P:
     return html.P(text, className="note")
 

@@ -44,6 +44,7 @@ Die genauen Schwellenwerte stehen bewusst nicht hier, sondern in der App auf den
   - aktuellem Stand und Verlauf
   - ausführlicher Erklärung (was sie misst, warum sie zählt, wie man sie liest, Grenzen)
   - Steckbrief (Quelle, Frequenz, Verzug, Historie)
+  - bei Indikatoren „So fließt der Wert in den Bereich ein“: welche Rolle der Wert heute spielt und wie er Schritt für Schritt in den Bereich und in Stress bzw. Fallhöhe eingeht
   - „Schwellen und Farben“: ab wann „erhöht“ bzw. welche Ampelregel gilt
   - Quellen
 - Die Seite „Erklärungen“ listet alle Kennzahlen nach Block, dazu die Konzepte Perzentil, Ampel, Konfidenz, Veraltung und Rezessionsbalken.
@@ -79,7 +80,8 @@ Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar 
 
 ## 7. Ansichten
 
-1. **Übersicht:** Ampel, Stress-Fallhöhe-Matrix mit 60-Tage-Spur, Konfidenz, Aktualität je Quelle. Auf dem Smartphone lesbar.
+1. **Übersicht:** Ampel, Stress, Fallhöhe und Konfidenz mit Verlauf; die Stress-Fallhöhe-Matrix mit 60-Tage-Spur folgt. Auf dem Smartphone lesbar.
+   - **Bereiche und Einzelreihen** (darunter): Volatilität/Optionen, Kredit/Funding, Makro/Finanzierungsbedingungen und Fallhöhe, jeweils mit aktuellem Bereichswert und Zahl der gültigen Indikatoren. „Verlauf und … Einzelreihen“ klappt den Verlauf des Bereichs und die Liste seiner Indikatoren auf; „Charts und Berechnung“ klappt je Indikator den Wert- und den Perzentil-Chart und die Erklärung auf, wie er in den Bereich einfließt. Charts laden erst beim Aufklappen; offene Abschnitte bleiben bei der automatischen Aktualisierung offen. Reine Anzeige-Reihen wie HY-OAS oder SKEW folgen später.
 2. **Schnelle Marktsignale:** VIX-Termstruktur, VIX/VIX3M, VRP, VVIX, SKEW, USD/JPY.
 3. **Marktbreite:** in Phase 1 ohne Datenquelle (O-1); die Ansicht sagt das.
 4. **Sentiment und Positionierung:** Positionierung am VIX-Futures-Markt (COT), Margin Debt.
@@ -88,4 +90,4 @@ Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar 
 7. **Visualisierung:** Heatmap aller Kennzahlen über die Zeit, Perzentilbänder, Composite-Historie mit markierten Krisen, Regime-Zeitleiste.
 8. **Datenstand** und **Erklärungen.**
 
-Hinweis zur Historie: Für vergangene Tage zählt je Beobachtung der neueste veröffentlichte Stand (auch nach späteren Revisionen). Die historische Kurve kann deshalb etwas anders aussehen als das, was man an dem jeweiligen Tag gesehen hätte. Die revisionsgenaue Rückrechnung ist für Phase 2 geplant.
+Hinweis zur Historie: Für vergangene Tage zählt je Beobachtung der neueste veröffentlichte Stand (auch nach späteren Revisionen). Die historische Kurve kann deshalb etwas anders aussehen als das, was man an dem jeweiligen Tag gesehen hätte. Die revisionsgenaue Rückrechnung ist für Phase 2 geplant. Unter jedem Verlauf steht dazu ein kurzer Hinweis.
