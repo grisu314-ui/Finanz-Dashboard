@@ -213,7 +213,7 @@ sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
 #   ein zweiter Lauf meldet je Reihe "0 neue Zeilen"
 ```
 
-✅ 26.09.2026, TrueNAS nach den Updates auf M4b (41 Reihen) und M4c (44 Reihen), jeweils 0 mit Problemen. Mit M4d (60 Reihen): ✅ Entwicklungsumgebung 26.09.2026 (Worker-Startzeile ebenfalls; Shiller dort nur mit Proxy-Abbrüchen der Cloud-Umgebung); ⏳ TrueNAS. Meldet es „mit Problemen“ (Exit-Code 1), nennen die `ERROR`-Zeilen darüber Reihe und Grund.
+✅ 26.09.2026, TrueNAS nach den Updates auf M4b (41 Reihen) und M4c (44 Reihen), jeweils 0 mit Problemen. Mit M4d (60 Reihen): ✅ TrueNAS 26.09.2026 („60 Reihen, 0 mit Problemen“); ✅ Entwicklungsumgebung (Worker-Startzeile ebenfalls; Shiller dort nur mit Proxy-Abbrüchen der Cloud-Umgebung). Meldet es „mit Problemen“ (Exit-Code 1), nennen die `ERROR`-Zeilen darüber Reihe und Grund.
 
 ## 8. Dashboard aufrufen ⏳ (ab M6)
 

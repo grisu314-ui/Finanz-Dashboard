@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2 und M4 erledigt, M3: Worker läuft auf TrueNAS (M4d noch nicht eingespielt)** · Nächster Schritt: M4d auf TrueNAS einspielen, M5 planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 und M4 erledigt, M3: Worker läuft auf TrueNAS mit 60 Reihen, M5 in Arbeit (Entscheidungen E-47 bis E-50)** · Nächster Schritt: M5 umsetzen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -81,6 +81,10 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-44 | Parameter der M4c-Reihen, Toleranz quartalsweise | Wie vorgeschlagen (Tabelle unter M4, „Ergebnis M4c“): Shiller Verzug 45, Z.1 Verzug 175; neue Standardtoleranz quartalsweise 10 Tage (Ergänzung zu E-10) | Rückfüllung Z.1 im Shutdown-Fall Q3 2025 17 Tage zu früh. Shiller-Verzug beruht auf einer einzigen beobachteten Aktualisierung |
 | 26.09.2026 | E-45 | Speichermodell der VX-Futures (M4d) | Rangreihen: Settlement und Kalendertage bis Verfall für die Ränge 1 bis 8 der Monatskontrakte als normale Reihen (16), eigene Quelle `cfe`; kein Schemawechsel. Umsetzung von E-18 | Kurve je Tag mit echter Laufzeitachse; VX1/VX2 später direkt nutzbar. Einzelkontrakte sind nur im Rohdatenarchiv; neu berechenbar, weil Cboe die Dateien weiter anbietet |
 | 26.09.2026 | E-46 | Rangregel und Parameter der VX-Futures | Am Verfallstag zählt der verfallende Kontrakt nicht mehr; Parameter wie vorgeschlagen (täglich, Verzug 0, 22:00 ET, Toleranz 3, Grenzen 1–300 bzw. 1–400) | Der Schlussabrechnungswert (ein VIX-Wert) geht nicht als Futures-Preis in die Kurve; die Uhrzeit ist unbelegt |
+| 26.09.2026 | E-47 | Methode des Scorings (L-1 bis L-4) | Perzentil = Mittelrang einschließlich xₜ; Fenster rollierend 10 Jahre über die eigenen Beobachtungen des Indikators, bei 5 bis 10 Jahren alle vorhandenen, unter 5 Jahren kein Score (Bericht 4.3); Ampelschwellen auf den Composite-Wert selbst; Composite = Mittel der vorhandenen Blöcke, mindestens 3 von 5 | In Phase 1 gibt es 3 Stressblöcke (Breite O-1 und Positionierung fehlen); fällt einer aus, fehlt der Composite sichtbar |
+| 26.09.2026 | E-48 | Glättung, Hysterese, Konfidenz, Diffusion (L-6, L-7, L-8, L-12) | EWMA über Handelstage: Volatilitätsblock Halbwertszeit 3, Composite 10, Fallhöhe 20; die Ampel nutzt den geglätteten Composite, die Einzelregeln Rohwerte. Hysterese spiegelbildlich: VIX/VIX3M-Rot endet nach 3 Tagen in Folge < 1, Diffusions-Gelb 5 Prozentpunkte unter 40 %. Konfidenz = Summe der V-Scores (Bericht, Tabelle 2) aktueller gültiger Indikatoren / Summe aller scorerelevanten. Diffusionsindex nur über Stress-Indikatoren | Der Composite-Weg zu Rot wirkt nach 10 Handelstagen zur Hälfte |
+| 26.09.2026 | E-49 | Kalender und Indikatoren (L-9 bis L-11) | Ein Score je Cboe-Handelstag (Tage mit VIX-Schluss); eine Beobachtung zählt an t, wenn Datum + Verzug zur `release_time` (Wochenende → Montag) spätestens am Ende des New-Yorker Tages t liegt. 15 Stress-Indikatoren in 3 Blöcken und 3 Fallhöhe-Komponenten (Tabelle unter M5). VRP: niedrig = Stress; T10Y3M nur Anzeige; USD/JPY als 5-Tage-Veränderung und 21-Tage-Vola; Erstanträge ggü. 52-Wochen-Tief. Fallhöhe = Mittel von mindestens 2 Komponenten; VX-COT im Score mit dem 10-Jahres-Fenster, 3-Jahres-Perzentil zusätzlich gespeichert (Anzeige) | Nur Anzeige: HY-OAS und weitere ICE-Spreads (O-5), ANFCI, OFR gesamt und übrige Teilindizes, T10Y3M/T10Y2Y, SKEW, VIX9D, VIX6M, VX-Futures |
+| 26.09.2026 | E-50 | Speicherung der Scores | Migration 0002 mit `indicator_score` und `composite_score`; jede Neuberechnung ersetzt beide Tabellen vollständig in einer Transaktion | Rohdaten (`observation`) bleiben unberührt; keine Historie früherer Rechenläufe |
 
 ---
 
@@ -564,17 +568,38 @@ Für jeden Meilenstein gilt die Definition of Done:
   - Gegenprobe gegen die Tages-Settlementdatei vom 25.09.2026: Ränge 1 bis 8 und Restlaufzeiten identisch
   - Unabhängige Neuberechnung aus getrennt geladenen Kontraktdateien: 26 896 Werte (3362 Tage × 8 Ränge), keine Abweichung
   - Gegenprobe mit 18 absichtlich eingebauten Fehlern, alle erkannt (Verfallstag, Aufrücken, Listungsbeginn, Settlement 0, erster vollständiger Tag, laufender Tag, Wochenkontrakte, Kontraktbezeichnung, Tag nach Verfall, Mindestzahl, Fenster, vertauschte Werte, Rang 9, Kopfzeile, `since` fehlt oder vom jüngsten Mitglied, Allowlist, Registrierung)
-- **Nicht geprüft:** Abruf auf TrueNAS (der erste Abruf dauert rund 3 Minuten); Uhrzeit, ab der Cboe den Handelstag in die Kontraktdateien schreibt (22:00 ET übernommen von den Indizes).
+- **Auf TrueNAS geprüft (26.09.2026):** Sofort-Abruf „60 Reihen, 0 mit Problemen“.
+- **Nicht geprüft:** Uhrzeit, ab der Cboe den Handelstag in die Kontraktdateien schreibt (22:00 ET übernommen von den Indizes).
 
 ### M5 – Scoring (Schritte 1–6, Stufe 1)
 
-**Voraussetzung:** L-1 bis L-12 entschieden (L-10 seit E-13 hier); `scoring.toml` mit Startwerten aus Bericht 4.3 und den Entscheidungen; Freigabe.
+**Voraussetzung:** L-1 bis L-12 entschieden (E-47 bis E-49, 26.09.2026); `scoring.toml` mit Startwerten aus Bericht 4.3 und den Entscheidungen; Freigabe erteilt 26.09.2026.
 
 **Dateien:**
 - `[indicator.*]` in `config/series.toml`: Transformation, Orientierung, Block bzw. Fallhöhe (E-13)
 - `fever/scoring/` mit Perzentil, Transformationen, Veraltung, Blockmedian, Composite, Fallhöhe, Glättung, Matrixregeln mit Hysterese, Konfidenz, Diffusionsindex. Reine Funktionen mit Stichtag t, ohne Import aus `web/` oder `store/`.
 - Migration der Score-Tabellen
 - Neuberechnung im Worker bei neuen Daten oder geändertem Hash von `scoring.toml`
+
+**Indikatoren (E-49):**
+
+| Block | Indikator | Transformation | Stress bzw. Fallhöhe hoch, wenn | V-Score |
+|---|---|---|---|---|
+| Volatilität | `vix` | VIX-Niveau | hoch | 1 |
+| | `vix_vix3m` | VIX/VIX3M | hoch | 2 |
+| | `vvix` | VVIX-Niveau | hoch | 2 |
+| | `vrp` | VIX − realisierte Vola des S&P 500 (21 Beobachtungen, annualisiert) | niedrig | 2 |
+| Kredit/Funding | `ebp` | Excess Bond Premium | hoch | 4 |
+| | `sofr_iorb` | SOFR − IORB | hoch | 2 |
+| | `ofr_credit`, `ofr_funding` | OFR-FSI-Teilindizes | hoch | 2 |
+| Makro/Finanzierungsbedingungen | `nfci`, `stlfsi4`, `ciss` | Niveau | hoch | 3, 2, 2 |
+| | `sahm` | Sahm-Regel in Echtzeit | hoch | 2 |
+| | `claims` | 4-Wochen-Schnitt / Minimum der letzten 52 Wochen − 1 | hoch | 3 |
+| | `stock_bond_corr` | Korrelation über 63 Beobachtungen: S&P-500-Logrendite gegen −ΔDGS10 | hoch | 2 |
+| | `usdjpy_change`, `usdjpy_vol` | USD/JPY aus EZB-Kursen: −(5-Tage-Logveränderung), annualisierte Vola der Logveränderungen über 21 Kurstage | hoch | 2 |
+| Fallhöhe | `ecy` | Excess CAPE Yield | niedrig | 1 |
+| | `margin_yoy` | Margin Debt (Z.1) ggü. Vorjahresquartal | hoch | 2 |
+| | `vx_cot_short` | (Short − Long) der Non-Commercials / Open Interest | hoch | 2 |
 
 **Pflichttests** (`CLAUDE.md`):
 - Ergebnis für t identisch mit und ohne Beobachtungen nach t
@@ -652,18 +677,18 @@ Nichts davon wird geraten. Die Vorschläge sind begründete Startpunkte, keine E
 
 | Nr. | Lücke | Betrifft | Vorschlag mit Begründung | Klären vor |
 |---|---|---|---|---|
-| L-1 | Perzentil bei Gleichständen; gehört xₜ zur Referenzmenge? | jeder Score | Mittelrang: p = 100 · (Anzahl kleiner + ½ · Anzahl gleich) / n, Referenz = alle gültigen Werte im Fenster bis einschließlich t. Symmetrisch; Reihen mit vielen gleichen Werten (Sahm-Regel, SOFR−IORB) werden nicht systematisch verschoben | M5 |
-| L-2 | Fenster für Reihen mit 5–10 Jahren Historie | jeder Score | Rollierend höchstens 10 Jahre; solange weniger vorhanden ist (aber ≥ Mindesthistorie), alle vorhandenen Werte. Passt zu „expandierend mit mindestens 5 Jahren“ (Bericht 4.3) | M5 |
-| L-3 | Worauf beziehen sich die Ampelschwellen („Stress-Composite ≥ 90. Perzentil“, „Fallhöhe ≥ 80“): auf den Wert selbst (Mittel der Blockperzentile, 0–100) oder auf einen erneut perzentilierten Composite? | Ampel | Auf den Wert selbst. Der CISS aggregiert ebenfalls ohne zweites Ranking. Ein neu gerankter Composite läge per Konstruktion an rund 10 % aller Tage ≥ 90, auch in ruhigen Jahrzehnten. Folge: Rot über den Composite nur bei breitem Stress, schnelle Schocks fangen die Einzelregeln | M5 |
-| L-4 | Composite, wenn Blöcke fehlen. In Phase 1 fehlt „Breite“ dauerhaft (O-1) | Stress, Ampel | Mittel der vorhandenen Blöcke, mindestens 3 von 5, sonst kein Composite (sichtbar). Fehlende Blöcke werden in der Übersicht benannt und senken die Konfidenz | M5 |
+| L-1 | Perzentil bei Gleichständen; gehört xₜ zur Referenzmenge? | jeder Score | **Entschieden 26.09.2026 (E-47):** wie vorgeschlagen. Mittelrang: p = 100 · (Anzahl kleiner + ½ · Anzahl gleich) / n, Referenz = alle gültigen Werte im Fenster bis einschließlich t. Symmetrisch; Reihen mit vielen gleichen Werten (Sahm-Regel, SOFR−IORB) werden nicht systematisch verschoben | – |
+| L-2 | Fenster für Reihen mit 5–10 Jahren Historie | jeder Score | **Entschieden 26.09.2026 (E-47):** wie vorgeschlagen. Rollierend höchstens 10 Jahre; solange weniger vorhanden ist (aber ≥ Mindesthistorie), alle vorhandenen Werte. Passt zu „expandierend mit mindestens 5 Jahren“ (Bericht 4.3) | – |
+| L-3 | Worauf beziehen sich die Ampelschwellen („Stress-Composite ≥ 90. Perzentil“, „Fallhöhe ≥ 80“): auf den Wert selbst (Mittel der Blockperzentile, 0–100) oder auf einen erneut perzentilierten Composite? | Ampel | **Entschieden 26.09.2026 (E-47):** wie vorgeschlagen. Auf den Wert selbst. Der CISS aggregiert ebenfalls ohne zweites Ranking. Ein neu gerankter Composite läge per Konstruktion an rund 10 % aller Tage ≥ 90, auch in ruhigen Jahrzehnten. Folge: Rot über den Composite nur bei breitem Stress, schnelle Schocks fangen die Einzelregeln | – |
+| L-4 | Composite, wenn Blöcke fehlen. In Phase 1 fehlt „Breite“ dauerhaft (O-1) | Stress, Ampel | **Entschieden 26.09.2026 (E-47):** wie vorgeschlagen. Mittel der vorhandenen Blöcke, mindestens 3 von 5, sonst kein Composite (sichtbar). Fehlende Blöcke werden in der Übersicht benannt und senken die Konfidenz | – |
 | L-5 | Toleranz je Frequenz (ab wann „veraltet“) | Veraltung, Score | **Entschieden (E-10):** Toleranz 3 / 3 / 10 Kalendertage zusätzlich zur Frequenz, also veraltet nach 4 / 10 / 41 Tagen. Der ursprüngliche Vorschlag „täglich 4, wöchentlich 3, monatlich 10“ mischte Gesamtwert und Toleranz; die Entscheidungsfrage nannte die Gesamtwerte ausdrücklich | – |
-| L-6 | Konfidenz „gewichtet mit dem historischen Vorlauf“: welche Gewichte? | Konfidenz | V-Score aus Bericht Tabelle 2 (1–5) als Gewicht. Konfidenz = Summe der Gewichte aktueller, gültiger Indikatoren / Summe der Gewichte aller scorerelevanten Indikatoren. Tabelle 2 ist die einzige vorhandene Vorlaufbewertung; die Werte sind Einschätzungen und in `series.toml` sichtbar | M5 |
-| L-7 | Hysterese für Regeln ohne Perzentilskala (VIX/VIX3M > 1 an 3 Tagen, Diffusionsindex ≥ 40 %) | Ampel | VIX/VIX3M: Die Regel endet, wenn das Verhältnis an 3 Tagen in Folge < 1 liegt (spiegelbildlich). Diffusionsindex: 5 Prozentpunkte unter der Schwelle, analog zur Perzentil-Hysterese | M5 |
-| L-8 | Glättung: welcher Block ist „schnell“, in welcher Reihenfolge wird geglättet, nutzt die Ampel geglättete Werte? | Stress, Ampel | Schnell = Volatilität/Optionen (HWZ 3 auf den Blockscore). Composite HWZ 10. Die Ampel nutzt den geglätteten Composite, die Einzelregeln (VIX/VIX3M, HY-OAS) Rohwerte. Folge: Bei HWZ 10 wirkt ein Sprung erst nach 10 Handelstagen zur Hälfte, der Composite-Weg zu Rot ist also träge | M5 |
-| L-9 | VX-COT-Perzentil über 3 Jahre (Bericht 6.3) vs. 10-Jahres-Fenster (4.3) | Positionierung | Im Score das Standardfenster (4.3), in Ansicht 4 zusätzlich das 3-Jahres-Perzentil als Anzeige | M5 |
-| L-10 | Transformationen ohne Definition: Erstanträge „Veränderung ggü. Tief“ (welches Fenster?), USD/JPY-Vola (Fenster), Re-Steepening-Flag (Definition), Aktien-Anleihen-Korrelation (Anleiherendite aus DGS10-Änderung?), COT-Maß und Orientierung, Excess CAPE Yield (Shiller-Spalte: 1/CAPE − (GS10 − 10-Jahres-Inflation), Ergebnis M4c), Margin Debt aus Z.1 quartalsweise (E-42): ggü. Vorjahr oder relativ zur Marktkapitalisierung aus Z.1; Strukturbruch vor 2000:Q1, VIX6M (nicht in 6.1, Endpoint prüfen) | Indikatoren | Je Indikator beim Anlegen in `series.toml` einzeln vorschlagen und fragen. Quelle für USD/JPY: E-17 | M5 (E-13) |
-| L-11 | Fallhöhe in Phase 1: Top-10-Konzentration (O-1), HY-OAS-Niveau (O-5) und AAII (Phase 2) fehlen | Fallhöhe | Mittel der vorhandenen Komponenten (Excess CAPE Yield, Margin Debt ggü. Vorjahr, VX-COT-Short-Vol), mindestens 2; Fehlende sichtbar | M5 |
-| L-12 | Diffusionsindex: welche Einzelreihen zählen? | Ampel (Gelb) | Nur Stress-Indikatoren mit gültigem, aktuellem Wert und ausreichender Historie. Fallhöhe-Indikatoren nicht, sonst ginge Fallhöhe doppelt in „Gelb“ ein | M5 |
+| L-6 | Konfidenz „gewichtet mit dem historischen Vorlauf“: welche Gewichte? | Konfidenz | **Entschieden 26.09.2026 (E-48):** wie vorgeschlagen. V-Score aus Bericht Tabelle 2 (1–5) als Gewicht. Konfidenz = Summe der Gewichte aktueller, gültiger Indikatoren / Summe der Gewichte aller scorerelevanten Indikatoren. Tabelle 2 ist die einzige vorhandene Vorlaufbewertung; die Werte sind Einschätzungen und in `series.toml` sichtbar | – |
+| L-7 | Hysterese für Regeln ohne Perzentilskala (VIX/VIX3M > 1 an 3 Tagen, Diffusionsindex ≥ 40 %) | Ampel | **Entschieden 26.09.2026 (E-48):** wie vorgeschlagen. VIX/VIX3M: Die Regel endet, wenn das Verhältnis an 3 Tagen in Folge < 1 liegt (spiegelbildlich). Diffusionsindex: 5 Prozentpunkte unter der Schwelle, analog zur Perzentil-Hysterese | – |
+| L-8 | Glättung: welcher Block ist „schnell“, in welcher Reihenfolge wird geglättet, nutzt die Ampel geglättete Werte? | Stress, Ampel | **Entschieden 26.09.2026 (E-48):** wie vorgeschlagen. Schnell = Volatilität/Optionen (HWZ 3 auf den Blockscore). Composite HWZ 10. Die Ampel nutzt den geglätteten Composite, die Einzelregeln (VIX/VIX3M, HY-OAS) Rohwerte. Folge: Bei HWZ 10 wirkt ein Sprung erst nach 10 Handelstagen zur Hälfte, der Composite-Weg zu Rot ist also träge | – |
+| L-9 | VX-COT-Perzentil über 3 Jahre (Bericht 6.3) vs. 10-Jahres-Fenster (4.3) | Positionierung | **Entschieden 26.09.2026 (E-49):** wie vorgeschlagen. Im Score das Standardfenster (4.3), in Ansicht 4 zusätzlich das 3-Jahres-Perzentil als Anzeige | – |
+| L-10 | Transformationen ohne Definition: Erstanträge „Veränderung ggü. Tief“ (welches Fenster?), USD/JPY-Vola (Fenster), Re-Steepening-Flag (Definition), Aktien-Anleihen-Korrelation (Anleiherendite aus DGS10-Änderung?), COT-Maß und Orientierung, Excess CAPE Yield (Shiller-Spalte: 1/CAPE − (GS10 − 10-Jahres-Inflation), Ergebnis M4c), Margin Debt aus Z.1 quartalsweise (E-42): ggü. Vorjahr oder relativ zur Marktkapitalisierung aus Z.1; Strukturbruch vor 2000:Q1, VIX6M (nicht in 6.1, Endpoint prüfen) | Indikatoren | **Entschieden 26.09.2026 (E-49):** siehe Entscheidung. Je Indikator beim Anlegen in `series.toml` einzeln vorschlagen und fragen. Quelle für USD/JPY: E-17 | – |
+| L-11 | Fallhöhe in Phase 1: Top-10-Konzentration (O-1), HY-OAS-Niveau (O-5) und AAII (Phase 2) fehlen | Fallhöhe | **Entschieden 26.09.2026 (E-49):** wie vorgeschlagen. Mittel der vorhandenen Komponenten (Excess CAPE Yield, Margin Debt ggü. Vorjahr, VX-COT-Short-Vol), mindestens 2; Fehlende sichtbar | – |
+| L-12 | Diffusionsindex: welche Einzelreihen zählen? | Ampel (Gelb) | **Entschieden 26.09.2026 (E-48):** wie vorgeschlagen. Nur Stress-Indikatoren mit gültigem, aktuellem Wert und ausreichender Historie. Fallhöhe-Indikatoren nicht, sonst ginge Fallhöhe doppelt in „Gelb“ ein | – |
 | L-13 | Krisenmarken in der Composite-Historie: genaue Zeiträume | Anzeige | Start und Ende je Episode mit Quelle in einer eigenen Datei `config/episodes.toml` (Anzeige, kein Score) | M7 |
 
 ---
