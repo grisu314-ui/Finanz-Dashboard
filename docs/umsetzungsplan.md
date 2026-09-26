@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3: Worker läuft auf TrueNAS, M4a und M4b erledigt** · Nächster Schritt: M4a und M4b auf TrueNAS einspielen; M3 abschließen nach den ersten Werktags-Abrufen; M4c planen (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 erledigt, M3: Worker läuft auf TrueNAS, M4a und M4b erledigt und auf TrueNAS** · Nächster Schritt: Quelle für Margin Debt entscheiden, dann M4c planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -75,6 +75,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-38 | Parameter der M4a-Reihen | Wie vorgeschlagen (Tabelle unter M4, „Ergebnis M4a“) | OFR: Verzug 4 Kalendertage wegen „two business days“ über das Wochenende. EBP erscheint sofort als veraltet, weil das September-Update der Fed fehlt |
 | 26.09.2026 | E-39 | Zuschnitt von M4b | Nur VIX-Futures (`1170E1`) aus dem Legacy-Bericht „Futures Only“: Open Interest, Non-Commercials Long, Short und Spread. Keine E-mini-S&P-500-Positionen, kein TFF-Bericht | Genügt für das COT-Maß der Fallhöhe (L-10, L-11); weitere Märkte lassen sich später als eigene Gruppe ergänzen |
 | 26.09.2026 | E-40 | Parameter der M4b-Reihen | Wie vorgeschlagen (Tabelle unter M4, „Ergebnis M4b“) | Geschätzter Stand der Rückfüllung in Feiertagswochen bis zu 3 Tage zu früh (E-14 ohne Feiertage). Ein verspäteter Freitagsbericht kommt erst am Montag an (E-31 fasst wöchentliche Reihen nicht nach) |
+| 26.09.2026 | E-41 | Excel-Leser für M4c | `xlrd` wird aufgenommen, sobald M4c es braucht (Shiller `ie_data.xls`, Binärformat); geprüft 26.09.2026: 2.0.2, Wheel `py2.py3-none-any`, BSD | Für `.xlsx` (FINRA) ist keine Bibliothek nötig: Die Datei nutzt Inline-Strings, lesbar mit `zipfile` und `xml.etree` in unter 50 Zeilen |
 
 ---
 
@@ -448,6 +449,11 @@ Für jeden Meilenstein gilt die Definition of Done:
   - FINRA (Stand 09.11.2023): nur „own non-commercial personal or professional use“; untersagt sind „data mining, scraping or harvesting tools (including robots)“ und „stored for subsequent use“ ohne Zustimmung. Ein automatischer Abruf widerspräche `CLAUDE.md` (kein Scraping gegen AGB); die Klärung erfolgt in M4c.
   - Shiller: in der Datei nur ein Haftungsausschluss.
   - OFR: keine Einschränkung für eigene Daten genannt, nur ein Haftungsausschluss.
+  - Fed-Board: „Unless otherwise indicated, information on Board's website is in the public domain“, Quellenangabe erbeten (Website Policies, geprüft 26.09.2026). Gilt für EBP und Z.1.
+- **Margin Debt, Optionen (26.09.2026, zur Entscheidung vor M4c):**
+  - FINRA-Nutzungsbedingungen (Stand 09.11.2023) untersagen neben Robots auch „stored for subsequent use“ und „develop or create a database of data using the FINRA Website“ ohne schriftliche Zustimmung. Damit wäre auch ein manueller Download mit Import in die Datenbank ohne Zustimmung unzulässig. Die Statistikseite sagt: „FINRA does not provide the data outside of this webpage and data feeds are not available.“ Zustimmung per Anfrage über `finra.org/contact-finra/permission-use-finra-copyrighted-material`, ohne Formular, Gebühr oder Frist.
+  - Ersatz aus der Z.1-Statistik der Fed über FRED: `BOGZ1FL663067003Q` (Security Brokers and Dealers; Receivables Due from Customers, Margin Loans and Other Receivables), quartalsweise ab Q4 1945, Mio. USD, echte Vintages in ALFRED. Veröffentlichung etwa 10 Wochen nach Quartalsende (Q2 2026 am 11.09.2026). Einmaliger Vergleich mit der FINRA-Datei, Quartalsenden 1997 bis Q2 2026: Niveau 0,42- bis 1,52-mal FINRA (Median 0,63), Vorjahresveränderungen korrelieren mit 0,83, gleiches Vorzeichen in 101 von 114 Quartalen. Abweichungen in einzelnen Phasen, z. B. 2007-12 FINRA +17 %, Z.1 +3 %; 2022-06 FINRA −23 %, Z.1 −6 %.
+  - Die Haushaltsreihe `BOGZ1FL153167005Q` (Margin Accounts at Brokers and Dealers) hat in ALFRED nur einen Stand (11.09.2026) und kommt deshalb nicht in Frage.
 
 **Ergebnis M4a (26.09.2026, erledigt):**
 - **Umgesetzt wie freigegeben:**
@@ -499,7 +505,8 @@ Für jeden Meilenstein gilt die Definition of Done:
   - `python -m fever.sources.update` gegen `data-dev/`, zweimal: „Sofort-Abruf beendet: 41 Reihen, 0 mit Problemen“; Worker-Start meldet „41 Reihen in 29 Abrufgruppen“
   - Gegenprobe gegen die CFTC-Jahresdatei `deacot2026.zip` (anderer Vertriebsweg): 38 Stichtage 2026, keine Abweichung
   - Gegenprobe mit 11 absichtlich eingebauten Fehlern, alle erkannt: immer erstes Feld, Kürzungsschutz fehlt oder um eins zu spät, Marktcode oder Feld ungeprüft, fehlendes Feld nicht übersprungen, Dezimalwerte akzeptiert, ohne Datums- und Endlichkeitsprüfung, kein Marktfilter, Allowlist ohne CFTC, Quelle nicht registriert
-- **Nicht geprüft:** Abruf auf TrueNAS (nach dem Update, `docs/einrichtung.md`, Schritt 9); tatsächliche Ankunft des Freitagsberichts vor 15:45 ET (Rohdatenarchiv nach dem ersten Freitag prüfen, wie M3, Schritt 9).
+- **Auf TrueNAS geprüft (26.09.2026, zusammen mit M4a):** Sofort-Abruf „41 Reihen, 0 mit Problemen“.
+- **Nicht geprüft:** tatsächliche Ankunft des Freitagsberichts vor 15:45 ET (Rohdatenarchiv nach dem ersten Freitag prüfen, wie M3, Schritt 9).
 
 ### M5 – Scoring (Schritte 1–6, Stufe 1)
 
@@ -697,12 +704,12 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (26.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt (178 Tests grün): Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-40; M4a (EZB, OFR, EBP; 14 Reihen) und M4b (CFTC COT, VIX-Futures; 4 Reihen) umgesetzt, 231 Tests grün, 41 Reihen im Katalog.
+  - Entscheidungen bis E-41; M4a (EZB, OFR, EBP; 14 Reihen) und M4b (CFTC COT, VIX-Futures; 4 Reihen) umgesetzt, 231 Tests grün, 41 Reihen im Katalog.
   - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“). Erstabruf aller 23 Reihen am 26.09.2026 per Sofort-Abruf; das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
-  1. Auf TrueNAS M4a und M4b einspielen: `git pull`, Build, Stack neu starten, Sofort-Abruf (`docs/einrichtung.md`, Schritt 9); erwartet „41 Reihen, 0 mit Problemen“.
+  1. Quelle für Margin Debt entscheiden (Optionen unter M4, „Margin Debt, Optionen“), dann M4c planen. M4a und M4b laufen auf TrueNAS seit 26.09.2026 („41 Reihen, 0 mit Problemen“).
   2. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen (Nutzer schickt Ausgaben); dann M3 abschließen (geplant in der Woche ab 28.09.2026).
-  3. M4c (Shiller-CAPE, FINRA) planen: Excel-Leser (`xlrd` für `.xls`) und FINRA-Nutzungsbedingungen (automatischer Abruf untersagt) zur Entscheidung vorlegen.
+  3. M4c planen: Shiller-CAPE mit `xlrd` (E-41) und Margin Debt nach der Entscheidung aus Punkt 1.
   4. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit, CFTC nach dem ersten Freitag.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.

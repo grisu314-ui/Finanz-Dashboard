@@ -212,7 +212,7 @@ sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
 #   ein zweiter Lauf meldet je Reihe "0 neue Zeilen"
 ```
 
-✅ 26.09.2026, Entwicklungsumgebung (41 Reihen, zweimal; Worker-Startzeile ebenfalls). Auf TrueNAS lief am 26.09.2026 die frühere Einzeiler-Fassung (23 Reihen, 101 363 Zeilen); das Kommando ist dort ⏳. Meldet es „mit Problemen“ (Exit-Code 1), nennen die `ERROR`-Zeilen darüber Reihe und Grund.
+✅ 26.09.2026, TrueNAS nach dem Update auf M4b: „Sofort-Abruf beendet: 41 Reihen, 0 mit Problemen“; ebenso Entwicklungsumgebung (zweimal, Worker-Startzeile ebenfalls). Meldet es „mit Problemen“ (Exit-Code 1), nennen die `ERROR`-Zeilen darüber Reihe und Grund.
 
 ## 8. Dashboard aufrufen ⏳ (ab M6)
 
@@ -221,9 +221,11 @@ Im Browser eines Geräts im Heimnetz: `http://<IP-von-TrueNAS>:8003`.
 - Es gibt **kein Passwort**. Jedes Gerät in deinem Heimnetz kann das Dashboard öffnen. Es zeigt nur öffentliche Marktdaten, keine Kontodaten.
 - **Keine Portweiterleitung** im Router einrichten; sonst wäre das Dashboard aus dem Internet erreichbar.
 
-## 9. Update auf eine neue Version ⏳
+## 9. Update auf eine neue Version
 
-Standardablauf, alles in der SSH-Shell auf TrueNAS; nur Stopp und Start des Stacks in Dockge. Er schadet nie: Gibt es keine neue Migration, ändert `alembic upgrade head` nichts, und die Sicherung davor ist nur eine zusätzliche Kopie. Ob eine neue Migration dabei ist, zeigt die dritte Zeile.
+✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). ⏳ Ablauf mit Sicherung und Migration.
+
+Standardablauf, alles in der SSH-Shell auf TrueNAS; nur Stopp und Start des Stacks in Dockge. Er schadet nie: Gibt es keine neue Migration, ändert `alembic upgrade head` nichts, und die Sicherung davor ist nur eine zusätzliche Kopie. Ob eine neue Migration dabei ist, zeigt die Zeile mit `migrations/`.
 
 ```bash
 cd /mnt/Daten-Z1/apps/feewer
@@ -316,7 +318,7 @@ Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
 | Start, Stopp | Dockge, Stack `finanz-dashboard` | ✅ TrueNAS 26.09.2026 (Start) |
 | Worker-Log | `sudo docker logs -f finanz-dashboard-worker-1` | ⏳ |
 | Healthcheck von Hand | `sudo docker exec finanz-dashboard-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"` | ✅ TrueNAS 26.09.2026 |
-| Sofort-Abruf aller Reihen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update` | ✅ Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
+| Sofort-Abruf aller Reihen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update` | ✅ TrueNAS und Entwicklungsumgebung 26.09.2026 |
 | Mountpunkt und Benutzer prüfen | `sudo docker inspect finanz-dashboard-worker-1 --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{end}} user={{.Config.User}}'` (erwartet: `/mnt/Daten-Z1/apps/feewer/data -> /data user=568:568`) | ✅ TrueNAS 26.09.2026 |
 | Sofort-Backup | `sudo docker exec finanz-dashboard-worker-1 python -m fever.backup` (Stack gestoppt: `$RUN python -m fever.backup`) | ✅ Entwicklungsumgebung 25.09.2026 |
 | Migration (Ablauf) | Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten | ⏳ |
