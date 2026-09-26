@@ -59,7 +59,7 @@ sudo docker version    # erwartet: Abschnitte "Client" und "Server"
 sudo docker compose version    # erwartet: Docker Compose version v2.… oder neuer
 ```
 
-Ob `git` im TrueNAS-Grundsystem enthalten ist, war nicht zu belegen. Meldet der erste Befehl `command not found`, übernimmt ein Container die Rolle von Git. Dann in allen folgenden Git-Befehlen `git` durch `$GIT` ersetzen:
+`git` ist auf TrueNAS 25.10.7 vorhanden (✅ 26.09.2026, TrueNAS: Git-Befehl lief). Nur falls der erste Befehl doch `command not found` meldet, übernimmt ein Container die Rolle von Git. Dann in allen folgenden Git-Befehlen `git` durch `$GIT` ersetzen:
 
 ```bash
 GIT="sudo docker run --rm -u $(id -u):$(id -g) -v /mnt/Daten-Z1/apps/feewer:/git -w /git alpine/git"
@@ -89,15 +89,22 @@ sudo chown admin:admin /mnt/Daten-Z1/apps/feewer
 ls -ld /mnt/Daten-Z1/apps/feewer    # erwartet: … admin admin … /mnt/Daten-Z1/apps/feewer
 ```
 
-### 3.2 Klonen (Branch `claude-testing`, E-30)
+### 3.2 Projekt holen (Branch `claude-testing`, E-30)
 
-Das Repository ist öffentlich; es braucht keine Zugangsdaten. Das Verzeichnis muss für den Klon leer sein, deshalb kommt das Dataset `data` erst danach.
+Das Repository ist öffentlich; es braucht keine Zugangsdaten. `git clone` verlangt ein leeres Verzeichnis und scheitert, sobald das Dataset `data` existiert („destination path '.' already exists and is not an empty directory“). Deshalb holen diese Befehle das Projekt in das bestehende Verzeichnis. `data/` bleibt dabei unberührt, weil Git es ignoriert. Die Reihenfolge von 3.2 und 3.3 ist damit egal.
 
 ```bash
 cd /mnt/Daten-Z1/apps/feewer
-git clone -b claude-testing https://github.com/grisu314-ui/Finanz-Dashboard.git .
-git status    # erwartet: "On branch claude-testing" und "nothing to commit, working tree clean"
+git init
+git remote add origin https://github.com/grisu314-ui/Finanz-Dashboard.git
+git fetch origin claude-testing
+git checkout -b claude-testing origin/claude-testing
+#   erwartet: Switched to a new branch 'claude-testing'
+#             branch 'claude-testing' set up to track 'origin/claude-testing'.
+git status    # erwartet: "On branch claude-testing", "Your branch is up to date …", "nothing to commit, working tree clean"
 ```
+
+✅ 26.09.2026, Entwicklungsumgebung: in einem Verzeichnis mit vorhandenem `data/`; dessen Inhalt blieb unverändert. Meldet `git init` „Permission denied“, fehlt Schritt 3.1.
 
 ### 3.3 Kind-Dataset `data` anlegen (E-28)
 
