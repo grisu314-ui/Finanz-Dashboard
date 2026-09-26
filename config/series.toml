@@ -787,3 +787,171 @@ lag_days = 0
 tolerance_days = 3
 bounds = [1, 400]
 license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
+# ================================================================================================
+# Derived indicators (M5, decisions E-47 to E-49). Fields:
+#   name         display text
+#   series       input series ids, in the order the transformation expects
+#   transform    level | ratio | difference | vrp | stock_bond_corr | above_low | fx_change | fx_vol
+#                | yoy | cot_net_short (definitions in fever/scoring/transforms.py; windows in
+#                scoring.toml [transforms])
+#   orientation  "high" or "low": which end of the indicator means more stress or vulnerability
+#   block        volatility | credit | macro | breadth | positioning (stress) or vulnerability
+#   v_score      lead-time score V from report table 2 (1-5); weight in the confidence (E-48)
+#   display_window  optional, true: also store the percentile over scoring.toml display_window_years
+# All inputs of an indicator must share their frequency; its publication lag and tolerance are the
+# largest of its inputs.
+# ================================================================================================
+
+[indicator.vix]
+name = "VIX-Niveau"
+series = ["vix"]
+transform = "level"
+orientation = "high"
+block = "volatility"
+v_score = 1
+
+[indicator.vix_vix3m]
+name = "VIX/VIX3M"
+series = ["vix", "vix3m"]
+transform = "ratio"
+orientation = "high"
+block = "volatility"
+v_score = 2
+
+[indicator.vvix]
+name = "VVIX-Niveau"
+series = ["vvix"]
+transform = "level"
+orientation = "high"
+block = "volatility"
+v_score = 2
+
+[indicator.vrp]
+name = "Variance Risk Premium (VIX − realisierte Vola S&P 500)"
+series = ["vix", "sp500"]
+transform = "vrp"
+orientation = "low"
+block = "volatility"
+v_score = 2
+
+[indicator.ebp]
+name = "Excess Bond Premium"
+series = ["fed_ebp"]
+transform = "level"
+orientation = "high"
+block = "credit"
+v_score = 4
+
+[indicator.sofr_iorb]
+name = "SOFR − IORB"
+series = ["sofr", "iorb"]
+transform = "difference"
+orientation = "high"
+block = "credit"
+v_score = 2
+
+[indicator.ofr_credit]
+name = "OFR FSI: Kredit"
+series = ["ofr_fsi_credit"]
+transform = "level"
+orientation = "high"
+block = "credit"
+v_score = 2
+
+[indicator.ofr_funding]
+name = "OFR FSI: Funding"
+series = ["ofr_fsi_funding"]
+transform = "level"
+orientation = "high"
+block = "credit"
+v_score = 2
+
+[indicator.nfci]
+name = "NFCI"
+series = ["nfci"]
+transform = "level"
+orientation = "high"
+block = "macro"
+v_score = 3
+
+[indicator.stlfsi4]
+name = "St. Louis Fed Financial Stress Index"
+series = ["stlfsi4"]
+transform = "level"
+orientation = "high"
+block = "macro"
+v_score = 2
+
+[indicator.ciss]
+name = "CISS Euroraum"
+series = ["ecb_ciss"]
+transform = "level"
+orientation = "high"
+block = "macro"
+v_score = 2
+
+[indicator.sahm]
+name = "Sahm-Regel (Echtzeit)"
+series = ["sahmrealtime"]
+transform = "level"
+orientation = "high"
+block = "macro"
+v_score = 2
+
+[indicator.claims]
+name = "Erstanträge: 4-Wochen-Schnitt ggü. 52-Wochen-Tief"
+series = ["ic4wsa"]
+transform = "above_low"
+orientation = "high"
+block = "macro"
+v_score = 3
+
+[indicator.stock_bond_corr]
+name = "Aktien-Anleihen-Korrelation (63 Tage)"
+series = ["sp500", "dgs10"]
+transform = "stock_bond_corr"
+orientation = "high"
+block = "macro"
+v_score = 2
+
+[indicator.usdjpy_change]
+name = "USD/JPY: Yen-Aufwertung über 5 Tage"
+series = ["ecb_exr_jpy", "ecb_exr_usd"]
+transform = "fx_change"
+orientation = "high"
+block = "macro"
+v_score = 2
+
+[indicator.usdjpy_vol]
+name = "USD/JPY: Vola über 21 Tage"
+series = ["ecb_exr_jpy", "ecb_exr_usd"]
+transform = "fx_vol"
+orientation = "high"
+block = "macro"
+v_score = 2
+
+[indicator.ecy]
+name = "Excess CAPE Yield"
+series = ["shiller_ecy"]
+transform = "level"
+orientation = "low"
+block = "vulnerability"
+v_score = 1
+
+[indicator.margin_yoy]
+name = "Margin Debt (Z.1) ggü. Vorjahr"
+series = ["bogz1fl663067003q"]
+transform = "yoy"
+orientation = "high"
+block = "vulnerability"
+v_score = 2
+
+[indicator.vx_cot_short]
+name = "VX-Futures: Netto-Short der Non-Commercials / Open Interest"
+series = ["cftc_vx_noncomm_short", "cftc_vx_noncomm_long", "cftc_vx_open_interest"]
+transform = "cot_net_short"
+orientation = "high"
+block = "vulnerability"
+v_score = 2
+display_window = true
