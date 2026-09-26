@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 und M1 erledigt, M2 Teil A (HTTP-Client) erledigt** · Nächster Schritt: M2 Teil B (Voraussetzungen in Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 und M1 erledigt, M2 Teil A (HTTP-Client) erledigt, M2 Teil B geplant** · Zielsystem seit E-21: TrueNAS · Nächster Schritt: M2 Teil B nach Freigabe (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -18,16 +18,16 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 |---|---|---|---|---|
 | M0 | Projektgerüst, Image, Compose | ☑ 25.09.2026 | – | erteilt 25.09.2026 |
 | M1 | Speicher, Migrationen, Backup | ☑ 25.09.2026 | M0, Schema-Freigabe, W-5 | erteilt 25.09.2026 |
-| M2 | HTTP-Client, Serienkatalog, Quellen Cboe und FRED/ALFRED | ◐ Teil A ☑ 26.09.2026 | M1, L-5, L-10 (betroffene Reihen), Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026 |
-| M3 | Worker und erste Inbetriebnahme auf dem Pi (ICE-Archiv startet) | ☐ | M2 | ja |
-| M4 | Weitere Quellen: CFTC, EZB, OFR, EBP, Shiller-CAPE, FINRA | ☐ | M3, L-10 | ja |
-| M5 | Scoring Schritte 1–6, Aggregation Stufe 1 | ☐ | M4, L-1 bis L-9, L-11, L-12 | ja (Scoring) |
+| M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ◐ Teil A ☑ 26.09.2026, Teil B geplant | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B offen |
+| M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ☐ | M2, Angaben zu TrueNAS (M3, Schritt 5) | ja |
+| M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, FINRA, VX-Futures | ☐ | M3 | ja |
+| M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☐ | M4, L-1 bis L-12 | ja (Scoring) |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☐ | M1 (Lesen), M3 (Heartbeat) | ja |
 | M7 | Ansichten 1–7 | ☐ | M5, M6, L-13 | ja |
 | M8 | Erklärtexte je Kennzahl | ☐ | parallel zu M6/M7 | ja (Texte prüfen) |
 | M9 | Abnahme Phase 1 | ☐ | M0–M8 | – |
 
-**Warum diese Reihenfolge:** FRED liefert die ICE-BofA-Spreads seit April 2026 nur noch für drei Jahre (Bericht, TL;DR). Jeder Tag ohne laufenden Worker verschiebt den Anfang des lokalen Archivs um einen Tag nach hinten. Deshalb geht ein minimaler Worker mit FRED und Cboe (M0–M3) auf den Pi, bevor Scoring und Oberfläche entstehen.
+**Warum diese Reihenfolge:** FRED liefert die ICE-BofA-Spreads seit April 2026 nur noch für drei Jahre (Bericht, TL;DR). Jeder Tag ohne laufenden Worker verschiebt den Anfang des lokalen Archivs um einen Tag nach hinten. Deshalb geht ein minimaler Worker mit FRED und Cboe (M0–M3) in Betrieb, bevor Scoring und Oberfläche entstehen.
 
 ---
 
@@ -47,6 +47,16 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-10 | L-5: ab wann ist ein Wert veraltet? | Kalendertage nach erwarteter Veröffentlichung (Beobachtungsdatum + Verzug): täglich > 4, wöchentlich > 10, monatlich > 41. Das ist Frequenz plus Toleranz 3 / 3 / 10 | Kein Börsenkalender nötig; lange Feiertagswochenenden lösen keinen Fehlalarm aus. Die Toleranz steht je Reihe in `series.toml` (so sieht es `CLAUDE.md` vor); Abweichungen vom Standard nur mit Begründung im Eintrag, ein Test prüft das |
 | 26.09.2026 | E-11 | Datenordner auf dem Pi (O-2, Teilentscheidung) | `/home/dirk/volumes/fever`, direkt als Datenordner (darin `fever.sqlite3`, `raw/`, `backup/`) | Anlegen ohne `sudo` als Benutzer `dirk`. `FEVER_UID`/`FEVER_GID` müssen die IDs von `dirk` sein. Liegt `/home` auf der SD-Karte, verschleißt sie; Speichermedium bleibt offen (O-2). Pfad kommt weiterhin nur aus `.env`, nicht aus Code oder Compose |
 | 26.09.2026 | E-12 | `.env.example` vorbelegen? | Ja: Secrets leer, nicht geheime Werte vorbelegt (Datenordner) | `cp .env.example .env` liefert den richtigen Pfad. `CLAUDE.md`-Regel entsprechend präzisiert |
+| 26.09.2026 | E-13 | M2 Teil B: Indikatoren (L-10) schon jetzt? | Nein. Teil B legt nur Rohreihen an; `[indicator.*]` und L-10 folgen in M5 | Keine Parameter ohne Verwendung; L-10 wird im Zusammenhang mit dem Scoring entschieden. Rohreihen für die denkbaren L-10-Varianten (SP500, DGS10, ICSA, IC4WSA) werden trotzdem ab Teil B archiviert |
+| 26.09.2026 | E-14 | Veröffentlichungszeit (Vintage) neuer Beobachtungen | Erstabruf einer Reihe: Beobachtungsdatum + Verzug in Kalendertagen; fällt das auf Samstag oder Sonntag, gilt der folgende Montag; Uhrzeit aus `series.toml` in America/New_York; höchstens die Abrufzeit; markiert als geschätzt. Danach bekommen neue Beobachtungen und Revisionen die Abrufzeit, nicht geschätzt | Kein Look-ahead im laufenden Betrieb. US-Feiertage bleiben in der Schätzung unberücksichtigt. Nach Ausfällen des Workers erscheinen Werte in der Historie später als tatsächlich veröffentlicht (konservativ) |
+| 26.09.2026 | E-15 | Verletzung der Plausibilitätsgrenzen | Nur der verletzende Wert wird verworfen; die übrigen Werte der Reihe werden gespeichert; Fehler in Log und `source_status` | Vorübergehende Lücke an dieser Stelle. Weil jeder Abruf die volle Historie holt, kommt der Wert nach Korrektur von Grenze oder Quelle nach |
+| 26.09.2026 | E-16 | Serien-IDs | Kennung der Quelle in Kleinbuchstaben (`vix`, `bamlh0a0hym2`, `sahmrealtime`); lesbarer Name im Feld `name` | IDs sind dauerhaft, weil Trigger ein UPDATE verhindern; Umbenennen hieße neue Reihe |
+| 26.09.2026 | E-17 | Quelle für USD/JPY (Ansicht 2, Ranking Nr. 10) | Nicht FRED DEXJPUS (H.10 erscheint montags 16:15 ET für die Vorwoche). In M4 prüfen: Kreuzkurs EUR/JPY ÷ EUR/USD aus den EZB-Referenzkursen | Bis M4 kein USD/JPY. Endpoint und Veröffentlichungszeit sind ungeprüft; der Kreuzkurs ist eine eigene Einschätzung |
+| 26.09.2026 | E-18 | VX-Futures-Termstruktur (Ansicht 2) | In M4 | Eigener Parser je Kontrakt und Kontraktkalender; bis dahin Index-Termstruktur 9D/30D/3M/6M |
+| 26.09.2026 | E-19 | Historische ALFRED-Vintages rückwirkend laden | Nicht in Phase 1 (gehört zur revisionsgenauen Rückrechnung, Phase 2) | Rückfüllung mit geschätzter Veröffentlichung (E-14); Revisionen werden ab Inbetriebnahme gespeichert |
+| 26.09.2026 | E-20 | Umfang M2 Teil B | 23 Rohreihen (Liste unter M2, „Plan Teil B“). Nicht archiviert: NFCILEVERAGE, DFII10, THREEFYTP10, DTWEXBGS, VIXCLS | Die nicht archivierten Reihen sind in Phase 1 ungenutzt und bei FRED jederzeit vollständig abrufbar |
+| 26.09.2026 | E-21 | Zielsystem (O-2). Angaben zum Pi: Compute Module 4 Rev 1.1, 1,8 GiB RAM, SD-Karte (Root 14 GB, davon 2,6 GB frei) | TrueNAS statt Pi. Das Image wird im Projektverzeichnis auf TrueNAS gebaut; der Betrieb läuft über eine eigene Compose-Datei ohne Build, die das Image aufruft, als Dockge-Stack; Datenordner über Volumes dieser Compose-Datei | Zielplattform x86_64 (linux/amd64) statt arm64; TrueNAS gibt es offiziell nur für x86_64. E-11 (Pfad auf dem Pi) ist überholt. In M3: Laufzeit-Compose, `.env.example` und `docs/einrichtung.md` neu. Der Datenordner liegt auf einem Dataset des TrueNAS-Hosts, nie per NFS/SMB |
+| 26.09.2026 | E-22 | Backup-Ziel außerhalb (O-4) | Backups bleiben im Datenordner auf TrueNAS, kein weiteres Ziel. Aufwand für Backups gering halten („nur ein Dashboard“) | E-8 (bereits umgesetzt) bleibt unverändert; keine zusätzliche Kopie, keine weitere Mechanik |
 
 ---
 
@@ -210,10 +220,10 @@ Für jeden Meilenstein gilt die Definition of Done:
 **Schritte:**
 1. Serien-IDs mit (*) aus Bericht 6.1 per FRED-Metadatenabruf prüfen; Ergebnis mit Datum hier protokollieren.
 2. Je Quelle: Endpoint real abrufen, Antwort in eine Datei schreiben, nur Anfang und Ende ansehen, gekürzt als Fixture ablegen, dann Parser und Test.
-3. `series.toml` je Reihe: Quelle, ID, Frequenz, Veröffentlichungszeit (America/New_York), Verzug, Toleranz (L-5), Plausibilitätsgrenzen. Indikatoren: Transformation (L-10), Orientierung, Block bzw. Fallhöhe.
+3. `series.toml` je Reihe: Quelle, ID, Frequenz, Veröffentlichungszeit (America/New_York), Verzug, Toleranz (L-5), Plausibilitätsgrenzen. Indikatoren: Transformation (L-10), Orientierung, Block bzw. Fallhöhe; verschoben nach M5 (E-13).
 4. Der FRED-API-Schlüssel steht als Query-Parameter in der URL. Der HTTP-Client maskiert ihn in jeder Log- und Fehlermeldung (Test).
 
-**Entscheidung bei M2:** Phase 1 speichert den aktuellen Stand und fortlaufend beobachtete Revisionen. Historische ALFRED-Vintages rückwirkend zu laden gehört zur revisionsgenauen Rückrechnung in Phase 2. Vorschlag: nicht in Phase 1.
+**Entscheidung bei M2:** Phase 1 speichert den aktuellen Stand und fortlaufend beobachtete Revisionen. Historische ALFRED-Vintages rückwirkend zu laden gehört zur revisionsgenauen Rückrechnung in Phase 2. Entschieden (E-19): nicht in Phase 1.
 
 **Tests:**
 - Parser gegen Fixtures
@@ -239,18 +249,64 @@ Für jeden Meilenstein gilt die Definition of Done:
   - Gegenprobe mit acht absichtlich eingebauten Fehlern, jeder erkannt: keine Maskierung im Client, Formatter ohne Maskierung, Allowlist aus, HTTP erlaubt, 404 wiederholt, kein Ratenlimit, `Retry-After` ignoriert, automatisches Folgen von Weiterleitungen
 - **Nicht geprüft:** echte Abrufe; die folgen in Teil B, sobald die Hosts freigegeben sind. Dockerfile und Compose sind unverändert, daher keine neue arm64-Probe.
 
-### M3 – Worker und erste Inbetriebnahme auf dem Pi
+**Plan Teil B (26.09.2026 vorgelegt, Freigabe offen):**
+- **Umfang (E-13, E-20):** 23 Rohreihen, je Beobachtung ein Wert (bei Cboe der Schlusskurs); IDs nach E-16:
+  - Cboe: `vix`, `vix9d`, `vix3m`, `vix6m`, `vvix`, `skew`
+  - FRED, ICE (nur drei Jahre, unwiederbringlich): `bamlh0a0hym2`, `bamlh0a1hybb`, `bamlh0a3hyc`, `bamlc0a0cm`, `bamlc0a4cbbb`
+  - FRED: `nfci`, `anfci`, `stlfsi4`, `t10y3m`, `t10y2y`, `sahmrealtime`, `icsa`, `ic4wsa`, `sofr`, `iorb`, `sp500` (nur 10 Jahre, S&P-Lizenz), `dgs10`
+- **Abruf:** jedes Mal die volle Historie; der Speicher legt nur neue und geänderte Werte an. So kommen rückwirkende Neuschätzungen (NFCI, STLFSI4) ohne eigenes Revisionsfenster an. Vintage nach E-14, Plausibilität nach E-15.
+- **Cboe:** Die Zeile des laufenden US-Handelstags wird vor der Veröffentlichungszeit verworfen, damit kein Zwischenstand dauerhaft als Schlusskurs gespeichert wird. Ob die CSV tagsüber eine solche Zeile enthält, ist ungeprüft.
+- **Dateien:**
+  - `config/series.toml`: je Reihe `source`, `source_id`, `name`, `unit`, `frequency`, `release_time`, `lag_days`, `tolerance_days` (bei Abweichung von E-10 zusätzlich `tolerance_reason`), `bounds`, `license`
+  - Prüfung der Einträge in `fever/config.py`
+  - `fever/sources/cboe.py`, `fever/sources/fred.py`: Abruf, Parser, Formatprüfung
+  - `fever/sources/__init__.py`: eine Funktion je Reihe: Versuch → Abruf → `raw/` → Parser → Plausibilität → Vintage → Anfügen → `source_status`
+  - Fixtures unter `tests/fixtures/`; Tests `test_sources_cboe.py`, `test_sources_fred.py`, `test_sources_update.py`, `test_series_catalog.py`
+- **Schritte:**
+  1. `fever/config.py` und `fever/http.py` lesen.
+  2. Nutzungsbedingungen von Cboe (CSV-Download) und der FRED-API prüfen und hier festhalten.
+  3. Echte Abrufe (Abschnitt 10.7): Antworten in Dateien, nur Anfang und Ende ansehen; FRED-Metadaten (Prüfung der (*)-IDs) und Veröffentlichungstermine (`fred/release/dates`).
+  4. **Zwischenhalt:** Tabelle je Reihe mit Verzug, Veröffentlichungszeit (ET), Toleranz und Plausibilitätsgrenzen zur Freigabe. Verzug aus den tatsächlichen Terminen, Grenzen aus beobachtetem Minimum und Maximum mit großem Abstand.
+  5. Fixtures, Parser, Tests, Katalog, Update-Funktion.
+  6. Ende-zu-Ende gegen `data-dev/`: Erstabruf aller Reihen; zweiter Abruf ohne neue Zeilen und ohne neue Rohdatei; Größe von Datenbank und `raw/` messen (Einschätzung vorab: `raw/` grob 0,3–1 GB pro Jahr).
+  7. Gegenprobe mit absichtlich eingebauten Fehlern, `pytest -q`, Doku, Commit.
+- **Tests:**
+  - Parser; der FRED-Platzhalter „.“ für fehlende Werte wird übersprungen
+  - Formatänderung und leere Antwort: sichtbarer Fehler, nichts gespeichert
+  - Grenzverletzung und Datum in der Zukunft: Wert nicht gespeichert, Fehler in Log und `source_status`
+  - Vintage: Wochenende, ET → UTC über die Sommerzeitwechsel, Begrenzung auf die Abrufzeit, Revisionen
+  - Cboe-Tageszeile vor der Veröffentlichungszeit
+  - Katalog: Toleranz nach E-10 oder begründet; `(source, source_id)` eindeutig
+  - API-Schlüssel weder im Log noch in `source_status`, geprüft über den ganzen Ablauf
+- **Recherchierte Veröffentlichungszeiten** (abgerufen 26.09.2026):
+  - H.10 (DEXJPUS, DTWEXBGS): montags 16:15 ET für die Vorwoche (federalreserve.gov/releases/h10)
+  - H.15 (DGS10): werktags 16:15 ET; der Wert vom 24.09. kam auf FRED am 25.09. um 15:16 CDT an
+  - NFCI/ANFCI: mittwochs 8:30 ET, Daten bis zum Vorfreitag (chicagofed.org)
+  - SOFR: werktags gegen 8:00 ET (newyorkfed.org)
+  - HY-OAS: Wert vom 24.09. auf FRED am 25.09. um 9:04 CDT; STLFSI4: Wert vom Freitag, 18.09., auf FRED am Mittwoch, 23.09., um 12:07 CDT. Beides Einzelbeobachtungen, keine Regel
+- **Offen vor Beginn:**
+  - Freigabe
+  - Bestätigung, dass die KI `fever/config.py` und `fever/http.py` lesen und die Quellen abrufen darf (am 26.09.2026 vom Auto-Modus der Sitzung blockiert)
+  - `cdn.cboe.com` antwortete auf `/` mit HTTP 403; Ursache (Proxy oder Server) offen
 
-**Ziel:** Der Worker läuft dauerhaft auf dem Pi und archiviert ab jetzt täglich.
+### M3 – Worker und erste Inbetriebnahme auf TrueNAS
 
-**Dateien:** `fever/worker.py`, Healthcheck `worker` in Compose, `tests/test_worker_schedule.py`.
+**Ziel:** Der Worker läuft dauerhaft auf TrueNAS als Dockge-Stack (E-21) und archiviert ab jetzt täglich.
+
+**Dateien:**
+- `fever/worker.py`, `tests/test_worker_schedule.py`
+- Healthcheck `worker` in der Compose-Datei
+- Compose-Datei für den Betrieb ohne `build`: ruft das im Projektverzeichnis gebaute Image auf, läuft in Dockge, Datenordner als Volume (E-21)
+- `.env.example` (Pfad und IDs für TrueNAS), `docs/einrichtung.md` (Neufassung für TrueNAS und Dockge)
 
 **Schritte:**
 1. Schleife alle 15 Minuten; fällige Abrufe nach Veröffentlichungsplan in America/New_York.
 2. Heartbeat schreiben, sauberes Beenden bei SIGTERM (`docker compose stop`), tägliches Backup.
 3. Healthcheck: Heartbeat-Alter (Vorschlag: höchstens 45 Minuten, also drei Takte).
-4. Branch für den Betrieb auf dem Pi festlegen (Auswahlfrage). Bisher existiert nur der Entwicklungsbranch `claude-testing`.
-5. Einrichtung auf dem Pi nach `docs/einrichtung.md`. Führt der Nutzer aus, weil die KI keinen Zugriff auf den Pi hat. Jeder ausgeführte Schritt wird mit ✅ und Datum markiert.
+4. Branch für den Betrieb festlegen (Auswahlfrage). Bisher existiert nur der Entwicklungsbranch `claude-testing`.
+5. Angaben des Nutzers vor dem Plan zu M3: TrueNAS-Version, Pfad des Datasets für den Datenordner, Projektverzeichnis für den Build, Stack-Verzeichnis von Dockge, Eigentümer (UID/GID) des Datenordners, freier Web-Port.
+6. Build und Betrieb trennen: ob die bestehende `docker-compose.yml` zur Laufzeit-Datei wird oder eine zweite Datei entsteht, im Plan zu M3 entscheiden (zwei Dateien können auseinanderlaufen).
+7. Einrichtung auf TrueNAS nach der neuen `docs/einrichtung.md`. Führt der Nutzer aus, weil die KI keinen Zugriff auf TrueNAS hat. Jeder ausgeführte Schritt wird mit ✅ und Datum markiert.
 
 **Tests:**
 - Fälligkeit rund um die Sommerzeitwechsel: USA endet am 01.11.2026, EU am 25.10.2026
@@ -259,21 +315,22 @@ Für jeden Meilenstein gilt die Definition of Done:
 
 ### M4 – Weitere Quellen
 
-**Ziel:** CFTC (COT), EZB (CISS), OFR (FSI), Fed-Board (EBP), Shiller-CAPE, FINRA Margin Debt.
+**Ziel:** CFTC (COT), EZB (CISS), OFR (FSI), Fed-Board (EBP), Shiller-CAPE, FINRA Margin Debt; dazu USD/JPY als Kreuzkurs aus EZB-Referenzkursen (E-17) und die VX-Futures-Termstruktur von Cboe (E-18).
 
 **Schritte:**
 1. Je Quelle wie in M2.
-2. Unverifizierte Endpoints zuerst prüfen: OFR-FSI-Download, EBP-CSV, CISS `SS_CIN`, TFF-IDs bei CFTC, FINRA ohne Login.
-3. Excel-Dateien (Shiller `ie_data.xls`, FINRA) brauchen ggf. eine Leser-Bibliothek. Das ist eine neue Abhängigkeit mit Begründung und geprüftem aarch64-Wheel, deshalb vorher fragen.
+2. Unverifizierte Endpoints zuerst prüfen: OFR-FSI-Download, EBP-CSV, CISS `SS_CIN`, TFF-IDs bei CFTC, FINRA ohne Login, EZB-Referenzkurse für den USD/JPY-Kreuzkurs, Cboe-CSV je VX-Kontrakt.
+3. Excel-Dateien (Shiller `ie_data.xls`, FINRA) brauchen ggf. eine Leser-Bibliothek. Das ist eine neue Abhängigkeit mit Begründung und geprüftem Wheel für linux/amd64, deshalb vorher fragen.
 4. Nutzungsbedingungen je Quelle prüfen (kein Scraping gegen AGB).
 
 **Tests:** Parser gegen Fixtures; Formatänderung der Quelle führt zu einem sichtbaren Fehler, nicht zu stillem Ausfall.
 
 ### M5 – Scoring (Schritte 1–6, Stufe 1)
 
-**Voraussetzung:** L-1 bis L-9, L-11 und L-12 entschieden; `scoring.toml` mit Startwerten aus Bericht 4.3 und den Entscheidungen; Freigabe.
+**Voraussetzung:** L-1 bis L-12 entschieden (L-10 seit E-13 hier); `scoring.toml` mit Startwerten aus Bericht 4.3 und den Entscheidungen; Freigabe.
 
 **Dateien:**
+- `[indicator.*]` in `config/series.toml`: Transformation, Orientierung, Block bzw. Fallhöhe (E-13)
 - `fever/scoring/` mit Perzentil, Transformationen, Veraltung, Blockmedian, Composite, Fallhöhe, Glättung, Matrixregeln mit Hysterese, Konfidenz, Diffusionsindex. Reine Funktionen mit Stichtag t, ohne Import aus `web/` oder `store/`.
 - Migration der Score-Tabellen
 - Neuberechnung im Worker bei neuen Daten oder geändertem Hash von `scoring.toml`
@@ -287,7 +344,7 @@ Für jeden Meilenstein gilt die Definition of Done:
 
 **Sichtbare Platzhalter:** Block „Breite“ ohne Datenquelle (O-1), HY-OAS-Rot-Regel inaktiv (O-5). Beides erscheint in der Oberfläche, nicht nur im Code.
 
-**Risiko:** Rechenzeit auf dem Pi (rollierende Perzentile über bis zu 10 Jahre je Indikator). Erst messen, dann optimieren.
+**Risiko:** Rechenzeit auf dem Zielsystem (rollierende Perzentile über bis zu 10 Jahre je Indikator). Erst messen, dann optimieren.
 
 ### M6 – Web-Grundgerüst, Gestaltung, Aktualität, Datenstand
 
@@ -341,7 +398,7 @@ Laut Bericht 6.3, soweit Daten vorhanden:
 
 ### M9 – Abnahme Phase 1
 
-1. `pytest -q`, arm64-Build-Probe, Update auf dem Pi nach `docs/einrichtung.md`.
+1. `pytest -q`, Build-Probe, Update auf TrueNAS nach `docs/einrichtung.md`.
 2. Sichtprüfung aller Ansichten auf Smartphone und Desktop.
 3. `docs/bedienung.md` und `docs/einrichtung.md` von ⏳ auf ✅, wo geprüft.
 4. README-Status aktualisieren.
@@ -363,7 +420,7 @@ Nichts davon wird geraten. Die Vorschläge sind begründete Startpunkte, keine E
 | L-7 | Hysterese für Regeln ohne Perzentilskala (VIX/VIX3M > 1 an 3 Tagen, Diffusionsindex ≥ 40 %) | Ampel | VIX/VIX3M: Die Regel endet, wenn das Verhältnis an 3 Tagen in Folge < 1 liegt (spiegelbildlich). Diffusionsindex: 5 Prozentpunkte unter der Schwelle, analog zur Perzentil-Hysterese | M5 |
 | L-8 | Glättung: welcher Block ist „schnell“, in welcher Reihenfolge wird geglättet, nutzt die Ampel geglättete Werte? | Stress, Ampel | Schnell = Volatilität/Optionen (HWZ 3 auf den Blockscore). Composite HWZ 10. Die Ampel nutzt den geglätteten Composite, die Einzelregeln (VIX/VIX3M, HY-OAS) Rohwerte. Folge: Bei HWZ 10 wirkt ein Sprung erst nach 10 Handelstagen zur Hälfte, der Composite-Weg zu Rot ist also träge | M5 |
 | L-9 | VX-COT-Perzentil über 3 Jahre (Bericht 6.3) vs. 10-Jahres-Fenster (4.3) | Positionierung | Im Score das Standardfenster (4.3), in Ansicht 4 zusätzlich das 3-Jahres-Perzentil als Anzeige | M5 |
-| L-10 | Transformationen ohne Definition: Erstanträge „Veränderung ggü. Tief“ (welches Fenster?), USD/JPY-Vola (Fenster), Re-Steepening-Flag (Definition), Aktien-Anleihen-Korrelation (Anleiherendite aus DGS10-Änderung?), COT-Maß und Orientierung, Definition der Excess CAPE Yield, Margin Debt nur ggü. Vorjahr (keine Marktkapitalisierung in Phase 1), VIX6M (nicht in 6.1, Endpoint prüfen) | Indikatoren | Je Indikator beim Anlegen in `series.toml` einzeln vorschlagen und fragen | M2/M4 |
+| L-10 | Transformationen ohne Definition: Erstanträge „Veränderung ggü. Tief“ (welches Fenster?), USD/JPY-Vola (Fenster), Re-Steepening-Flag (Definition), Aktien-Anleihen-Korrelation (Anleiherendite aus DGS10-Änderung?), COT-Maß und Orientierung, Definition der Excess CAPE Yield, Margin Debt nur ggü. Vorjahr (keine Marktkapitalisierung in Phase 1), VIX6M (nicht in 6.1, Endpoint prüfen) | Indikatoren | Je Indikator beim Anlegen in `series.toml` einzeln vorschlagen und fragen. Quelle für USD/JPY: E-17 | M5 (E-13) |
 | L-11 | Fallhöhe in Phase 1: Top-10-Konzentration (O-1), HY-OAS-Niveau (O-5) und AAII (Phase 2) fehlen | Fallhöhe | Mittel der vorhandenen Komponenten (Excess CAPE Yield, Margin Debt ggü. Vorjahr, VX-COT-Short-Vol), mindestens 2; Fehlende sichtbar | M5 |
 | L-12 | Diffusionsindex: welche Einzelreihen zählen? | Ampel (Gelb) | Nur Stress-Indikatoren mit gültigem, aktuellem Wert und ausreichender Historie. Fallhöhe-Indikatoren nicht, sonst ginge Fallhöhe doppelt in „Gelb“ ein | M5 |
 | L-13 | Krisenmarken in der Composite-Historie: genaue Zeiträume | Anzeige | Start und Ende je Episode mit Quelle in einer eigenen Datei `config/episodes.toml` (Anzeige, kein Score) | M7 |
@@ -379,7 +436,7 @@ Nichts davon wird geraten. Die Vorschläge sind begründete Startpunkte, keine E
 | W-3 | Bericht 4.3, Schritt 4 nennt Fallhöhe-Komponenten, die in Phase 1 größtenteils fehlen | L-11 |
 | W-4 | Die Rot-Regel „HY-OAS-Anstieg über 20 Tage ≥ 95. Perzentil“ braucht HY-OAS im Score; O-5 schließt das bis zur Entscheidung aus | Regel ist inaktiv und in der Oberfläche als inaktiv markiert, bis O-5 entschieden ist |
 | W-5 | `CLAUDE.md`: Fehler „werden geloggt, nicht gespeichert, und erscheinen im Datenstand“. Die Web-Oberfläche kann Worker-Logs nicht lesen | Entschieden (E-9): Fehlerhafte Werte werden nie gespeichert. Der letzte Fehler je Quelle (Zeit und Meldung) steht in `source_status`, ohne Historie |
-| W-6 | Bericht 6.3, Ansicht 2 nennt MOVE (ICE-Lizenz, nicht in Phase 1) und VIX6M (nicht in Tabelle 6.1) | MOVE entfällt in Phase 1; VIX6M unter L-10 |
+| W-6 | Bericht 6.3, Ansicht 2 nennt MOVE (ICE-Lizenz, nicht in Phase 1) und VIX6M (nicht in Tabelle 6.1) | MOVE entfällt in Phase 1; VIX6M als Rohreihe in M2 Teil B (E-20), VX-Futures in M4 (E-18) |
 | W-7 | Der Migrationsablauf in `CLAUDE.md` (stop → Backup → upgrade → up) gilt „auch bei der Ersteinrichtung“; dann gibt es aber nichts zu stoppen oder zu sichern | Die Einrichtungsanleitung lässt Stop und Backup bei der Ersteinrichtung aus; `fever.backup` meldet eine fehlende Datenbank klar |
 
 ---
@@ -423,8 +480,8 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 - **Kopfzeile auf jeder Seite:** letzte erfolgreiche Worker-Aktualisierung und Zeitpunkt der letzten Seitenaktualisierung.
 - **Worker-Banner:** Ist der Heartbeat überfällig (dieselbe Grenze wie der Healthcheck), erscheint ein roter Hinweis „Worker ohne Lebenszeichen seit …, Werte werden nicht aktualisiert“.
 - **Seiten-Aktualisierung (E-7):** `dcc.Interval` alle 5 Minuten liest Daten und Status neu.
-- **Verbindungs-Wächter:** Ist der Pi nicht erreichbar, schlagen die Interval-Callbacks fehl und die Seite zeigt still alte Werte. Deshalb merkt sich ein Clientside-Callback die Browserzeit der letzten erfolgreichen Antwort. Ein zweiter Clientside-Timer blendet nach mehr als 2 Intervallen ohne Antwort ein Banner ein: „Keine Verbindung zum Pi – angezeigte Werte vom …“. Es wird die Browserzeit verglichen, nicht die Serverzeit, damit abweichende Uhren keine Rolle spielen.
-- **Uhrzeit des Pi:** Die Veraltungslogik hängt an der Systemzeit. Die Einrichtungsanleitung prüft die NTP-Synchronisation.
+- **Verbindungs-Wächter:** Ist der Server nicht erreichbar, schlagen die Interval-Callbacks fehl und die Seite zeigt still alte Werte. Deshalb merkt sich ein Clientside-Callback die Browserzeit der letzten erfolgreichen Antwort. Ein zweiter Clientside-Timer blendet nach mehr als 2 Intervallen ohne Antwort ein Banner ein: „Keine Verbindung zum Server – angezeigte Werte vom …“. Es wird die Browserzeit verglichen, nicht die Serverzeit, damit abweichende Uhren keine Rolle spielen.
+- **Uhrzeit des Servers:** Die Veraltungslogik hängt an der Systemzeit. Die Einrichtungsanleitung prüft die NTP-Synchronisation.
 
 ### 7.4 Gestaltung
 
@@ -444,42 +501,38 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 | Risiko | Wirkung | Gegenmaßnahme |
 |---|---|---|
-| Verzögerter Start des Workers | ICE-Historie geht tageweise verloren | M0–M3 zuerst, früh auf den Pi |
+| Verzögerter Start des Workers | ICE-Historie geht tageweise verloren | M0–M3 zuerst, früh in Betrieb |
 | Dash 4 / Plotly 7 sind neuer als das Trainingswissen vieler KI-Modelle | erfundene oder veraltete Signaturen | Signaturen im installierten Paket nachsehen; bei Unsicherheit sagen |
 | Unverifizierte Endpoints (OFR, EBP, CISS, TFF-IDs, VIX6M) | Quelle fällt aus oder liefert anderes Format | real abrufen vor dem Parser (M2/M4), Fixture, sichtbarer Fehler |
-| Rechenzeit rollierender Perzentile auf dem Pi | langsame Neuberechnung | messen in M5, erst dann optimieren |
+| Rechenzeit rollierender Perzentile | langsame Neuberechnung | messen in M5, erst dann optimieren |
 | Druck von dunklen Charts | unlesbare PDFs | Prüfung in M6, Fallback `beforeprint` |
 | Kein Passwort im Heimnetz (E-3) | jedes Gerät im WLAN sieht das Dashboard | akzeptiert; die Daten sind öffentliche Marktdaten ohne Kontobezug |
-| Docker umgeht ufw (E-4) | Firewall-Regeln greifen nicht für den Web-Port | in `docs/einrichtung.md` dokumentiert; keine Portweiterleitung im Router |
+| Docker-Portfreigaben umgehen Host-Firewallregeln (E-4) | Firewall-Regeln greifen nicht für den Web-Port | in `docs/einrichtung.md` dokumentiert; keine Portweiterleitung im Router |
 
 ---
 
 ## 9. Übergabe an die nächste Sitzung
 
-- **Stand (26.09.2026):** M0, M1 und M2 Teil A erledigt: Image (arm64 geprüft), Compose, Konfiguration, Speicher mit Migration, Schutz des Archivs, Backup und Wiederherstellung, zentraler HTTP-Client mit Schlüssel-Maskierung, 70 Tests grün. Noch keine Quellen, kein Worker, keine Oberfläche.
-- **Nächster Schritt:** M2 Teil B (Quellen Cboe und FRED). Voraussetzungen:
-  1. **Netzwerk der Cloud-Entwicklungsumgebung** (nur für KI-Sitzungen; der Pi ist nicht betroffen): Die Quellen-Hosts stehen nicht auf der Allowlist („Host not in allowlist“, geprüft 25.09.2026). Der Nutzer ergänzt sie in den Umgebungseinstellungen unter Network access. Für M2: `cdn.cboe.com`, `api.stlouisfed.org`. Für M4 später: `publicreporting.cftc.gov`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `www.finra.org` und der Host des Shiller-Datensatzes (in M4 prüfen).
-  2. **FRED-Schlüssel für Testabrufe:** als Umgebungsvariable `FRED_API_KEY` in den Einstellungen der Cloud-Umgebung. Nie im Chat und nie im Repo. Die `.env` wird nie gelesen.
-  3. **Fachliche Entscheidungen:** L-10 für die ersten Reihen, per Auswahlfrage. L-5 ist entschieden (E-10).
-  4. Plan für M2 vorlegen (`CLAUDE.md`, Arbeitsweise 1–2).
-- **Offene Entscheidungen des Nutzers:** O-1, O-2, O-4, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 (Abschnitt 5), Betriebs-Branch (M3).
-- **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), arm64-Probe und Compose-Tests siehe Abschnitt 10; Betriebsbefehle in `docs/einrichtung.md`, Abschnitt 12.
+- **Stand (26.09.2026):** M0, M1 und M2 Teil A erledigt (70 Tests grün). M2 Teil B ist geplant (Abschnitt 4, M2, „Plan Teil B“), die Entscheidungen E-13 bis E-20 sind getroffen. Zielsystem ist seit E-21 TrueNAS mit Dockge statt Pi; Compose, `.env.example` und `docs/einrichtung.md` beschreiben noch den Pi und werden in M3 umgestellt. Noch keine Quellen, kein Worker, keine Oberfläche.
+- **Nächster Schritt:** M2 Teil B. Voraussetzungen:
+  1. Freigabe des Plans Teil B durch den Nutzer.
+  2. Bestätigung für das Lesen von `fever/config.py` und `fever/http.py` und für die echten Abrufe (am 26.09.2026 vom Auto-Modus blockiert).
+  3. **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): `api.stlouisfed.org` antwortet (26.09.2026); `cdn.cboe.com` lieferte HTTP 403 auf `/`, klären. Für M4 später: `publicreporting.cftc.gov`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `www.finra.org` und der Host des Shiller-Datensatzes.
+  4. **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
+- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 außer L-5 (Abschnitt 5), Angaben zu TrueNAS und Betriebs-Branch (M3).
+- **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Tests siehe Abschnitt 10; die Betriebsbefehle für TrueNAS folgen in M3 (`docs/einrichtung.md` beschreibt noch den Pi).
 
 ---
 
 ## 10. Entwicklungsumgebung (für KI-Sitzungen in der Cloud)
 
-Stand 25.09.2026, erprobt in der Claude-Code-Cloud-Umgebung. Die Umgebung ist ein flüchtiger Container: Docker-Daemon, QEMU-Registrierung und Hilfs-Images sind nach einem Neustart weg.
+Stand 25.09.2026, erprobt in der Claude-Code-Cloud-Umgebung. Die Umgebung ist ein flüchtiger Container: Docker-Daemon und Hilfs-Images sind nach einem Neustart weg.
 
 1. **Docker-Daemon starten** (CLI und `dockerd` sind installiert, laufen aber nicht):
    ```bash
    nohup dockerd > /tmp/dockerd.log 2>&1 &
    ```
-2. **arm64-Emulation registrieren** (für Build-Probe und arm64-Container):
-   ```bash
-   sudo mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
-   docker run --privileged --rm tonistiigi/binfmt --install arm64
-   ```
+2. **arm64-Emulation:** entfällt seit E-21 (Zielsystem x86_64 wie die Entwicklungsumgebung).
 3. **Proxy-Zertifikat:** Ausgehender Verkehr läuft über einen Proxy (`$HTTPS_PROXY` auf 127.0.0.1) mit eigener CA (`/root/.ccr/ca-bundle.crt`). `pip` in Containern braucht deshalb `--network host`, die Proxy-Variablen und `PIP_CERT`. Die CA kommt nie ins Projekt-Dockerfile.
 4. **Tests mit Python 3.14** (lokal gibt es nur 3.10–3.13): ein Hilfs-Image außerhalb des Repos, z. B. im Scratchpad:
    ```dockerfile
@@ -495,13 +548,13 @@ Stand 25.09.2026, erprobt in der Claude-Code-Cloud-Umgebung. Die Umgebung ist ei
      --network host --build-arg HTTPS_PROXY --build-arg HTTP_PROXY -t fever-devtest .
    docker run --rm -v "$PWD":/src fever-devtest pytest -q -p no:cacheprovider
    ```
-5. **arm64-Build-Probe:** Kopie des Dockerfiles mit den zwei Zertifikatszeilen nach `FROM`, sonst unverändert:
+5. **Build-Probe** (seit E-21 für x86_64, ohne Emulation; in dieser Form noch nicht ausgeführt, Stand 26.09.2026): Kopie des Dockerfiles mit den zwei Zertifikatszeilen nach `FROM`, sonst unverändert:
    ```bash
    sed '/^FROM /a COPY --from=proxyca ca-bundle.crt /tmp/proxy-ca.crt\nENV PIP_CERT=/tmp/proxy-ca.crt' \
      Dockerfile > <scratch>/Dockerfile.probe
-   docker buildx build --platform linux/arm64 -f <scratch>/Dockerfile.probe \
+   docker buildx build -f <scratch>/Dockerfile.probe \
      --build-context proxyca=/root/.ccr --network host \
-     --build-arg HTTPS_PROXY --build-arg HTTP_PROXY --load -t fever:probe-arm64 .
+     --build-arg HTTPS_PROXY --build-arg HTTP_PROXY --load -t fever:probe .
    ```
 6. **Compose prüfen ohne `.env`** (die echte `.env` wird nie gelesen): eine Testdatei mit Platzhaltern im Scratchpad anlegen und `docker compose --env-file <scratch>/probe.env config` aufrufen.
 7. **Echte Abrufe in Containern** (Teil B): Proxy-Variablen, Zertifikat und Schlüssel durchreichen, ohne ihn anzuzeigen:
@@ -510,5 +563,5 @@ Stand 25.09.2026, erprobt in der Claude-Code-Cloud-Umgebung. Die Umgebung ist ei
      -e REQUESTS_CA_BUNDLE=/ca.crt -v /root/.ccr/ca-bundle.crt:/ca.crt:ro -v "$PWD":/src fever-devtest python …
    ```
    `requests` nutzt sonst sein eigenes Zertifikatsbündel und scheitert am Proxy. Große Antworten erst in eine Datei schreiben und nur Anfang und Ende ansehen (`CLAUDE.md`).
-8. **Nach einem Neustart der Cloud-Umgebung** sind Docker-Daemon, QEMU-Registrierung und Hilfs-Images weg. Die Schritte 1, 2 und 4 wiederholen; am 26.09.2026 dauerte das rund 2 Minuten.
-9. **Abhängigkeiten ändern:** im arm64-Container mit `pip install --only-binary=:all: -r <direkte Pakete>` auflösen, `pip freeze` übernehmen, direkte Pakete mit Zweckkommentar oben in `requirements.txt`, transitive darunter.
+8. **Nach einem Neustart der Cloud-Umgebung** sind Docker-Daemon und Hilfs-Images weg. Die Schritte 1 und 4 wiederholen.
+9. **Abhängigkeiten ändern:** im Container (linux/amd64) mit `pip install --only-binary=:all: -r <direkte Pakete>` auflösen, `pip freeze` übernehmen, direkte Pakete mit Zweckkommentar oben in `requirements.txt`, transitive darunter.

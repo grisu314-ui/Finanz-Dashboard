@@ -8,7 +8,7 @@
 
 Du arbeitest an genau einem Projekt: einem selbst gehosteten Web-Dashboard („Fieberthermometer"), das den Stresszustand des US- und des globalen Aktienmarkts anzeigt. Ein Nutzer, private Nutzung.
 
-Ein Worker ruft öffentliche Marktdaten ab und speichert sie mit Zeitstempel. Daraus entstehen zwei Scores (akuter Stress, Fallhöhe) und eine Ampel; eine Dash-Oberfläche stellt alles interaktiv dar. Betrieb als Docker-Compose-Stack auf einem Raspberry Pi (linux/arm64).
+Ein Worker ruft öffentliche Marktdaten ab und speichert sie mit Zeitstempel. Daraus entstehen zwei Scores (akuter Stress, Fallhöhe) und eine Ampel; eine Dash-Oberfläche stellt alles interaktiv dar. Betrieb als Docker-Compose-Stack auf TrueNAS (x86_64), verwaltet mit Dockge (E-21).
 
 Zweck ist Regime- und Risikoanzeige, keine Crash-Prognose. Ziel ist genau die hier beschriebene Anwendung, korrekt und von einer Einzelperson wartbar – nicht „eine möglichst gute Anwendung".
 
@@ -45,12 +45,12 @@ Zweck ist Regime- und Risikoanzeige, keine Crash-Prognose. Ziel ist genau die hi
 | Abrufe | requests, synchron |
 | Konfiguration | TOML in `config/`, Secrets aus `.env` |
 | Tests | pytest, ohne Netzwerkzugriff |
-| Deployment | `docker-compose.yml`: Dienste `web` und `worker` aus einem Image |
-| Zielplattform | Raspberry Pi, 64-Bit-OS (linux/arm64) |
+| Deployment | Dienste `web` und `worker` aus einem Image; Build im Projektverzeichnis, Betrieb über eine Compose-Datei ohne Build als Dockge-Stack (E-21, Umsetzung M3) |
+| Zielplattform | TrueNAS, x86_64 (linux/amd64); entschieden 26.09.2026 (E-21), vorher Raspberry Pi |
 
 Bewusste Abweichungen vom Bericht:
 - SQLite statt DuckDB: `web` und `worker` sind getrennte Prozesse, DuckDB erlaubt aber nur einen schreibenden Prozess oder mehrere nur lesende, nicht beides zugleich.
-- Kein Prefect, Grafana oder Streamlit: zu schwer für den Pi oder doppelt.
+- Kein Prefect, Grafana oder Streamlit: zu schwer oder doppelt.
 - Shiller-CAPE und FINRA Margin Debt schon in Phase 1, sonst bleibt die Fallhöhe-Achse leer.
 
 Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `assets/`. Alternative Stacks schlägst du nicht vor.
@@ -58,8 +58,8 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
 ## Befehle (einrichten und hier aktuell halten)
 
 - `pytest -q`: alle Tests (Python 3.14 mit `requirements-dev.txt`; Cloud-Umgebung: `docs/umsetzungsplan.md`, Abschn. 10)
-- `docker buildx build --platform linux/arm64 .`: Build-Probe auf dem Entwicklungsrechner (unter x86 mit QEMU/binfmt)
-- `docker compose up -d --build`: Start und Update auf dem Pi
+- `docker build .`: Build-Probe auf dem Entwicklungsrechner (x86_64 wie TrueNAS; Cloud-Umgebung: `docs/umsetzungsplan.md`, Abschn. 10)
+- Start und Update auf TrueNAS: Image im Projektverzeichnis bauen, Stack in Dockge starten; genaue Befehle folgen in M3 (E-21)
 - `docker compose run --rm worker python -m fever.backup`: sofortiges Backup
 - Migration, auch bei der Ersteinrichtung: `docker compose stop` → Backup → `docker compose run --rm worker alembic upgrade head` → `docker compose up -d`; Stand: `… alembic current`
 - `docker compose logs -f worker`
@@ -96,7 +96,7 @@ Ein Assistent ergänzt diese Dinge erfahrungsgemäß ungefragt. Hier nicht. Bei 
 - Keine Intraday-Daten, kein Streaming, keine WebSockets.
 - Kein Celery, kein Redis, keine Queue, kein Caching-Layer, kein asyncio.
 - Kein Postgres, keine DuckDB, keine Abstraktion für einen Datenbankwechsel.
-- Keine Telemetrie, keine externen CDNs, Webfonts oder Stylesheets per URL (auch nicht `dbc.themes`). Der Browser lädt nur vom Pi.
+- Keine Telemetrie, keine externen CDNs, Webfonts oder Stylesheets per URL (auch nicht `dbc.themes`). Der Browser lädt nur vom eigenen Server.
 - Kein Scraping gegen Nutzungsbedingungen, keine Umgehung von Lizenzgrenzen, keine Weitergabe lizenzierter Daten (ICE, Moody's, S&P).
 - Keine Optimierung ohne Messung: keine vorsorglichen Indizes, keine Pagination, keine Denormalisierung.
 - Keine generischen Basisklassen oder Plugin-Mechanismen. Zwischen einfacher und erweiterbarer Lösung wählst du die einfache.
@@ -110,7 +110,7 @@ Entscheidet der Nutzer gegen eine Funktion, trägst du sie hier ein.
 3. Umsetzen.
 4. Prüfen:
    - `pytest -q` muss grün sein.
-   - Nach Änderungen an Dockerfile oder Compose: arm64-Build-Probe.
+   - Nach Änderungen an Dockerfile oder Compose: Build-Probe.
    - Nach Oberflächenänderungen: Smoke-Test (App startet, `/_dash-layout` und Health-Endpunkt liefern 200), wo möglich Sichtprüfung im Browser.
    - Was sich nicht prüfen ließ, benennst du als offen.
 5. Selbst-Review: Funktion, Fehlerbehandlung, Randfälle, Einschränkungen. Belege statt Erfolgsbehauptungen (Befehl und Ausgabe), dazu der pytest-Befehl, der die Änderung abdeckt.
@@ -160,11 +160,11 @@ Ein falscher Score fällt nicht auf, bis die Ampel eine falsche Lage zeigt.
 - **Das lokale Archiv der ICE-BofA-Spreads ist unwiederbringlich**: FRED und ALFRED liefern seit April 2026 nur noch drei Jahre. Nichts, was diese Daten löschen oder überschreiben kann, ohne Rückfrage.
 - Entwicklung und Tests nie gegen die Produktivdatenbank; lokal gilt `data-dev/`. Migrationen zuerst auf einer Kopie eines Produktiv-Backups durchspielen.
 
-## Raspberry Pi und Docker
+## TrueNAS und Docker
 
-- Nur Abhängigkeiten mit aarch64-Wheels, nichts, was auf dem Pi kompiliert; vor der Aufnahme prüfen.
+- Nur Abhängigkeiten mit Wheels für linux/amd64, nichts, was beim Build kompiliert; vor der Aufnahme prüfen.
 - Ein Image für `web` und `worker`, `restart: unless-stopped`, Nicht-root-Benutzer (UID/GID per Build-Arg, Standard 1000).
-- Datenordner als Bind-Mount auf lokalem Dateisystem (kein NFS/SMB: SQLite-WAL funktioniert dort nicht), Host-Pfad aus `.env` (O-2). Ins Image wird nie geschrieben.
+- Datenordner als Bind-Mount auf einem Dataset des TrueNAS-Hosts selbst (kein NFS/SMB, auch nicht von einem anderen Rechner eingebunden: SQLite-WAL funktioniert dort nicht), Host-Pfad aus `.env` (Festlegung in M3). Ins Image wird nie geschrieben.
 - Logs nur auf stdout, in Compose begrenzt (`json-file` mit `max-size` und `max-file`), um das Speichermedium zu schonen.
 - Healthchecks ohne Zusatzpakete (`python -c …`): `web` per HTTP-Endpunkt, `worker` per Alter des Heartbeats.
 - Secrets nur in `.env` (wie `data*/` in `.gitignore`); im Repo liegt `.env.example`: Secrets leer, nicht geheime Werte vorbelegt (E-12). Nie loggen, nie ins Image. `.env` liest du nicht. Einziges Secret derzeit: der FRED-API-Schlüssel.
@@ -173,7 +173,7 @@ Ein falscher Score fällt nicht auf, bis die Ampel eine falsche Lage zeigt.
 
 ## Abhängigkeiten und Sprache
 
-- Neue Bibliothek nur mit Zweck in einem Satz, gepinnter Version in `requirements.txt` und geprüftem aarch64-Wheel. Zurückhaltung ist die Vorgabe: nichts, was sich in unter 50 Zeilen selbst schreiben lässt.
+- Neue Bibliothek nur mit Zweck in einem Satz, gepinnter Version in `requirements.txt` und geprüftem Wheel für linux/amd64. Zurückhaltung ist die Vorgabe: nichts, was sich in unter 50 Zeilen selbst schreiben lässt.
 - Code, Bezeichner, Kommentare und Commits auf Englisch; Oberfläche, Fehlermeldungen, `docs/` und Antworten an mich auf Deutsch.
 - Einheitliche Begriffe im Code: `series` (Rohreihe), `indicator` (abgeleitet), `block`, `stress` (akuter Stress), `vulnerability` (Fallhöhe), `vintage` (Stand).
 
@@ -192,8 +192,8 @@ Vor der Umsetzung des betroffenen Teils klären; Entschiedenes hier mit Antwort 
 | Nr. | Frage | Bis zur Entscheidung |
 |---|---|---|
 | O-1 | Kursquelle für ETFs und Indexmitglieder (RSP/SPY, Sektor- und Größenverhältnisse, Breite). FRED `SP500` reicht nur 10 Jahre zurück, genügt aber für VRP und Aktien-Anleihen-Korrelation | VRP und Korrelation aus FRED `SP500`; übrige Indikatoren weglassen, keine Quelle selbst wählen |
-| O-2 | Pi-Modell, RAM, Speichermedium, Pfad des Datenordners (SSD statt SD-Karte empfohlen) | Pfad **entschieden 26.09.2026:** `/home/dirk/volumes/fever` (über `.env`); Modell, RAM, Speichermedium offen |
+| O-2 | Zielsystem, RAM, Speichermedium, Pfad des Datenordners | **Entschieden 26.09.2026 (E-21):** TrueNAS statt Pi (Pi: CM4 mit 1,8 GiB RAM, SD-Karte mit 2,6 GB frei). Pfad, UID/GID und Dockge-Stack werden in M3 festgelegt; E-11 (Pfad auf dem Pi) ist überholt |
 | O-3 | Zugang: nur Heimnetz oder Tailscale, ggf. mit Basic-Auth-Pforte | **Entschieden 25.09.2026:** nur Heimnetz, kein Passwort; Port an `0.0.0.0`; keine Portweiterleitung im Router |
-| O-4 | Backup-Ziel außerhalb des Pi | nur lokale Backups |
+| O-4 | Backup-Ziel außerhalb des Servers | **Entschieden 26.09.2026 (E-22):** Backups bleiben im Datenordner auf TrueNAS, kein weiteres Ziel; Aufwand für Backups gering halten |
 | O-5 | ICE-Spreads: drei Jahre Historie bei fünf Jahren Mindesthistorie; betrifft Kreditblock und Rot-Regel. Optionen: BAA10Y (FRED, täglich ab 1986, Moody's-Lizenz) als langer Ersatz, Lizenz direkt bei ICE, befristete Ausnahme mit Kennzeichnung | archivieren und anzeigen, nicht in den Score |
 | O-6 | Alert-Kanal (ntfy, Telegram, E-Mail), Phase 2 | – |

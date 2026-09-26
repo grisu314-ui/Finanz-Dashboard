@@ -1,5 +1,7 @@
 # Einrichtung und Betrieb auf dem Raspberry Pi
 
+> **Überholt seit 26.09.2026 (E-21):** Das Dashboard läuft auf TrueNAS als Dockge-Stack statt auf dem Pi. Diese Anleitung wird in Meilenstein M3 neu geschrieben. Bis dahin nicht danach einrichten; auch der vorbelegte Datenordner in `.env.example` gilt noch für den Pi.
+
 Stand: 25.09.2026 · Für: dich als Anwender · Status: **M1 erledigt.** Image, `.env`-Vorlage, Datenbank anlegen, Backup und Wiederherstellung funktionieren; das ist in der Entwicklungsumgebung mit dem arm64-Image geprüft, auf einem Pi noch nicht. Datenabruf und Dauerbetrieb folgen mit Meilenstein M3 (siehe `docs/umsetzungsplan.md`).
 
 Markierungen:

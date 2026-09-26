@@ -12,7 +12,7 @@ Die Doku hat zwei Zielgruppen: eine KI, die das Projekt später fortsetzt, und d
 | `fever/web/texts/*.md` | Nutzer (in der App) | Kurzinfo und Erklärseite je Kennzahl | neuen oder geänderten Kennzahlen |
 
 - Jeder Einrichtungsschritt ist ein kopierbarer Befehl mit erwarteter Ausgabe. Braucht ein Schritt ein Secret, einen Schlüssel oder einen Hash, steht der Befehl zum Erzeugen daneben, nie der Wert.
-- Markierung je Abschnitt: ✅ geprüft (mit Datum und Ort: Entwicklungsrechner oder Pi) oder ⏳ geplant bzw. ungeprüft. Nichts als geprüft markieren, was nicht ausgeführt wurde.
+- Markierung je Abschnitt: ✅ geprüft (mit Datum und Ort: Entwicklungsrechner oder TrueNAS) oder ⏳ geplant bzw. ungeprüft. Nichts als geprüft markieren, was nicht ausgeführt wurde.
 - Anwender-Doku schreibt keine Parameterwerte aus `scoring.toml` ab, sondern verweist auf die Erklärseiten der App.
 - Neue oder geänderte Befehle auch in `CLAUDE.md` unter „Befehle“ eintragen.
 - Am Ende jeder Sitzung in `docs/umsetzungsplan.md` den Status (Abschnitt 1) und die Übergabe (Abschnitt 9) aktualisieren.

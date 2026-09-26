@@ -55,8 +55,8 @@ Die genauen Schwellenwerte stehen bewusst nicht hier, sondern in der App auf den
 - **Handelsfreie Tage** (Wochenende, US-Feiertage) sind normal und kein Fehler.
 - **Die offene Seite aktualisiert sich alle 5 Minuten** selbst; dein Zoom bleibt dabei erhalten.
 - **Banner:**
-  - „Worker ohne Lebenszeichen“: Der Datenabruf auf dem Pi steht, alle Werte werden nicht mehr aktualisiert.
-  - „Keine Verbindung zum Pi“: Die Seite erreicht den Pi nicht mehr; was du siehst, ist der Stand von der angegebenen Uhrzeit.
+  - „Worker ohne Lebenszeichen“: Der Datenabruf auf dem Server steht, alle Werte werden nicht mehr aktualisiert.
+  - „Keine Verbindung zum Server“: Die Seite erreicht den Server nicht mehr; was du siehst, ist der Stand von der angegebenen Uhrzeit.
 - Ansicht **„Datenstand“**: je Quelle letzter erfolgreicher Abruf, letzter Versuch, letzter Fehler.
 
 ## 6. Charts bedienen
