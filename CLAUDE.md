@@ -67,7 +67,7 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
 ## Architektur
 
 ```
-fever/sources/     je Quelle ein Modul: fetch → parse → validate
+fever/sources/     je Quelle ein Modul (fetch, parse); update.py prüft, datiert (Vintage) und speichert
 fever/store/       Tabellen (SQLAlchemy Core), Lese- und Schreibfunktionen
 fever/scoring/     reine Berechnung, importiert nichts aus web/ oder store/
 fever/worker.py    Abrufschleife, Scoring-Lauf, Heartbeat
@@ -116,7 +116,7 @@ Entscheidet der Nutzer gegen eine Funktion, trägst du sie hier ein.
 5. Selbst-Review: Funktion, Fehlerbehandlung, Randfälle, Einschränkungen. Belege statt Erfolgsbehauptungen (Befehl und Ausgabe), dazu der pytest-Befehl, der die Änderung abdeckt.
 
 - Spekuliere nie über Code, den du nicht geöffnet hast. Erfinde keine Funktionen oder Parameter; bei unsicherer Signatur sag es.
-- Neue Quelle: Endpoint real abrufen, Antwort in eine Datei schreiben und nur Anfang und Ende ansehen (ganze Historien füllen den Kontext), gekürzt als Fixture in `tests/fixtures/` ablegen, dann Parser und Test schreiben.
+- Neue Quelle: Endpoint real abrufen, Antwort in eine Datei schreiben und nur Anfang und Ende ansehen (ganze Historien füllen den Kontext), gekürzt als Fixture in `tests/fixtures/` ablegen, dann Parser und Test schreiben. Das Repository ist öffentlich: Bei lizenzierten Quellen (ICE, S&P, Moody's, Cboe) übernimmt die Fixture nur das Format, die Werte sind synthetisch (`tests/fixtures/README.md`, E-27).
 - Beim Kompaktieren erhalten: geänderte Dateien, Testbefehle, Stand der offenen Punkte.
 
 ## Fachliche Korrektheit hat Vorrang

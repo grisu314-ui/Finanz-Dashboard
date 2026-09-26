@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 und M1 erledigt, M2 Teil A (HTTP-Client) erledigt, M2 Teil B geplant** · Zielsystem seit E-21: TrueNAS · Nächster Schritt: M2 Teil B nach Freigabe (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0, M1 und M2 erledigt** · Zielsystem seit E-21: TrueNAS · Nächster Schritt: M3 (Voraussetzungen in Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -18,7 +18,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 |---|---|---|---|---|
 | M0 | Projektgerüst, Image, Compose | ☑ 25.09.2026 | – | erteilt 25.09.2026 |
 | M1 | Speicher, Migrationen, Backup | ☑ 25.09.2026 | M0, Schema-Freigabe, W-5 | erteilt 25.09.2026 |
-| M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ◐ Teil A ☑ 26.09.2026, Teil B geplant | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B offen |
+| M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ☑ 26.09.2026 | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B erteilt 26.09.2026 |
 | M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ☐ | M2, Angaben zu TrueNAS (M3, Schritt 5) | ja |
 | M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, FINRA, VX-Futures | ☐ | M3 | ja |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☐ | M4, L-1 bis L-12 | ja (Scoring) |
@@ -57,6 +57,11 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-20 | Umfang M2 Teil B | 23 Rohreihen (Liste unter M2, „Plan Teil B“). Nicht archiviert: NFCILEVERAGE, DFII10, THREEFYTP10, DTWEXBGS, VIXCLS | Die nicht archivierten Reihen sind in Phase 1 ungenutzt und bei FRED jederzeit vollständig abrufbar |
 | 26.09.2026 | E-21 | Zielsystem (O-2). Angaben zum Pi: Compute Module 4 Rev 1.1, 1,8 GiB RAM, SD-Karte (Root 14 GB, davon 2,6 GB frei) | TrueNAS statt Pi. Das Image wird im Projektverzeichnis auf TrueNAS gebaut; der Betrieb läuft über eine eigene Compose-Datei ohne Build, die das Image aufruft, als Dockge-Stack; Datenordner über Volumes dieser Compose-Datei | Zielplattform x86_64 (linux/amd64) statt arm64; TrueNAS gibt es offiziell nur für x86_64. E-11 (Pfad auf dem Pi) ist überholt. In M3: Laufzeit-Compose, `.env.example` und `docs/einrichtung.md` neu. Der Datenordner liegt auf einem Dataset des TrueNAS-Hosts, nie per NFS/SMB |
 | 26.09.2026 | E-22 | Backup-Ziel außerhalb (O-4) | Backups bleiben im Datenordner auf TrueNAS, kein weiteres Ziel. Aufwand für Backups gering halten („nur ein Dashboard“) | E-8 (bereits umgesetzt) bleibt unverändert; keine zusätzliche Kopie, keine weitere Mechanik |
+| 26.09.2026 | E-23 | Parameter je Reihe (Verzug, Uhrzeit, Toleranz, Grenzen) | Wie vorgeschlagen (Tabelle unter M2, „Ergebnis Teil B“): Verzug = regulärer Höchstwert, Grenzen fangen nur Einheiten- und Formatfehler ab | Bei Shutdown-Verspätungen und US-Feiertagen liegt die geschätzte Veröffentlichung in der Rückfüllung 1–3 Tage zu früh (rund 5 % der DGS10- und SOFR-Werte) |
+| 26.09.2026 | E-24 | VVIX-Werte vor dem 03.01.2007 | Nicht speichern (Feld `start`) | Die dünn besetzten, teils unplausiblen Werte von 2006 entfallen ohne Fehlermeldung. Beginn laut Sekundärquellen (arXiv 1506.07554, Macroption) |
+| 26.09.2026 | E-25 | IORB-Werte mit Datum in der Zukunft | Bis 7 Tage voraus zulassen (Feld `lead_days`, Standard 0) | Der angekündigte Satz wird gespeichert, sobald FRED ihn listet. Bei allen anderen Reihen bleibt ein Zukunftsdatum ein Fehler |
+| 26.09.2026 | E-26 | Cboe-CSV trotz unklarer Speicherklausel in den Nutzungsbedingungen | Weiter verwenden | Private, nicht kommerzielle Nutzung, ein Abruf je Datei und Tag, keine Weitergabe. Die Auslegungsfrage bleibt als Risiko (Abschnitt 8) |
+| 26.09.2026 | E-27 | Echte ICE- und Cboe-Werte in Fixtures des öffentlichen Repos (W-9) | Fixtures lizenzierter Quellen mit Originalformat und synthetischen Werten; den betroffenen Commit ersetzen (Force-Push auf `claude-testing`) | Die Werte sind aus der Branch-Historie entfernt; GitHub hält den alten Commit über seine ID noch eine Weile abrufbar. Regel in `CLAUDE.md` (Neue Quelle) ergänzt |
 
 ---
 
@@ -249,7 +254,7 @@ Für jeden Meilenstein gilt die Definition of Done:
   - Gegenprobe mit acht absichtlich eingebauten Fehlern, jeder erkannt: keine Maskierung im Client, Formatter ohne Maskierung, Allowlist aus, HTTP erlaubt, 404 wiederholt, kein Ratenlimit, `Retry-After` ignoriert, automatisches Folgen von Weiterleitungen
 - **Nicht geprüft:** echte Abrufe; die folgen in Teil B, sobald die Hosts freigegeben sind. Dockerfile und Compose sind unverändert, daher keine neue arm64-Probe.
 
-**Plan Teil B (26.09.2026 vorgelegt, Freigabe offen):**
+**Plan Teil B (freigegeben 26.09.2026):**
 - **Umfang (E-13, E-20):** 23 Rohreihen, je Beobachtung ein Wert (bei Cboe der Schlusskurs); IDs nach E-16:
   - Cboe: `vix`, `vix9d`, `vix3m`, `vix6m`, `vvix`, `skew`
   - FRED, ICE (nur drei Jahre, unwiederbringlich): `bamlh0a0hym2`, `bamlh0a1hybb`, `bamlh0a3hyc`, `bamlc0a0cm`, `bamlc0a4cbbb`
@@ -268,7 +273,7 @@ Für jeden Meilenstein gilt die Definition of Done:
   3. Echte Abrufe (Abschnitt 10.7): Antworten in Dateien, nur Anfang und Ende ansehen; FRED-Metadaten (Prüfung der (*)-IDs) und Veröffentlichungstermine (`fred/release/dates`).
   4. **Zwischenhalt:** Tabelle je Reihe mit Verzug, Veröffentlichungszeit (ET), Toleranz und Plausibilitätsgrenzen zur Freigabe. Verzug aus den tatsächlichen Terminen, Grenzen aus beobachtetem Minimum und Maximum mit großem Abstand.
   5. Fixtures, Parser, Tests, Katalog, Update-Funktion.
-  6. Ende-zu-Ende gegen `data-dev/`: Erstabruf aller Reihen; zweiter Abruf ohne neue Zeilen und ohne neue Rohdatei; Größe von Datenbank und `raw/` messen (Einschätzung vorab: `raw/` grob 0,3–1 GB pro Jahr).
+  6. Ende-zu-Ende gegen `data-dev/`: Erstabruf aller Reihen; zweiter Abruf ohne neue Zeilen und ohne neue Rohdatei; Größe von Datenbank und `raw/` messen (Einschätzung vorab: `raw/` grob 0,3–1 GB pro Jahr; gemessen: siehe Ergebnis).
   7. Gegenprobe mit absichtlich eingebauten Fehlern, `pytest -q`, Doku, Commit.
 - **Tests:**
   - Parser; der FRED-Platzhalter „.“ für fehlende Werte wird übersprungen
@@ -284,10 +289,62 @@ Für jeden Meilenstein gilt die Definition of Done:
   - NFCI/ANFCI: mittwochs 8:30 ET, Daten bis zum Vorfreitag (chicagofed.org)
   - SOFR: werktags gegen 8:00 ET (newyorkfed.org)
   - HY-OAS: Wert vom 24.09. auf FRED am 25.09. um 9:04 CDT; STLFSI4: Wert vom Freitag, 18.09., auf FRED am Mittwoch, 23.09., um 12:07 CDT. Beides Einzelbeobachtungen, keine Regel
-- **Offen vor Beginn:**
-  - Freigabe
-  - Bestätigung, dass die KI `fever/config.py` und `fever/http.py` lesen und die Quellen abrufen darf (am 26.09.2026 vom Auto-Modus der Sitzung blockiert)
-  - `cdn.cboe.com` antwortete auf `/` mit HTTP 403; Ursache (Proxy oder Server) offen
+- **Freigabe:** erteilt am 26.09.2026, einschließlich Lesen der beiden Dateien und echter Abrufe.
+
+**Ergebnis Teil B (26.09.2026, erledigt):**
+- **Umgesetzt wie freigegeben:**
+  - `config/series.toml` mit 23 Rohreihen, geprüft durch `series_catalog()` in `fever/config.py`
+  - `fever/sources/cboe.py` und `fever/sources/fred.py`: Abruf, Parser, Formatprüfung
+  - `fever/sources/update.py`: Plausibilität, Vintage, Anfügen, `source_status`
+  - Fixtures aus gekürzten echten Antworten vom 26.09.2026 unter `tests/fixtures/`; bei ICE und Cboe mit synthetischen Werten (E-27)
+- **Abweichungen vom Plan:**
+  - Die Ablauf-Funktion liegt in `fever/sources/update.py` statt in `__init__.py`. So importieren die Quellmodule nur aus dem Paket, ohne Zirkelimport.
+  - `cdn.cboe.com` leitet auf `cdn-api.cboe.com` weiter. Dieser Host steht jetzt in der Allowlist von `fever/http.py` und wird direkt abgerufen.
+  - `(source, source_id)` braucht keine eigene Eindeutigkeitsprüfung: Die ID ist die Quellkennung in Kleinbuchstaben (E-16), ein Duplikat wäre ein doppelter TOML-Schlüssel.
+  - Neue Katalogfelder `start` (E-24) und `lead_days` (E-25).
+- **Geprüfte Kennungen:** Alle 23 existieren. Die mit (*) markierten (ANFCI, T10Y2Y, ICSA, IC4WSA, SOFR, IORB, VIX9D, VVIX, SKEW) und VIX6M sind per Metadaten bzw. Datei geprüft (26.09.2026).
+- **Parameter (E-23):** Verzug = regulärer Höchstwert aus den Erstveröffentlichungen in ALFRED seit 2022. Uhrzeiten aus „last_updated“ (FRED) bzw. „Last-Modified“ (Cboe) mit Aufschlag. Toleranz überall nach E-10.
+
+  | Reihen | Verzug | Uhrzeit ET | Beleg |
+  |---|---|---|---|
+  | Cboe (6) | 0 | 22:00 | Dateien am 25.09. um 18:01 (VIX9D, VIX3M, VIX6M, VVIX), 20:30 (VIX), 21:51 ET (SKEW) geändert; Einzelbeobachtung |
+  | ICE-OAS (5) | 1 | 10:15 | FRED-Update 10:01–10:04 ET am Folgetag; ALFRED verzeichnet Verzug 0 und ist hier unbrauchbar |
+  | NFCI, ANFCI | 6 | 08:45 | 5 Tage 208×, 6 Tage 36×, Ausreißer 13/20 |
+  | STLFSI4 | 6 | 14:00 | 5 Tage 59×, 6 Tage 143×; Uhrzeit nur einmal beobachtet (13:07 ET) |
+  | T10Y3M, T10Y2Y | 0 | 17:15 | 0 Tage 576×, 1 Tag 3×; Update 17:03 ET am selben Tag |
+  | DGS10 | 1 | 16:30 | 1 Tag 445×, 3 Tage (Fr → Mo) 104×, Feiertage 29× |
+  | SOFR | 1 | 08:15 | 1 Tag 921×, 3 Tage 205×, Feiertage 54× |
+  | IORB | 0 | 16:45 | Satz steht 1–6 Tage vorher fest (E-25) |
+  | SP500 | 0 | 20:15 | Update 20:01 ET am selben Tag; keine ALFRED-Historie |
+  | ICSA, IC4WSA | 5 | 08:45 | 5 Tage 231×, 4 Tage 9×, 7 Ausreißer 12–54 Tage (vermutlich Shutdown 2025, nicht geprüft) |
+  | SAHMREALTIME | 37 | 10:00 | 31–37 Tage 50×, 39–45 Tage 4×, 80 Tage 1× |
+
+  Die Plausibilitätsgrenzen stehen in `config/series.toml`. Die historischen Extreme liegen weit innerhalb; im Erstabruf wurde kein Wert verworfen.
+- **Nutzungsbedingungen (geprüft 26.09.2026):**
+  - [FRED](https://fred.stlouisfed.org/docs/api/terms_of_use.html): Serien mit Copyright (ICE, S&P) nur zur eigenen Nutzung. Pflichthinweis in der Oberfläche: „This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.“ (M6)
+  - [Cboe](https://www.cboe.com/terms) (Stand 16.11.2022): „download one copy … for your personal non-commercial use“; ohne Zustimmung untersagt ist, Inhalte „otherwise … store … in an electronic retrieval system“. Kein ausdrückliches Verbot automatisierter Abrufe. Weiterverwendung trotz Auslegungsfrage: E-26.
+- **Formate:**
+  - Cboe: `DATE,OPEN,HIGH,LOW,CLOSE` (VIX, VIX9D, VIX3M, VIX6M) oder `DATE,<Symbol>` (VVIX, SKEW), Datum MM/DD/YYYY
+  - FRED: JSON mit `count`, `offset` und `observations`; „.“ steht für fehlende Werte (bei ICE Feiertage). ICE hat zusätzlich echte Werte an Monatsenden, die auf ein Wochenende fallen.
+- **Belege:**
+  - `pytest -q`: 143 passed (73 neu)
+  - Ende-zu-Ende gegen `data-dev/` mit echten Abrufen:
+    - Lauf 1: 101 363 Zeilen aus 23 Reihen, 0 verworfen, 0 Fehler, 22 s
+    - Lauf 2: 0 neue Zeilen, keine neue Rohdatei
+    - Größe: Datenbank 14,7 MB (plus WAL 6,0 MB), `raw/` 0,64 MB
+  - Rohdaten: Ein Vollabruf aller Reihen ergibt 0,68 MB komprimiert. Bei täglichem Abruf sind das grob 0,15–0,25 GB pro Jahr (Einschätzung; FRED-Antworten ändern sich täglich, weil sie das Abrufdatum enthalten).
+  - Gegenprobe mit 16 absichtlich eingebauten Fehlern, jeder von mindestens einem Test erkannt:
+    - Vintage immer geschätzt, Wochenendregel fehlt, UTC statt New York, keine Begrenzung auf die Abrufzeit
+    - Grenzen, `lead_days` oder `start` ignoriert; verworfene Werte nicht in `source_status`
+    - Cboe: OPEN statt CLOSE, Schutz der Tageszeile fehlt
+    - FRED: „.“ nicht übersprungen, Abschneiden nicht erkannt
+    - Duplikate nicht erkannt; Toleranzabweichung ohne Begründung; ID ungleich Quellkennung; `cdn-api.cboe.com` fehlt in der Allowlist (dafür kam ein Test hinzu)
+  - API-Schlüssel in keiner Datei des Repos, der Fixtures und der Rohdaten (geprüft per Skript, ohne Ausgabe des Werts)
+- **Nicht geprüft:**
+  - ob die Cboe-CSV tagsüber eine laufende Tageszeile enthält (frühestens Montag, 28.09.2026, während der US-Handelszeit); der Schutz ist trotzdem aktiv
+  - Uhrzeiten, die nur einmal beobachtet wurden (Cboe, ICE, STLFSI4, SP500, T10Y3M, T10Y2Y): in M3 aus dem Rohdatenarchiv prüfen
+  - Build und Betrieb auf TrueNAS (M3). Dockerfile und Compose sind unverändert, daher keine Build-Probe.
+- **Technische Schuld (nicht behoben):** Der HTTP-Client verwirft bei HTTP-Fehlern den Antworttext. FREDs eigene Fehlermeldung (etwa bei HTTP 400 für eine eingestellte Reihe) erscheint deshalb weder im Log noch im Datenstand.
 
 ### M3 – Worker und erste Inbetriebnahme auf TrueNAS
 
@@ -307,6 +364,8 @@ Für jeden Meilenstein gilt die Definition of Done:
 5. Angaben des Nutzers vor dem Plan zu M3: TrueNAS-Version, Pfad des Datasets für den Datenordner, Projektverzeichnis für den Build, Stack-Verzeichnis von Dockge, Eigentümer (UID/GID) des Datenordners, freier Web-Port.
 6. Build und Betrieb trennen: ob die bestehende `docker-compose.yml` zur Laufzeit-Datei wird oder eine zweite Datei entsteht, im Plan zu M3 entscheiden (zwei Dateien können auseinanderlaufen).
 7. Einrichtung auf TrueNAS nach der neuen `docs/einrichtung.md`. Führt der Nutzer aus, weil die KI keinen Zugriff auf TrueNAS hat. Jeder ausgeführte Schritt wird mit ✅ und Datum markiert.
+8. Abrufe je Reihe nach `release_time` und `lag_days` aus `config/series.toml` planen. `fever.sources.update.update_series` erledigt Abruf, Prüfung und Speichern einer Reihe.
+9. Nach einigen Tagen Betrieb die tatsächlichen Änderungszeiten aus dem Rohdatenarchiv (Zeitstempel bei geändertem Inhalt) mit `release_time` vergleichen. Das betrifft vor allem die nur einmal beobachteten Uhrzeiten (M2, „Ergebnis Teil B“). Abweichungen als Änderung zur Freigabe vorlegen, dazu das Verhalten der Cboe-CSV während der US-Handelszeit.
 
 **Tests:**
 - Fälligkeit rund um die Sommerzeitwechsel: USA endet am 01.11.2026, EU am 25.10.2026
@@ -357,7 +416,7 @@ Für jeden Meilenstein gilt die Definition of Done:
 - `fever/web/pages/`: Übersicht, Themen-Ansichten, Visualisierung, Datenstand, Erklärungen, `/kennzahl/<id>`
 - `assets/`: `base.css` (Tokens hell/dunkel, Layout), `tooltip.css`, `print.css`, `fullscreen.js`, `theme.js`
 
-**Schritte:** Abschnitt 7 umsetzen. Healthcheck `web` in Compose.
+**Schritte:** Abschnitt 7 umsetzen. Healthcheck `web` in Compose. Pflichthinweis nach den FRED-Nutzungsbedingungen auf jeder Seite, z. B. in der Fußzeile: „This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.“
 
 **Tests:**
 - Smoke-Test: App startet, `/_dash-layout` und Health-Endpunkt liefern 200
@@ -438,6 +497,8 @@ Nichts davon wird geraten. Die Vorschläge sind begründete Startpunkte, keine E
 | W-5 | `CLAUDE.md`: Fehler „werden geloggt, nicht gespeichert, und erscheinen im Datenstand“. Die Web-Oberfläche kann Worker-Logs nicht lesen | Entschieden (E-9): Fehlerhafte Werte werden nie gespeichert. Der letzte Fehler je Quelle (Zeit und Meldung) steht in `source_status`, ohne Historie |
 | W-6 | Bericht 6.3, Ansicht 2 nennt MOVE (ICE-Lizenz, nicht in Phase 1) und VIX6M (nicht in Tabelle 6.1) | MOVE entfällt in Phase 1; VIX6M als Rohreihe in M2 Teil B (E-20), VX-Futures in M4 (E-18) |
 | W-7 | Der Migrationsablauf in `CLAUDE.md` (stop → Backup → upgrade → up) gilt „auch bei der Ersteinrichtung“; dann gibt es aber nichts zu stoppen oder zu sichern | Die Einrichtungsanleitung lässt Stop und Backup bei der Ersteinrichtung aus; `fever.backup` meldet eine fehlende Datenbank klar |
+| W-8 | Bericht 6.1: VIX3M-Historie ab 04.12.2007. Die Cboe-CSV beginnt erst am 18.09.2009 (geprüft 26.09.2026) | Archiviert wird, was die CSV liefert; für das 10-Jahres-Fenster folgenlos |
+| W-9 | `CLAUDE.md` verlangt gekürzte echte Antworten als Fixtures, verbietet aber die Weitergabe lizenzierter Daten; das Repository ist öffentlich | E-27: Format echt, Werte lizenzierter Quellen synthetisch |
 
 ---
 
@@ -508,16 +569,18 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 | Druck von dunklen Charts | unlesbare PDFs | Prüfung in M6, Fallback `beforeprint` |
 | Kein Passwort im Heimnetz (E-3) | jedes Gerät im WLAN sieht das Dashboard | akzeptiert; die Daten sind öffentliche Marktdaten ohne Kontobezug |
 | Docker-Portfreigaben umgehen Host-Firewallregeln (E-4) | Firewall-Regeln greifen nicht für den Web-Port | in `docs/einrichtung.md` dokumentiert; keine Portweiterleitung im Router |
+| Speicherklausel der Cboe-Nutzungsbedingungen (E-26) | Cboe könnte das private Archiv beanstanden | nur private Nutzung, keine Weitergabe, ein Abruf je Datei und Tag; bei Beanstandung Cboe-Reihen aus dem Katalog nehmen |
+| Veröffentlichungszeiten teils nur einmal beobachtet (E-23) | geschätzte Vintages der Rückfüllung um Stunden verschoben | Prüfung aus dem Rohdatenarchiv in M3 (Schritt 9) |
 
 ---
 
 ## 9. Übergabe an die nächste Sitzung
 
-- **Stand (26.09.2026):** M0, M1 und M2 Teil A erledigt (70 Tests grün). M2 Teil B ist geplant (Abschnitt 4, M2, „Plan Teil B“), die Entscheidungen E-13 bis E-20 sind getroffen. Zielsystem ist seit E-21 TrueNAS mit Dockge statt Pi; Compose, `.env.example` und `docs/einrichtung.md` beschreiben noch den Pi und werden in M3 umgestellt. Noch keine Quellen, kein Worker, keine Oberfläche.
-- **Nächster Schritt:** M2 Teil B. Voraussetzungen:
-  1. Freigabe des Plans Teil B durch den Nutzer.
-  2. Bestätigung für das Lesen von `fever/config.py` und `fever/http.py` und für die echten Abrufe (am 26.09.2026 vom Auto-Modus blockiert).
-  3. **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): `api.stlouisfed.org` antwortet (26.09.2026); `cdn.cboe.com` lieferte HTTP 403 auf `/`, klären. Für M4 später: `publicreporting.cftc.gov`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `www.finra.org` und der Host des Shiller-Datensatzes.
+- **Stand (26.09.2026):** M0, M1 und M2 erledigt (143 Tests grün). 23 Rohreihen von Cboe und FRED werden abgerufen, geprüft und mit Vintage gespeichert (Abschnitt 4, M2, „Ergebnis Teil B“); Entscheidungen E-13 bis E-26. Zielsystem ist seit E-21 TrueNAS mit Dockge statt Pi; Compose, `.env.example` und `docs/einrichtung.md` beschreiben noch den Pi und werden in M3 umgestellt. Noch kein Worker, keine Oberfläche; das ICE-Archiv startet erst mit dem Betrieb (M3).
+- **Nächster Schritt:** M3 (Worker und Inbetriebnahme auf TrueNAS). Voraussetzungen:
+  1. Angaben des Nutzers zu TrueNAS (M3, Schritt 5) und Entscheidung über den Betriebs-Branch (Schritt 4).
+  2. Plan für M3 vorlegen und Freigabe abwarten (`CLAUDE.md`, Arbeitsweise 1–2).
+  3. **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): `api.stlouisfed.org` und `cdn-api.cboe.com` erreichbar (26.09.2026). Für M4 später: `publicreporting.cftc.gov`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `www.finra.org` und der Host des Shiller-Datensatzes.
   4. **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
 - **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-1 bis L-13 außer L-5 (Abschnitt 5), Angaben zu TrueNAS und Betriebs-Branch (M3).
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Tests siehe Abschnitt 10; die Betriebsbefehle für TrueNAS folgen in M3 (`docs/einrichtung.md` beschreibt noch den Pi).
@@ -548,6 +611,7 @@ Stand 25.09.2026, erprobt in der Claude-Code-Cloud-Umgebung. Die Umgebung ist ei
      --network host --build-arg HTTPS_PROXY --build-arg HTTP_PROXY -t fever-devtest .
    docker run --rm -v "$PWD":/src fever-devtest pytest -q -p no:cacheprovider
    ```
+   Antwortet Docker Hub mit „429 Too Many Requests“ (anonyme Abrufe gedrosselt, so am 26.09.2026), das Basis-Image über den Spiegel holen und umbenennen: `docker pull mirror.gcr.io/library/python:3.14-slim-trixie && docker tag mirror.gcr.io/library/python:3.14-slim-trixie python:3.14-slim-trixie`.
 5. **Build-Probe** (seit E-21 für x86_64, ohne Emulation; in dieser Form noch nicht ausgeführt, Stand 26.09.2026): Kopie des Dockerfiles mit den zwei Zertifikatszeilen nach `FROM`, sonst unverändert:
    ```bash
    sed '/^FROM /a COPY --from=proxyca ca-bundle.crt /tmp/proxy-ca.crt\nENV PIP_CERT=/tmp/proxy-ca.crt' \
@@ -559,9 +623,11 @@ Stand 25.09.2026, erprobt in der Claude-Code-Cloud-Umgebung. Die Umgebung ist ei
 6. **Compose prüfen ohne `.env`** (die echte `.env` wird nie gelesen): eine Testdatei mit Platzhaltern im Scratchpad anlegen und `docker compose --env-file <scratch>/probe.env config` aufrufen.
 7. **Echte Abrufe in Containern** (Teil B): Proxy-Variablen, Zertifikat und Schlüssel durchreichen, ohne ihn anzuzeigen:
    ```bash
-   docker run --rm --network host -e HTTPS_PROXY -e HTTP_PROXY -e FRED_API_KEY \
-     -e REQUESTS_CA_BUNDLE=/ca.crt -v /root/.ccr/ca-bundle.crt:/ca.crt:ro -v "$PWD":/src fever-devtest python …
+   docker run --rm --network host -e HTTPS_PROXY -e HTTP_PROXY -e FRED_API_KEY -e PYTHONPATH=/src \
+     -e FEVER_DATA=/src/data-dev -e REQUESTS_CA_BUNDLE=/ca.crt -v /root/.ccr/ca-bundle.crt:/ca.crt:ro \
+     -v "$PWD":/src fever-devtest python …
    ```
+   `data-dev/` vorher anlegen und migrieren: `mkdir -p data-dev && docker run --rm -e FEVER_DATA=/src/data-dev -v "$PWD":/src fever-devtest alembic upgrade head`.
    `requests` nutzt sonst sein eigenes Zertifikatsbündel und scheitert am Proxy. Große Antworten erst in eine Datei schreiben und nur Anfang und Ende ansehen (`CLAUDE.md`).
 8. **Nach einem Neustart der Cloud-Umgebung** sind Docker-Daemon und Hilfs-Images weg. Die Schritte 1 und 4 wiederholen.
 9. **Abhängigkeiten ändern:** im Container (linux/amd64) mit `pip install --only-binary=:all: -r <direkte Pakete>` auflösen, `pip freeze` übernehmen, direkte Pakete mit Zweckkommentar oben in `requirements.txt`, transitive darunter.

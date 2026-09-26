@@ -22,6 +22,7 @@ from fever.log import mask
 # Host -> minimum seconds between two requests to it. Further hosts come with milestone M4.
 ALLOWED_HOSTS = {
     "cdn.cboe.com": 1.0,
+    "cdn-api.cboe.com": 1.0,  # cdn.cboe.com redirects the daily price CSVs here (checked 26.09.2026)
     "api.stlouisfed.org": 1.0,  # FRED allows 120 requests/minute per key (secondary sources)
 }
 USER_AGENT = f"Fieberthermometer/{__version__} (private, non-commercial)"

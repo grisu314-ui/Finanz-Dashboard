@@ -6,7 +6,7 @@ Zweck ist Regime- und Risikoanzeige, **keine Crash-Prognose, keine Handelssignal
 
 ## Status
 
-Stand 26.09.2026: **M0, M1 und M2 Teil A erledigt**: Projektgerüst, Docker-Image, Datenbank mit geschütztem Archiv, Backup und Wiederherstellung, abgesicherter HTTP-Client. M2 Teil B (Datenquellen Cboe und FRED) ist geplant. Noch nicht lauffähig: Datenabruf (ab M2/M3) und Oberfläche (ab M6). Die Einrichtung auf TrueNAS entsteht mit M3. Fortschritt: `docs/umsetzungsplan.md`, Abschnitt 1.
+Stand 26.09.2026: **M0, M1 und M2 erledigt**: Projektgerüst, Docker-Image, Datenbank mit geschütztem Archiv, Backup und Wiederherstellung, abgesicherter HTTP-Client, 23 Datenreihen von Cboe und FRED mit Prüfung und Veröffentlichungszeitpunkt. Noch nicht lauffähig: Dauerbetrieb des Datenabrufs (ab M3) und Oberfläche (ab M6). Die Einrichtung auf TrueNAS entsteht mit M3. Fortschritt: `docs/umsetzungsplan.md`, Abschnitt 1.
 
 ## Dokumentation
 
