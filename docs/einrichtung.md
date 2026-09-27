@@ -157,6 +157,7 @@ Einmalig vor dem ersten Start. Der Hilfsbefehl `$RUN` startet einen Einmal-Conta
 
 ```bash
 RUN='sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v /mnt/Daten-Z1/apps/feewer/data:/data fever:local'
+echo "$RUN"    # erwartet: sudo docker run --rm --user 568:568 … fever:local  (leer? Zeile darüber erneut ausführen)
 $RUN alembic upgrade head
 #   erwartet u. a.: Running upgrade  -> 0001, Initial schema: …
 $RUN alembic current
@@ -251,6 +252,7 @@ git diff --stat HEAD@{1} -- migrations/                          # Ausgabe = neu
 sudo docker compose build
 # in Dockge: Stack "finanz-dashboard" stoppen
 RUN='sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v /mnt/Daten-Z1/apps/feewer/data:/data fever:local'    # wie Schritt 6, gilt bis zum Abmelden
+echo "$RUN"    # erwartet: sudo docker run --rm --user 568:568 … fever:local; leer heißt: neue Sitzung, Zeile darüber erneut ausführen
 $RUN python -m fever.backup        # Sicherung vor der Migration
 #   erwartet: INFO __main__: Backup erstellt und geprüft: /data/backup/fever-…-manual.sqlite3
 $RUN alembic upgrade head
@@ -349,6 +351,7 @@ Den Ordner `alt-…` erst löschen, wenn wieder alles korrekt läuft. Zeigt `ale
 | Dashboard nicht erreichbar | `sudo docker ps` zeigt `finanz-dashboard-web-1`? Sonst fehlt der Dienst in der Compose-Kopie von Dockge (Schritt 8). Dann `curl -s http://127.0.0.1:8003/health` und `sudo docker logs finanz-dashboard-web-1` |
 | Rotes Banner „Worker ohne Lebenszeichen“ | Der Worker schreibt seit über 45 Minuten keinen Heartbeat: Worker-Log und Healthcheck prüfen |
 | Rotes Banner „Keine Verbindung zum Server“ | Der Browser erreicht den Dienst `web` nicht mehr; die angezeigten Werte stammen von der genannten Uhrzeit |
+| `$RUN …` meldet `ImportError` mit Pfad `/usr/lib/python3/dist-packages` | Die Variable `RUN` ist in dieser Shell leer (etwa nach neuem Anmelden); der Befehl lief ohne Container mit dem Python von TrueNAS und brach beim Import ab, ohne etwas zu ändern. `RUN` neu setzen (Schritt 6), mit `echo "$RUN"` prüfen, Befehl wiederholen |
 | Log-Zeile „Scoring fehlgeschlagen“ | Die Abrufe laufen weiter; der Fehler steht unter `scoring` im Datenstand. Mit `sudo docker exec finanz-dashboard-worker-1 python -m fever.score` wiederholen und die Ausgabe melden |
 
 Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
