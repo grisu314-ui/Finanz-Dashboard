@@ -10,6 +10,7 @@ EXPECTED_IDS = {
     "bamlh0a0hym2", "bamlh0a1hybb", "bamlh0a3hyc", "bamlc0a0cm", "bamlc0a4cbbb",
     "nfci", "anfci", "stlfsi4", "t10y3m", "t10y2y", "sahmrealtime",
     "icsa", "ic4wsa", "sofr", "iorb", "sp500", "dgs10",
+    "usrec",  # display only (E-56)
     # M4a (E-35 ids)
     "ecb_ciss", "ecb_exr_usd", "ecb_exr_jpy",
     "ofr_fsi", "ofr_fsi_credit", "ofr_fsi_equity_valuation", "ofr_fsi_safe_assets", "ofr_fsi_funding",

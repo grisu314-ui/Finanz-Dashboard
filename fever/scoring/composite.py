@@ -20,8 +20,8 @@ from datetime import date, datetime, time, timedelta, timezone
 
 import numpy as np
 
-from fever.config import FREQUENCY_DAYS, STRESS_BLOCKS, VULNERABILITY, Indicator, ScoringConfig
-from fever.release import NEW_YORK
+from fever.config import STRESS_BLOCKS, VULNERABILITY, Indicator, ScoringConfig
+from fever.release import NEW_YORK, is_stale
 
 OK, MISSING, STALE, HISTORY = "ok", "missing", "stale", "history"
 GREEN, YELLOW, ORANGE, RED = 0, 1, 2, 3
@@ -43,6 +43,7 @@ class IndicatorHistory:
     available: list[datetime]  # estimated publication (UTC), non-decreasing
     percentiles: np.ndarray  # oriented (high = more stress or vulnerability); NaN below min history
     display_percentiles: np.ndarray | None = None  # shorter display window (display_window = true)
+    bands: np.ndarray | None = None  # quantiles 10/50/90 of the percentile window, one row per date (E-64)
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,9 @@ class IndicatorScore:
     value: float | None
     percentile: float | None
     percentile_display: float | None
+    band_p10: float | None = None  # raw values: 10th, 50th and 90th percentile of the window (E-64)
+    band_p50: float | None = None
+    band_p90: float | None = None
 
 
 @dataclass(frozen=True)
@@ -85,14 +89,14 @@ def indicator_score(history: IndicatorHistory, day: date) -> IndicatorScore:
     obs_date = history.dates[index]
     percentile = _number(history.percentiles[index])
     display = None if history.display_percentiles is None else _number(history.display_percentiles[index])
-    age = (day - (obs_date + timedelta(days=indicator.lag_days))).days
-    if age > FREQUENCY_DAYS[indicator.frequency] + indicator.tolerance_days:
+    if is_stale(obs_date, indicator.lag_days, indicator.frequency, indicator.tolerance_days, day):
         status = STALE
     elif percentile is None:
         status = HISTORY
     else:
         status = OK
-    return IndicatorScore(day, indicator.id, status, obs_date, float(history.values[index]), percentile, display)
+    bands = (None, None, None) if history.bands is None else tuple(_number(b) for b in history.bands[index])
+    return IndicatorScore(day, indicator.id, status, obs_date, float(history.values[index]), percentile, display, *bands)
 
 
 def compute(

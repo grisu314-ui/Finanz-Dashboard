@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2, M4 und M5 erledigt (M5 noch nicht auf TrueNAS), M3: Worker läuft auf TrueNAS mit 60 Reihen** · Nächster Schritt: M5 auf TrueNAS einspielen (mit Migration 0002), M6 planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 und M4 bis M7 erledigt, M3: Worker und Dashboard laufen auf TrueNAS; M7 (mit Migration 0003) noch nicht auf TrueNAS** · Nächster Schritt: Update mit Migration 0003 (Abschnitt 9), Texte prüfen (M8)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -21,10 +21,10 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ☑ 26.09.2026 | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B erteilt 26.09.2026 |
 | M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ◐ läuft auf TrueNAS seit 26.09.2026, ICE-Archiv ab Beobachtung 26.09.2023; offen: erste Werktags-Abrufe, Schritt 9 | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
 | M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ☑ 26.09.2026 (M4a bis M4d, E-37) | M3 | M4a bis M4d erteilt 26.09.2026 |
-| M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☑ 26.09.2026 (auf TrueNAS ⏳) | M4, L-1 bis L-12 | erteilt 26.09.2026 |
-| M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☐ | M1 (Lesen), M3 (Heartbeat) | ja |
-| M7 | Ansichten 1–7 | ☐ | M5, M6, L-13 | ja |
-| M8 | Erklärtexte je Kennzahl | ☐ | parallel zu M6/M7 | ja (Texte prüfen) |
+| M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026) | M4, L-1 bis L-12 | erteilt 26.09.2026 |
+| M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026; Nachtrag Rezessionsbalken E-56 dort ⏳) | M1 (Lesen), M3 (Heartbeat) | erteilt 26.09.2026 |
+| M7 | Ansichten 1–7 | ☑ 27.09.2026: Übersicht (vormals Übersicht B) und Ansichten 2–6 (E-62, E-65, E-67), Perzentilbänder (E-64, Migration 0003) und Ansicht 7 (E-63, E-66); die Variante M7a ist wieder entfernt (E-67); auf TrueNAS ⏳ | M5, M6, L-13 | M7a erteilt 26.09.2026, M7 erteilt 27.09.2026 |
+| M8 | Erklärtexte je Kennzahl | ◐ 29 Texte (alle 19 Indikatoren, 3 Blöcke, 4 Scores, 3 Begriffe); Prüfung durch den Nutzer ausstehend | parallel zu M6/M7 | ja (Texte prüfen) |
 | M9 | Abnahme Phase 1 | ☐ | M0–M8 | – |
 
 **Warum diese Reihenfolge:** FRED liefert die ICE-BofA-Spreads seit April 2026 nur noch für drei Jahre (Bericht, TL;DR). Jeder Tag ohne laufenden Worker verschiebt den Anfang des lokalen Archivs um einen Tag nach hinten. Deshalb geht ein minimaler Worker mit FRED und Cboe (M0–M3) in Betrieb, bevor Scoring und Oberfläche entstehen.
@@ -86,6 +86,22 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-49 | Kalender und Indikatoren (L-9 bis L-11) | Ein Score je Cboe-Handelstag (Tage mit VIX-Schluss); eine Beobachtung zählt an t, wenn Datum + Verzug zur `release_time` (Wochenende → Montag) spätestens am Ende des New-Yorker Tages t liegt. 16 Stress-Indikatoren in 3 Blöcken und 3 Fallhöhe-Komponenten (Tabelle unter M5; zunächst irrtümlich als 15 gezählt). VRP: niedrig = Stress; T10Y3M nur Anzeige; USD/JPY als 5-Tage-Veränderung und 21-Tage-Vola; Erstanträge ggü. 52-Wochen-Tief. Fallhöhe = Mittel von mindestens 2 Komponenten; VX-COT im Score mit dem 10-Jahres-Fenster, 3-Jahres-Perzentil zusätzlich gespeichert (Anzeige) | Nur Anzeige: HY-OAS und weitere ICE-Spreads (O-5), ANFCI, OFR gesamt und übrige Teilindizes, T10Y3M/T10Y2Y, SKEW, VIX9D, VIX6M, VX-Futures |
 | 26.09.2026 | E-50 | Speicherung der Scores | Migration 0002 mit `indicator_score` und `composite_score`; jede Neuberechnung ersetzt beide Tabellen vollständig in einer Transaktion | Rohdaten (`observation`) bleiben unberührt; keine Historie früherer Rechenläufe |
 | 26.09.2026 | E-51 | Randfälle des Scorings (Annahmen aus der Umsetzung von M5) | Bestätigt wie umgesetzt: EWMA beginnt nach einer Lücke neu; realisierte Vola ohne Mittelwertabzug; ein Tag ohne VIX/VIX3M-Wert unterbricht die Serien, beendet eine aktive Rot-Regel aber nicht; ohne Composite bestimmen die übrigen Regeln die Ampel, die Oberfläche zeigt „Composite fehlt“ | Die Kennzeichnung ohne Composite folgt in M6 |
+| 26.09.2026 | E-52 | Umfang der Übersicht in M6 | Ampel, Stress, Fallhöhe und Konfidenz mit Aktualität und Verlauf; dafür schon jetzt die Texte dieser vier Kennzahlen und der Konzeptseiten Perzentil und Veraltung | Der Nutzer prüft diese Texte wie in M8; alle übrigen Kennzahlen erscheinen erst mit ihrem Text (M7/M8) |
+| 26.09.2026 | E-53 | Umfang der Ansicht „Datenstand“ | Je Quelle (letzter Erfolg, Versuch, Fehler, dazu Worker und Scoring) und je Reihe (letzte Beobachtung, Abruf, Alter, „veraltet“ nach E-10) | Veraltete Reihen stehen oben |
+| 26.09.2026 | E-54 | gunicorn-Prozesse | 1 Prozess | 4 Threads im Prozess, damit parallele Callbacks nicht warten; wenig Speicher |
+| 26.09.2026 | E-55 | Farbsystem | Validierte Referenzpalette des Dataviz-Skills: Ampel in vier Statusfarben immer mit Text, Perzentile als blaue Einfarbskala (E-1), hell und dunkel je eigene Stufen | Linienfarben mit dem Validator geprüft; Systemschriften, keine Webfonts |
+| 26.09.2026 | E-56 | Rezessionsbalken in den Charts (Nutzerwunsch) | FRED `USREC` (NBER-Datierung, Trough-Methode wie in den FRED-Grafiken) als graue Flächen hinter den Linien in allen Zeitreihen-Charts; Hinweis in der Datierung jedes Charts; Konzeptseite „Rezessionsbalken“ | Nur Anzeige, in keinem Indikator und keinem Score; eine laufende Rezession erscheint erst nach der NBER-Datierung, Monate später |
+| 26.09.2026 | E-57 | Bereiche und Einzelreihen auf der Übersicht (Nutzerwunsch, M7a) | Unter allem Bisherigen vier Bereiche in fester Reihenfolge: Volatilität/Optionen, Kredit/Funding, Makro/Finanzierungsbedingungen, Fallhöhe; je Bereich nur die Indikatoren, die in den Score eingehen (19). Je Indikator ein erzeugter Abschnitt „So fließt der Wert in den Bereich ein“ aus `series.toml` und `scoring.toml` mit der heutigen Rolle aus den gespeicherten Scores | Reine Anzeige-Reihen (HY-OAS, SKEW, Zinskurve, CAPE, VX-Termstruktur) folgen in M7; M7a ersetzt die Themen-Ansichten 2 und 4–6 für die Score-Indikatoren |
+| 26.09.2026 | E-58 | Texte für die neuen Kennzahlen | Alle 22 jetzt (19 Indikatoren, Blöcke Volatilität, Kredit, Makro); E-52 bleibt: keine Kennzahl ohne Text | Fakten aus Bericht Abschn. 1–3 und Primärquellen mit Abrufdatum; der Nutzer prüft die Texte |
+| 26.09.2026 | E-59 | Charts je Indikator | Wert und Perzentil untereinander, beide mit Rezessionsflächen | Keine zweite y-Achse |
+| 26.09.2026 | E-60 | Aufklappen | Zwei Ebenen: Bereich (Verlauf und Indikatorzeilen), darunter jeder Indikator einzeln; Charts entstehen nur für geöffnete Abschnitte | Gemessen: alle 19 Indikatoren auf einmal wären rund 9,4 MB Chart-Daten je Aufruf und Aktualisierung |
+| 26.09.2026 | E-61 | Startzeitraum der Charts | Bereiche und Einzelreihen starten mit der ganzen Historie (alle Rezessionsflächen sichtbar); der Verlauf oben in der Übersicht und die Erklärseiten bleiben bei 5 Jahren | Die letzte US-Rezession endete im April 2020; im 5-Jahres-Startbild wäre keine Fläche zu sehen |
+| 27.09.2026 | E-62 | M7 neben M7a (Nutzerwunsch: beide Versionen behalten, später entscheiden) | Die bisherige Übersicht mit den Bereichen bleibt Startseite (`/`); die Ansichten nach Bericht 6.3 kommen als eigene Seiten dazu: „Übersicht B“ (`/uebersicht-b`) und `/ansicht/<name>`, in einer zweiten Navigationszeile „Ansichten“ | Erklär- und Datenstand-Seiten bleiben unverändert; welche Version bleibt oder wie beide zusammengehen, entscheidet der Nutzer später |
+| 27.09.2026 | E-63 | Krisenmarken (L-13) | Je Episode des Berichts Start und Ende als Schlusskurs-Hoch und -Tief des S&P 500, recherchiert mit Quelle, in `config/episodes.toml`; nur Anzeige | Unbelegtes wird markiert |
+| 27.09.2026 | E-64 | Perzentilbänder 10/50/90 | Im Scoring berechnet und gespeichert (Migration 0003, drei Spalten in `indicator_score`), aus den eigenen Werten im selben Fenster wie das Perzentil, nur mit Daten bis t | Auf TrueNAS Migration mit Probe an einer Backup-Kopie; der Scoring-Lauf wird länger |
+| 27.09.2026 | E-65 | Re-Steepening der Zinskurve (L-10) | Violette Fläche, solange 10J − 3M unter null liegt; das Ende einer Fläche ist das Re-Steepening | Keine neuen Parameter; kurze Unterschreitungen erscheinen als schmale Flächen |
+| 27.09.2026 | E-66 | Raster der Heatmap | Schalter: Start wöchentlich über die ganze Historie (Perzentil vom letzten Handelstag der Woche), umschaltbar auf täglich für die letzten 2 Jahre | Geladen wird nur das gewählte Raster |
+| 27.09.2026 | E-67 | Welche Übersicht bleibt (E-62) | Die Variante nach Bericht 6.3: Übersicht B wird Startseite `/` und bekommt Karten für Stress und Fallhöhe; die bisherige Übersicht mit den aufklappbaren Bereichen und Einzelreihen (M7a) entfällt ganz; Navigation in einer Zeile | Die Einzelreihen stehen in den Ansichten 2–6, „So fließt der Wert in den Bereich ein“ bleibt auf den Erklärseiten; `/uebersicht-b` leitet auf `/` um; in `CLAUDE.md` unter „NICHT gebaut“ eingetragen |
 
 ---
 
@@ -637,7 +653,7 @@ Für jeden Meilenstein gilt die Definition of Done:
   - Gegenprobe mit 36 absichtlich eingebauten Fehlern, alle erkannt (Perzentil, Orientierung, Veröffentlichung, Stichtag, Veraltung, Median, Mindestblöcke, Glättung, Fallhöhe, Konfidenz, Diffusion, Regeln, Hysterese, VIX-Regel, Transformationen, Auslöser der Neuberechnung, Worker)
   - Rechenzeit: 5,6 s für den ganzen Lauf mit 9281 Handelstagen (Rechnung 2,0 s), Entwicklungsumgebung
   - Migration mit dem gebauten Image als 568:568 auf einer Kopie des Backups vor der Migration: 0001 → 0002, danach `python -m fever.score` wie oben
-- **Nicht geprüft:** Migration und Scoring auf TrueNAS; Rechenzeit dort.
+- **Auf TrueNAS geprüft (26.09.2026):** Migration 0002 und `python -m fever.score`: „9281 Tage ab 02.01.1990, zuletzt 25.09.2026: Stress 37,8, Fallhöhe 79,9, Ampel Grün, Konfidenz 90,0 % (6,5 s)“, identisch mit der Entwicklungsumgebung.
 
 
 **Risiko:** Rechenzeit auf dem Zielsystem (rollierende Perzentile über bis zu 10 Jahre je Indikator). Erst messen, dann optimieren.
@@ -664,6 +680,41 @@ Für jeden Meilenstein gilt die Definition of Done:
 
 **Sichtprüfung:** Playwright mit dem vorinstallierten Chromium in der Entwicklungsumgebung (kein Projekt-Requirement), Breiten 390 px und 1440 px, hell und dunkel, Druckvorschau. Screenshots bleiben außerhalb des Repos.
 
+**Ergebnis M6 (26.09.2026, umgesetzt; auf TrueNAS ⏳):**
+- **Umgesetzt wie entschieden (E-52 bis E-55):**
+  - `fever/web/app.py`: Dash 4.4.1 mit Seiten (`use_pages`), nur lokale Ressourcen, Seitenrahmen mit Kopfzeile (Worker zuletzt aktiv, Scores berechnet, Seite aktualisiert), Banner „Worker ohne Lebenszeichen“ (Grenze wie der Healthcheck) und „Keine Verbindung zum Server“ (clientseitig nach mehr als zwei Intervallen ohne Antwort), Aktualisierung alle 5 Minuten, Fußzeile mit den Pflichthinweisen (FRED, EZB) und Quellen, `/health`
+  - `fever/web/db.py` (nur lesend, `query_only`), `format.py` (Dezimalkomma, TT.MM.JJJJ, MEZ/MESZ, relatives Alter), `figures.py` (Chart-Fabrik nach 7.1), `components.py` (Kennzahl-Kopf mit CSS-Tooltip, Aktualität, Ampel, Perzentil-Chip, Chart-Karte mit Vollbild), `texts.py` (Textprüfung, Steckbrief und „Schwellen und Farben“ aus der Konfiguration), `views.py` (Seiteninhalte als testbare Funktionen)
+  - Seiten: Übersicht (Ampel mit zutreffenden Regeln, Stress, Fallhöhe, Konfidenz, Verlauf Stress/Fallhöhe, sichtbare Platzhalter O-1, O-5, Phase 2), Datenstand (Worker, je Quelle, je Reihe mit „veraltet“ nach E-10), Erklärungen, Erklärseite `/kennzahl/<id>`
+  - Texte für `traffic_light`, `stress`, `vulnerability`, `confidence`, `percentile`, `staleness` (inhaltliche Prüfung durch den Nutzer wie in M8); Indikatoren ohne Text werden nicht angezeigt
+  - `assets/`: `base.css` (Farben hell/dunkel aus der Referenzpalette), `tooltip.css`, `print.css`, `theme.js` (Systemwechsel, vor dem Druck hell), `fullscreen.js`
+  - Dienst `web` in `compose.dockge.yaml` (gunicorn, 1 Prozess mit 4 Threads, Port `0.0.0.0:${FEVER_WEB_PORT}`, Healthcheck über `/health` mit der Standardbibliothek); das Dockerfile kopiert `assets/`
+  - Veraltungsregel (E-10) als `is_stale` in `fever/release.py`, gemeinsam für Scoring und Oberfläche
+- **Belege:**
+  - `pytest -q`: 359 passed (18 neu in `tests/test_web.py` und `tests/test_compose.py`): Smoke-Test (`/`, Seiten, `/_dash-layout`, `/_dash-dependencies`, `/health`), `/health` 503 ohne Datenbank, keine externe URL im HTML, `query_only`, kein `dangerously_allow_html`, Chart-Standard, Textregeln, jede angezeigte Kennzahl hat einen Text, Formate
+  - gunicorn gegen `data-dev/`: alle Seiten 200
+  - Sichtprüfung mit Playwright und Chromium (390 px und 1440 px, hell und dunkel, fünf Seiten): keine Konsolenfehler, keine Anfrage an fremde Hosts, kein horizontales Scrollen; Druck aus dem Dunkelmodus hell ohne Navigation und Knöpfe; Tooltip per Fokus; Vollbild und ESC. Behoben nach der Sichtprüfung: Legende über den Zeitraum-Buttons, abgeschnittene Datierung, schräge Achsenbeschriftung bei 390 px
+  - Build-Probe; Dienst `web` über `compose.dockge.yaml` als 568:568: „healthy“, `0.0.0.0:8003`, Seiten 200
+  - Farben: Linienfarben mit dem Validator des Dataviz-Skills geprüft (hell und dunkel, alle Prüfungen bestanden)
+- **Nicht geprüft:** echte Geräte (nur Chromium-Emulation); Perzentilbänder im Verlauf fehlen noch (brauchen gespeicherte Bänder, M7). Auf TrueNAS läuft das Dashboard seit 26.09.2026 (Rückmeldung des Nutzers).
+
+**Nachtrag M6 (26.09.2026): Rezessionsbalken (E-56) und Korrekturen aus der Sichtprüfung**
+- **Umgesetzt:**
+  - `config/series.toml`: Reihe `usrec` (FRED `USREC`, monatlich, Verzug 31 Tage wie die übrigen Monatsreihen, Grenzen 0 bis 1); damit 61 Reihen in 33 Abrufgruppen. Kein `[indicator.*]`, also in keinem Score.
+  - `fever/web/db.py`: `recessions()` fasst aufeinanderfolgende Monate mit Wert 1 zu Zeiträumen (Monatserster bis Monatsletzter) zusammen, je Beobachtung der neueste Stand.
+  - `fever/web/figures.py`: graue Flächen (`layer: below`, eigene Stufe für hell und dunkel) nur im Datenbereich des Charts; Datierungszeile „Grau: US-Rezessionen nach NBER (über FRED)“; `views.py` übergibt die Zeiträume an alle Zeitreihen-Charts.
+  - Konzeptseite `fever/web/texts/recessions.md` mit Steckbrief aus `series.toml`; Fußzeile nennt die NBER-Rezessionsdatierung.
+- **Korrigiert (Fehler seit M6, bei dieser Sichtprüfung gefunden):**
+  1. Nach einem Klick auf einen Zeitraum-Button fiel die Chart-Karte auf 0 px Höhe zusammen: `dcc.Graph` mit `responsive` setzt `height: 100%`, der Container hatte keine Höhe. Jetzt steckt der Graph in `.chart-box` mit 450 px, der Höhe, die Plotly vorher als Standard nutzte.
+  2. Plotly.js 4.1.1 (in Plotly 7.1.0) zeigt standardmäßig den Modebar-Button „Share chart…“, der den Chart samt Daten nach einer Bestätigung zu Plotly Cloud hochlädt (Standard `plotlyServerURL`: `https://cloud.plotly.com/newchart`, geprüft im Quelltext von `plotly.min.js`). Das widerspricht „keine Weitergabe lizenzierter Daten“ und „der Browser spricht nur mit dem eigenen Server“. Abgeschaltet mit `showSendToCloud: False`; ein Test sichert es.
+  3. Im Vollbild rutschten die Datierungszeilen aus dem Bild, weil ihr Abstand ein Anteil der Plot-Höhe war. Jetzt fester Abstand in Pixeln (`yshift`).
+  4. Der Vollbild-Button verdeckte die Modebar-Buttons „Zoom in“, „Zoom out“ und „Reset axes“. Er steht jetzt in einer eigenen Zeile über dem Chart; im Vollbild füllt der Chart den Rest der Höhe.
+- **Belege (Entwicklungsumgebung, 26.09.2026):**
+  - `pytest -q`: 362 passed (neu: Rezessionszeiträume aus `USREC`, Flächen und Datierungszeile, Chart-Container mit Höhe; erweitert: `showSendToCloud`, Pixelabstand der Datierung).
+  - Messung mit Playwright/Chromium, Seite Stress, 1440 px: Karte/Plot vor dem Fix nach „Max“ 26/0 px, danach 507/450 px; Vollbild 900 px, unterste Datierungszeile endet bei 853 px (390 × 844: 797 px); ESC stellt 507/450 px wieder her. Kein Modebar-Button unter dem Vollbild-Button (1440 und 390 px); kein „Share chart“ im DOM. Keine Konsolenfehler.
+  - Screenshots 390 und 1440 px, hell und dunkel, dazu Druckmedien-Emulation: Flächen 1990/91, 2001, 2008/09 und 2020 hinter den Linien.
+  - Scores gegen `data-dev/` neu berechnet: unverändert (Stress 37,8, Fallhöhe 79,9, Ampel Grün, Konfidenz 90,0 %); `/_dash-layout` und `/health` 200.
+- **Nicht geprüft:** TrueNAS; der echte Druckdialog (nur Druckmedien-Emulation, dabei läuft `beforeprint` nicht).
+
 ### M7 – Ansichten 1–7
 
 Laut Bericht 6.3, soweit Daten vorhanden:
@@ -675,6 +726,63 @@ Laut Bericht 6.3, soweit Daten vorhanden:
 - **6 Fallhöhe:** CAPE bzw. Excess CAPE Yield, Margin Debt. Konzentration fehlt (O-1).
 - **7 Visualisierung:** Heatmap (Perzentilskala nach E-1), Perzentilbänder 10/50/90, Sparklines mit Zeitstempel, Composite-Historie mit Krisenmarken (L-13), Regime-Zeitleiste.
 - Historienansicht mit Hinweis: je Beobachtung zählt der neueste Stand (Phase-1-Ausnahme, `CLAUDE.md`).
+
+**Nachtrag 27.09.2026: eine Version (E-67)**
+- Übersicht B ist die Startseite `/` (Karten Ampel, Stress, Fallhöhe, Konfidenz, Diffusionsindex; Ampelmatrix; Hinweis zum neuesten Stand; Aktualisierung je Quelle); `/uebersicht-b` leitet mit 301 auf `/` um
+- Entfernt: die alte Übersicht mit den Bereichen und Einzelreihen (M7a: Rahmen, Callbacks mit `MATCH`, Auf- und Zuklappen, Stile, Tests); geblieben sind die 22 Texte, „So fließt der Wert in den Bereich ein“ auf den Erklärseiten und die Korrektur „Historie ab“
+- Navigation in einer Zeile: Übersicht, Signale, Breite, Positionierung, Makro, Fallhöhe, Visualisierung, Datenstand, Erklärungen
+- Belege: `pytest -q` 388 passed; Seiten 200, `/uebersicht-b` 301; Browser 1440 px hell und 390 px dunkel ohne Konsolenfehler und ohne seitliches Scrollen
+
+**Ergebnis M7, Teil 1 (27.09.2026, umgesetzt; auf TrueNAS ⏳): Übersicht B und Ansichten 2–6 (E-62, E-65)**
+- **Umgesetzt:**
+  - Zweite Navigationszeile „Ansichten“ (`fever/web/app.py`, `VIEWS`); die bisherige Übersicht bleibt Startseite (E-62)
+  - Übersicht B (`/uebersicht-b`): Ampel, Konfidenz, Diffusionsindex; Ampelmatrix mit den Regeln für Stress und Fallhöhe aus `scoring.toml` als Flächen (opake Tönungen, die höchste Stufe liegt oben, Stufennamen im Chart), Spur der letzten 60 Handelstage und heutigem Punkt; Hinweis, dass VIX/VIX3M-Regel, Diffusionsregel und Hysterese nicht in den Flächen stehen; letzte Aktualisierung je Quelle
+  - `/ansicht/signale`: VIX-Termstruktur als Kurve (Indizes auf nominaler Frist, VX-Futures auf Restlaufzeit), VIX/VIX3M mit violetter Backwardation, VIX, VRP, VVIX, SKEW, USD/JPY; Hinweis zu MOVE (W-6)
+  - `/ansicht/breite`: ausdrücklich ohne Datenquelle (O-1)
+  - `/ansicht/positionierung`: VX-COT mit Perzentil über 10 Jahre (Score) und 3 Jahre (Anzeige), Margin Debt; Hinweis AAII (Phase 2)
+  - `/ansicht/makro`: NFCI, ANFCI, STLFSI4, OFR FSI mit Beiträgen der Kategorien und Regionen, CISS, HY-OAS, CCC − BB (am selben Beobachtungstag gebildet), EBP, SOFR − IORB, Zinskurve mit violetten Inversionsphasen (E-65), Sahm-Regel, Erstanträge; Lizenzhinweis bei den ICE-Reihen
+  - `/ansicht/fallhoehe`: CAPE, Excess CAPE Yield, Margin Debt; Hinweis auf fehlende Konzentration und Margin Debt relativ zur Marktkapitalisierung
+  - Anzeige-Kennzahlen (`texts.DISPLAYS`): `vix_term`, `skew`, `hy_oas`, `ccc_bb`, `anfci`, `ofr_fsi`, `yield_curve`, `cape`, nie in einem Score, mit Steckbrief aus `series.toml` und Link zur Ansicht; 9 neue Texte (die acht und `diffusion`)
+  - Chart-Fabrik: Ampelmatrix (`matrix`), Termstruktur (`curve`), violette Phasen, Nulllinie, Endbeschriftungen ab drei Linien; die Linienfarben folgen der validierten Reihenfolge der Referenzpalette (fünf Farben hell und dunkel mit dem Validator geprüft; im hellen Modus drei Farben unter 3:1 Kontrast, deshalb Endbeschriftungen); gemeinsame Chart-Konfiguration und Datierungszeilen
+  - Charts der Ansichten starten mit der ganzen Historie und beim ersten echten Wert: Plotly skaliert die y-Achse über alle Daten, ein Start mit 5 Jahren ließ NFCI, Sahm-Regel oder Erstanträge flach wirken
+  - Kleine Werte mit mindestens zwei signifikanten Stellen (die Yen-Aufwertung zeigte „0,00“); Tooltips mit vier signifikanten Stellen
+- **Belege (Entwicklungsumgebung, 27.09.2026):**
+  - `pytest -q`: 386 passed; neu: Regionen der Matrix aus `scoring.toml` (geänderte Parameter verschieben die Flächen), Matrix-Standard und Beschriftungen, Übersicht B mit Spur der letzten 60 Tage, Navigation, alle Ansichten rendern und zeigen jede Anzeige-Kennzahl, Seiten 200, `runs`, CCC − BB nur an gemeinsamen Tagen, Inversionsflächen, Werteformat, Link der Anzeige-Seiten
+  - Browser (Chromium, 1440 px hell, 390 px dunkel): alle Seiten ohne Konsolenfehler. Datenmenge je Seite: Signale 1,5 MB, Positionierung 1,0 MB, Makro 3,4 MB (14 Charts, rund 6 s), Fallhöhe 0,7 MB
+- **Nicht geprüft:** TrueNAS; echte Geräte; Druck der neuen Seiten.
+
+**Ergebnis M7, Teil 2 (27.09.2026, umgesetzt; auf TrueNAS ⏳): Perzentilbänder (E-64) und Ansicht 7 (E-63, E-66)**
+- **Umgesetzt:**
+  - Scoring: `window_quantiles()` in `fever/scoring/percentile.py` (10., 50. und 90. Perzentil der Rohwerte im selben Fenster wie das Perzentil, nur Beobachtungen bis t, lineare Interpolation, unter der Mindesthistorie leer); `IndicatorHistory.bands`, `IndicatorScore.band_p10/p50/p90`
+  - Migration 0003: drei Spalten in `indicator_score`; `fever/store/tables.py` angepasst
+  - `config/episodes.toml` (L-13, E-63): 13 Krisen des Berichts als Schlusskurs-Hoch bis -Tief des S&P 500 mit Quelle (1998 bis 2020: Yardeni, *Predicting the Markets*, Anhang 15.4; 2022, August 2024, April 2025: S&P Dow Jones Indices bzw. CNBC; 2026: Bericht Abschn. 3 und PBS, Sekundärquellen); nur Daten, keine Indexstände; Loader `crisis_episodes()` prüft Felder und Reihenfolge
+  - Ansicht 7 (`/ansicht/visualisierung`) als statischer Rahmen, damit Schalter und Auswahl die Aktualisierung überstehen (Dash-`persistence`): Stress-Historie mit Krisenbalken oben (Hover nennt Krise und Daten) und Tabelle der Krisen mit Quellen; Regime-Zeitleiste der Ampel; Heatmap der Perzentile mit Schalter wöchentlich/ganze Historie (letzter Handelstag je Woche, nichts gemittelt) und täglich/2 Jahre (E-66), ungültige Werte bleiben leer; Perzentilbänder mit Auswahl des Indikators; Sparklines der letzten 12 Monate mit Wert, Perzentil, Stand und Abruf
+  - Chart-Fabrik: `Band`, Krisenstreifen, `heatmap`, `regime`, `sparkline`; `PERCENTILE_RAMP` liegt jetzt in `figures.py`
+- **Belege (Entwicklungsumgebung, 27.09.2026):**
+  - `pytest -q`: 396 passed; neu: Bänder von Hand gerechnet (mit Fenster und Mindesthistorie), Bänder als Rohwerte bis in `IndicatorScore`; der Look-ahead-Pflichttest vergleicht ganze Zeilen und deckt die Bänder mit ab; Krisen-Konfiguration, Krisenstreifen, alle Teile der Ansicht 7, Wochen- und Tagesraster, leere Zellen, Bänder im Chart, Standard der neuen Chart-Arten, Rahmen mit `persistence`
+  - Gegenprobe: Bänder aus dem ganzen Datensatz statt bis t → Look-ahead-Pflichttest und beide Handrechnungen rot
+  - Migration: Probe an einer Backup-Kopie mit dem neu gebauten Image als 568:568 (0002 → 0003, `alembic current` 0003 (head)); Scoring danach 11,8 s statt 5,6 s, Werte unverändert (Stress 37,8, Fallhöhe 79,9, Ampel Grün, Konfidenz 90,0 %); alle gültigen Indikatoren haben Bänder
+  - Build-Probe (Dockerfile unverändert; `config/episodes.toml` und die Migration sind im Image)
+  - Browser (Chromium, 1440 px hell, 390 px dunkel): keine Konsolenfehler; Seitenaufruf 1,9 MB, Wechsel auf das Tagesraster 0,2 MB; der Schalter bleibt nach einer simulierten Aktualisierung auf „täglich“
+- **Nicht geprüft:** TrueNAS; echte Geräte; Druck. Die Server-Zeit der Sparklines liegt bei rund 2 s, die der Ansicht Makro bei rund 3 s (gemessen, nicht optimiert).
+- **Technische Schuld (neu, nicht behoben):** Eine neue Programmversion des Scorings löst keine Neuberechnung aus; der Worker rechnet nur bei neuen Beobachtungen oder geänderter `scoring.toml`/`series.toml` neu. Nach Updates, die das Scoring ändern, ist deshalb ein Sofort-Lauf nötig (`docs/einrichtung.md`, Schritt 9).
+
+**Ergebnis M7a (26.09.2026, umgesetzt; auf TrueNAS ⏳): Bereiche und Einzelreihen (E-57 bis E-60)**
+- **Umgesetzt:**
+  - Übersicht: unter dem Verlauf von Stress und Fallhöhe die vier Bereiche als eigener, statischer Rahmen außerhalb des alle 5 Minuten ersetzten Inhalts, damit geöffnete Abschnitte offen bleiben. Kopf je Bereich: Bereichswert (Volatilität: Median und geglättet; Fallhöhe: ungeglättet und geglättet), Zahl der gültigen Indikatoren, Stand. Aufgeklappt: Verlauf des Bereichs und je Indikator eine Zeile mit Wert, Perzentil, Status und Stand; jede Zeile klappt einzeln auf zu Wert- und Perzentil-Chart und „So fließt der Wert in den Bereich ein“
+  - `fever/web/pages/uebersicht.py`: Callbacks mit Mustern (`ALL` für die Kopfzeilen in einer Datenbankabfrage, `MATCH` für die Charts nur geöffneter Abschnitte); Auf- und Zuklappen im Browser (clientseitiger Callback setzt `hidden` und `aria-expanded` und löst ein `resize` aus, damit Plotly verdeckt gezeichnete Charts anpasst)
+  - `fever/web/texts.py`: `contribution()` erzeugt die Schritte je Indikator aus der Konfiguration (Umrechnung, Perzentilfenster und Richtung, Mindesthistorie und Veraltung, Median im Bereich bzw. Mittel der Fallhöhe, Glättung, Stress, Diffusion, VIX/VIX3M-Regel, Konfidenzgewicht, Anzeigeperzentil); `views._role_today()` nennt den heutigen Anteil aus den gespeicherten Scores
+  - 22 neue Texte (`fever/web/texts/`), dazu Erklärseiten aller 19 Indikatoren und der drei Blöcke; die Erklärseite eines Indikators enthält ebenfalls den Abschnitt „So fließt der Wert in den Bereich ein“
+  - Hinweis unter jedem Verlauf (Übersicht, Bereiche, Erklärseiten): Je Beobachtung zählt der neueste Stand (Phase-1-Ausnahme aus `CLAUDE.md`, fehlte seit M6)
+  - Startzeitraum (E-61): Charts der Bereiche und Einzelreihen zeigen zu Beginn die ganze Historie (`Chart.full_history`); geprüft im Browser: Bereich Kredit/Funding und EBP ab 1990 mit vier Rezessionsflächen
+- **Korrigiert (Fehler seit M6):** „Historie ab“ im Steckbrief nahm bei Indikatoren aus mehreren Reihen das früheste Datum irgendeiner Reihe (VIX/VIX3M zeigte 1990, SOFR − IORB 2018). Jetzt `db.history_start()`: der erste Tag, an dem alle Reihen vorliegen (VIX/VIX3M 18.09.2009, SOFR − IORB 29.07.2021, VRP und Aktien-Anleihen-Korrelation 26.09.2016).
+- **Belege (Entwicklungsumgebung, 26.09.2026):**
+  - `pytest -q`: 375 passed; neu in `tests/test_web.py`: Startzeitraum (ganze Historie in den Bereichen, 5 Jahre auf den Erklärseiten), Rahmen mit genau den Indikatoren je Bereich (alle 19, alles zu Beginn geschlossen), Rahmen außerhalb des aktualisierten Inhalts und Callbacks registriert, Charts nur offen, Rezessionsflächen in Bereichs- und Indikator-Charts, Reihenfolge der Kopfzeilen, ohne Scores, Einflussschritte folgen der Konfiguration (geänderte Parameter ändern den Text), heutige Rolle, `history_start`, Erklärseite mit Einfluss, Hinweis zum neuesten Stand
+  - Gegenprobe mit eingebauten Fehlern (`min` statt `max` in `history_start`, Bereich offen statt geschlossen, festes „10 Jahre“ im Text): jeweils ein Test rot
+  - Browser (Chromium, 390 und 1440 px, hell und dunkel): Aufklappen von Bereich und Indikator, simulierte 5-Minuten-Aktualisierung (Abschnitte bleiben offen, 3 Charts bleiben), Zuklappen setzt `hidden`, Wiederaufklappen mit voller Chartbreite (328 bzw. 1218 px); keine Konsolenfehler. Datenmenge: Seitenaufruf 615 KB, Bereich Volatilität 536 KB, ein Indikator 447 KB
+  - Scores unverändert (keine Änderung an Scoring, Schema, Dockerfile oder Compose)
+- **Nicht geprüft:** TrueNAS; echte Geräte; der Druck geöffneter Bereiche (nur Bildschirmansicht geprüft).
+- **Beobachtung:** Die Cboe-Datei des VIX3M beginnt am 18.09.2009; der Bericht nennt als Historienbeginn den 04.12.2007 (Abschn. 6.1). Folge: VIX/VIX3M hat zwei Jahre weniger Historie als im Bericht angenommen.
 
 ### M8 – Erklärtexte
 
@@ -719,7 +827,7 @@ Nichts davon wird geraten. Die Vorschläge sind begründete Startpunkte, keine E
 | L-10 | Transformationen ohne Definition: Erstanträge „Veränderung ggü. Tief“ (welches Fenster?), USD/JPY-Vola (Fenster), Re-Steepening-Flag (Definition), Aktien-Anleihen-Korrelation (Anleiherendite aus DGS10-Änderung?), COT-Maß und Orientierung, Excess CAPE Yield (Shiller-Spalte: 1/CAPE − (GS10 − 10-Jahres-Inflation), Ergebnis M4c), Margin Debt aus Z.1 quartalsweise (E-42): ggü. Vorjahr oder relativ zur Marktkapitalisierung aus Z.1; Strukturbruch vor 2000:Q1, VIX6M (nicht in 6.1, Endpoint prüfen) | Indikatoren | **Entschieden 26.09.2026 (E-49):** siehe Entscheidung. Je Indikator beim Anlegen in `series.toml` einzeln vorschlagen und fragen. Quelle für USD/JPY: E-17 | – |
 | L-11 | Fallhöhe in Phase 1: Top-10-Konzentration (O-1), HY-OAS-Niveau (O-5) und AAII (Phase 2) fehlen | Fallhöhe | **Entschieden 26.09.2026 (E-49):** wie vorgeschlagen. Mittel der vorhandenen Komponenten (Excess CAPE Yield, Margin Debt ggü. Vorjahr, VX-COT-Short-Vol), mindestens 2; Fehlende sichtbar | – |
 | L-12 | Diffusionsindex: welche Einzelreihen zählen? | Ampel (Gelb) | **Entschieden 26.09.2026 (E-48):** wie vorgeschlagen. Nur Stress-Indikatoren mit gültigem, aktuellem Wert und ausreichender Historie. Fallhöhe-Indikatoren nicht, sonst ginge Fallhöhe doppelt in „Gelb“ ein | – |
-| L-13 | Krisenmarken in der Composite-Historie: genaue Zeiträume | Anzeige | Start und Ende je Episode mit Quelle in einer eigenen Datei `config/episodes.toml` (Anzeige, kein Score) | M7 |
+| L-13 | Krisenmarken in der Composite-Historie: genaue Zeiträume | Anzeige | **Entschieden 27.09.2026 (E-63):** Schlusskurs-Hoch bis -Tief des S&P 500 je Episode, recherchiert mit Quelle, in `config/episodes.toml` (Anzeige, kein Score) | – |
 
 ---
 
@@ -749,9 +857,10 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 - **Eine Fabrikfunktion** in `fever/web/figures.py` erzeugt Figure und Config. Kein Chart wird an ihr vorbei gebaut, damit Standard und Test an einer Stelle hängen.
 - **Zoom und Verschieben:** Plotly-Standard (Rahmen aufziehen, Verschieben über die Modebar, Doppelklick setzt zurück). `scrollZoom` aus, weil sonst das Scrollen der Seite auf dem Smartphone im Chart hängen bleibt.
 - **Zeitraum-Buttons (E-2):** `xaxis.rangeselector` mit „1 M“, „6 M“, „1 J“, „5 J“, „Max“. Kein Rangeslider; er kostet auf dem Smartphone zu viel Höhe.
-- **Bildexport:** Modebar-Button „Download als PNG“ über `toImageButtonOptions` (`format="png"`, `scale=2`, Dateiname `<kennzahl>_<TT-MM-JJJJ>`), `displaylogo=False`. Die Bilderzeugung läuft im Browser, ohne Server-Bibliothek; geprüft am Quelltext von Dash 4.4.1 (`dcc.Graph`, Prop `config`).
-- **Datenstand im Bild:** Titel, Quelle, letztes Beobachtungsdatum und Abrufzeitpunkt stehen als Annotation *im* Chart. Ein exportiertes oder ausgedrucktes Bild darf nie zeitlos wirken.
-- **Vollbild (E-2):** ein Button je Chart-Karte, der die Karte per CSS-Klasse als Overlay über den ganzen Bildschirm legt (`position: fixed; inset: 0`); Plotly passt sich über `responsive` an. Bewusst ohne Fullscreen-API, damit das Verhalten nicht vom Browser abhängt. ESC oder Button schließt.
+- **Bildexport:** Modebar-Button „Download als PNG“ über `toImageButtonOptions` (`format="png"`, `scale=2`, Dateiname `<kennzahl>_<TT-MM-JJJJ>`), `displaylogo=False`. `showSendToCloud=False`: Plotly.js 4 zeigt sonst „Share chart…“ und lädt damit Chart und Daten zu Plotly Cloud hoch. Die Bilderzeugung läuft im Browser, ohne Server-Bibliothek; geprüft am Quelltext von Dash 4.4.1 (`dcc.Graph`, Prop `config`).
+- **Datenstand im Bild:** Titel, Quelle, letztes Beobachtungsdatum und Abrufzeitpunkt stehen als Annotation *im* Chart, mit festem Pixelabstand unter der Achse. Ein exportiertes oder ausgedrucktes Bild darf nie zeitlos wirken.
+- **Rezessionsbalken (E-56):** US-Rezessionen aus FRED `USREC` als graue Flächen hinter den Linien in allen Zeitreihen-Charts, mit Hinweiszeile in der Datierung. Nur Anzeige.
+- **Vollbild (E-2):** ein Button je Chart-Karte, in eigener Zeile über dem Chart (über der Modebar verdeckte er deren Buttons), der die Karte per CSS-Klasse als Overlay über den ganzen Bildschirm legt (`position: fixed; inset: 0`); Plotly passt sich über `responsive` an. Der Graph steckt in `.chart-box` mit fester Höhe, im Vollbild füllt die Box den Rest der Karte. Bewusst ohne Fullscreen-API, damit das Verhalten nicht vom Browser abhängt. ESC oder Button schließt.
 - **Druck-/PDF-Ansicht (E-2):** `assets/print.css` blendet Navigation, Modebar und Buttons aus, druckt hell, bricht nicht mitten in einer Karte um. Nutzung: Browser → Drucken → „Als PDF speichern“. Risiko: Plotly setzt Farben inline im SVG, deshalb im Browser prüfen, ob ein dunkler Chart hell druckt; sonst beim Drucken per `beforeprint` auf das helle Template umschalten.
 - **Auto-Aktualisierung ohne Zoomverlust:** `uirevision` je Chart fest setzen.
 - **Ehrliche Darstellung:** `connectgaps=False`. Veraltete Abschnitte werden abgesetzt, nicht interpoliert. Keine geglättete Linie ohne Hinweis auf die Glättung.
@@ -770,7 +879,8 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
   5. erzeugter „Steckbrief“ aus `series.toml`: Quelle, Serien-ID, Frequenz, Veröffentlichung und Verzug, Toleranz, Historie ab, Orientierung, Block bzw. Fallhöhe, Transformation, Mindesthistorie, Lizenzhinweis
   6. erzeugter Abschnitt „Schwellen und Farben“ aus `scoring.toml`
   7. Quellen
-- **Übersichtsseite „Erklärungen“:** alle Kennzahlen nach Block gruppiert, dazu die Konzeptseiten „Perzentil“, „Ampel“, „Konfidenz“, „Veraltung“.
+- **Übersichtsseite „Erklärungen“:** alle Kennzahlen nach Block gruppiert, dazu die Konzeptseiten „Perzentil“, „Ampel“, „Konfidenz“, „Veraltung“, „Rezessionsbalken“ (E-56).
+- **Einfluss je Indikator (E-57):** erzeugter Abschnitt „So fließt der Wert in den Bereich ein“ auf der Erklärseite und in der Übersicht: die heutige Rolle aus den gespeicherten Scores, dann die Schritte aus `series.toml` und `scoring.toml`. Keine Zahl davon steht im Code.
 
 ### 7.3 Aktualität
 
@@ -817,22 +927,23 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 ## 9. Übergabe an die nächste Sitzung
 
-- **Stand (26.09.2026):**
-  - M0 bis M2 erledigt, M3 umgesetzt (178 Tests grün): Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-51; M4 vollständig (60 Reihen in 32 Abrufgruppen, auf TrueNAS seit 26.09.2026: „60 Reihen, 0 mit Problemen“).
-  - M5 umgesetzt: 19 Indikatoren, Scoring nach Bericht 4.3 Schritte 1–6, Migration 0002, Scoring-Lauf im Worker und als `python -m fever.score`; 341 Tests grün. Noch nicht auf TrueNAS eingespielt.
-  - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“). Erstabruf aller 23 Reihen am 26.09.2026 per Sofort-Abruf; das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
+- **Stand (27.09.2026):**
+  - M0 bis M2 erledigt, M3 umgesetzt: Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
+  - Entscheidungen bis E-67; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026.
+  - M7 vollständig umgesetzt, noch nicht auf TrueNAS: Rezessionsbalken (E-56, 61 Reihen), Übersicht nach Bericht 6.3 als Startseite und Ansichten 2–7 (E-67; die Variante M7a ist entfernt), Perzentilbänder mit Migration 0003; 388 Tests grün.
+  - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“); das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
-  1. M5 auf TrueNAS einspielen (Migration 0002): `docs/einrichtung.md`, Schritt 9, zuerst die Probe an einer Backup-Kopie; danach `python -m fever.score` und die Rechenzeit notieren.
-  2. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen (Nutzer schickt Ausgaben); dann M3 abschließen (geplant in der Woche ab 28.09.2026).
-  3. M6 planen (Web-Grundgerüst, Gestaltung, Aktualität, Datenstand); `scoring` in `source_status` im Datenstand als eigene Zeile benennen.
-  4. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe-Verhalten während der US-Handelszeit (Indizes und VX-Kontraktdateien), CFTC nach dem ersten Freitag, Shiller nach dem Oktober-Upload.
+  1. Update auf TrueNAS mit Migration 0003 nach `docs/einrichtung.md`, Schritt 9: Probe an einer Backup-Kopie, Stack stoppen, Backup, `alembic upgrade head`, Stack starten, `python -m fever.score`, Sofort-Abruf (61 Reihen).
+  2. Nutzer prüft die Texte: sechs aus E-52, `recessions.md`, die 22 aus E-58 und die 9 aus M7 (M8), dazu die Krisendaten in `config/episodes.toml`.
+  4. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen; dann M3 abschließen (Woche ab 28.09.2026).
+  5. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9).
+  6. Danach M8 (Prüfung der Texte) und M9 (Abnahme Phase 1).
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-13 (Abschnitt 5, vor M7).
+- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`).
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---

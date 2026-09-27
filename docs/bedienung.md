@@ -1,6 +1,6 @@
 # Bedienung: das Dashboard lesen
 
-Stand: 25.09.2026 · Für: dich als Anwender · Status: ⏳ **Zielbild.** Die Oberfläche entsteht in M6–M8 (`docs/umsetzungsplan.md`). Dieser Text wird bei der Abnahme (M9) gegen die fertige App geprüft und dann auf ✅ gesetzt.
+Stand: 26.09.2026 · Für: dich als Anwender · Status: ⏳ **Zielbild, teilweise umgesetzt.** Seit M6 gibt es Seitenrahmen, Übersicht (Ampel, Stress, Fallhöhe, Konfidenz), Datenstand, Erklärungen und Erklärseiten; die Themen-Ansichten folgen in M7, die übrigen Texte in M8 (`docs/umsetzungsplan.md`). Dieser Text wird bei der Abnahme (M9) gegen die fertige App geprüft und dann auf ✅ gesetzt.
 
 Die genauen Schwellenwerte stehen bewusst nicht hier, sondern in der App auf den Erklärseiten (z. B. „Ampel“). Die Seiten werden aus der Konfiguration erzeugt und sind deshalb immer aktuell.
 
@@ -44,9 +44,10 @@ Die genauen Schwellenwerte stehen bewusst nicht hier, sondern in der App auf den
   - aktuellem Stand und Verlauf
   - ausführlicher Erklärung (was sie misst, warum sie zählt, wie man sie liest, Grenzen)
   - Steckbrief (Quelle, Frequenz, Verzug, Historie)
+  - bei Indikatoren „So fließt der Wert in den Bereich ein“: welche Rolle der Wert heute spielt und wie er Schritt für Schritt in den Bereich und in Stress bzw. Fallhöhe eingeht
   - „Schwellen und Farben“: ab wann „erhöht“ bzw. welche Ampelregel gilt
   - Quellen
-- Die Seite „Erklärungen“ listet alle Kennzahlen nach Block, dazu die Konzepte Perzentil, Ampel, Konfidenz und Veraltung.
+- Die Seite „Erklärungen“ listet alle Kennzahlen nach Block, dazu die Konzepte Perzentil, Ampel, Konfidenz, Veraltung und Rezessionsbalken.
 
 ## 5. Aktualität: Wie alt ist, was ich sehe?
 
@@ -69,7 +70,8 @@ Die genauen Schwellenwerte stehen bewusst nicht hier, sondern in der App auf den
 | Zeitraum | Buttons „1 M“, „6 M“, „1 J“, „5 J“, „Max“ über dem Chart |
 | Werte ablesen | Maus über die Linie bzw. antippen |
 | Bild speichern | Kamera-Symbol in der Chart-Leiste lädt ein PNG herunter; Titel, Quelle und Datenstand sind im Bild enthalten |
-| Vollbild | Vollbild-Button an der Chart-Karte; ESC oder Button schließt |
+| Vollbild | Button „Vollbild“ oben rechts über dem Chart; ESC oder „Schließen“ beendet es |
+| Graue Flächen | US-Rezessionen nach der NBER-Datierung, wie in den FRED-Grafiken; nur zur Orientierung, kein Teil eines Scores. Erklärung: Seite „Erklärungen“ → „Rezessionsbalken“ |
 | Ganze Ansicht als PDF | Browser → Drucken → „Als PDF speichern“; die Druckansicht ist hell und ohne Bedienelemente |
 
 Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar bleibt.
@@ -78,13 +80,20 @@ Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar 
 
 ## 7. Ansichten
 
-1. **Übersicht:** Ampel, Stress-Fallhöhe-Matrix mit 60-Tage-Spur, Konfidenz, Aktualität je Quelle. Auf dem Smartphone lesbar.
-2. **Schnelle Marktsignale:** VIX-Termstruktur, VIX/VIX3M, VRP, VVIX, SKEW, USD/JPY.
-3. **Marktbreite:** in Phase 1 ohne Datenquelle (O-1); die Ansicht sagt das.
-4. **Sentiment und Positionierung:** Positionierung am VIX-Futures-Markt (COT), Margin Debt.
-5. **Makro und Liquidität:** Financial-Conditions-Indizes, Stressindizes, Kreditspreads, Zinskurve, Arbeitsmarkt.
-6. **Fallhöhe:** Bewertung (CAPE), Margin Debt.
-7. **Visualisierung:** Heatmap aller Kennzahlen über die Zeit, Perzentilbänder, Composite-Historie mit markierten Krisen, Regime-Zeitleiste.
+1. **Übersicht** (Startseite): Ampel mit den zutreffenden Regeln, Stress und Fallhöhe (geglättet, dazu ungeglättet), Konfidenz und Diffusionsindex; die Ampelmatrix (Stress nach rechts, Fallhöhe nach oben; die farbigen Flächen zeigen, welche Ampelstufe die Regeln aus Stress und Fallhöhe ergeben; die Linie ist die Spur der letzten 60 Handelstage) und die letzte Aktualisierung je Quelle. Rot über VIX/VIX3M und Gelb über den Diffusionsindex stehen nicht in den Flächen; die Ampel kann deshalb höher stehen, als der Punkt vermuten lässt. Auf dem Smartphone lesbar.
+2. **Signale:** VIX-Termstruktur (heute), VIX/VIX3M mit violett markierter Backwardation, VIX, VRP, VVIX, SKEW, USD/JPY.
+3. **Breite:** in Phase 1 ohne Datenquelle (O-1); die Seite sagt das.
+4. **Positionierung:** Positionierung am VIX-Futures-Markt (COT) mit Perzentil über 10 und 3 Jahre, Margin Debt; AAII folgt in Phase 2.
+5. **Makro:** Financial-Conditions- und Stressindizes, OFR FSI nach Kategorien und Regionen, Kreditspreads (HY-OAS, CCC − BB nur als Anzeige), Zinskurve mit violett markierter Inversion, Arbeitsmarkt.
+6. **Fallhöhe:** CAPE, Excess CAPE Yield, Margin Debt.
+7. **Visualisierung:**
+   - *Stress-Historie mit Krisen:* die dunklen Balken oben markieren Krisen vom Hoch bis zum Tief des S&P 500; Maus darüber nennt Krise und Daten, die Tabelle darunter die Quellen.
+   - *Regime-Zeitleiste:* die Ampelstufe an jedem Handelstag.
+   - *Heatmap:* jede Zeile ein Indikator, die Farbe sein Perzentil (dunkler = höher); der Schalter wechselt zwischen wöchentlich über die ganze Historie und täglich für die letzten zwei Jahre. Leere Stellen: an diesem Tag nicht gültig (veraltet oder zu kurze Historie).
+   - *Perzentilbänder:* für den gewählten Indikator der Wert, der Bereich zwischen dem 10. und 90. Perzentil seines Vergleichsfensters (hellblau) und der Median (gestrichelt). Liegt der Wert über dem Band, ist er ungewöhnlich hoch.
+   - *Sparklines:* alle Indikatoren der letzten 12 Monate auf einen Blick, mit Wert, Perzentil und Stand.
 8. **Datenstand** und **Erklärungen.**
 
-Hinweis zur Historie: Für vergangene Tage zählt je Beobachtung der neueste veröffentlichte Stand (auch nach späteren Revisionen). Die historische Kurve kann deshalb etwas anders aussehen als das, was man an dem jeweiligen Tag gesehen hätte. Die revisionsgenaue Rückrechnung ist für Phase 2 geplant.
+In den Ansichten starten die Verläufe mit der ganzen Historie; Grau sind US-Rezessionen. „Nur Anzeige, kein Score“ steht bei Reihen, die nicht in Stress oder Fallhöhe eingehen.
+
+Hinweis zur Historie: Für vergangene Tage zählt je Beobachtung der neueste veröffentlichte Stand (auch nach späteren Revisionen). Die historische Kurve kann deshalb etwas anders aussehen als das, was man an dem jeweiligen Tag gesehen hätte. Die revisionsgenaue Rückrechnung ist für Phase 2 geplant. Unter jedem Verlauf steht dazu ein kurzer Hinweis.

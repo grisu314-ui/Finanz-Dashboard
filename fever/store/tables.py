@@ -80,6 +80,9 @@ indicator_score = Table(
     Column("value", Float),
     Column("percentile", Float),
     Column("percentile_display", Float),  # shorter display window (display_window = true)
+    Column("band_p10", Float),  # percentile bands of the raw values in the window (migration 0003, E-64)
+    Column("band_p50", Float),
+    Column("band_p90", Float),
 )
 
 composite_score = Table(

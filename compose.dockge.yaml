@@ -2,7 +2,8 @@
 # Copy this file as compose.yaml into the Dockge stack and fill the stack's .env from
 # .env.example (docs/einrichtung.md). It never builds: the image fever:local comes from
 # docker-compose.yml in the project directory.
-# The web service follows in milestone M6 (port FEVER_WEB_PORT, O-3/E-4).
+# The web service (M6) publishes the dashboard on FEVER_WEB_PORT on all interfaces (O-3/E-4:
+# home network only, no password, no port forwarding in the router).
 
 x-service: &service
   image: fever:local
@@ -40,3 +41,20 @@ services:
       timeout: 30s
       start_period: 2m
       retries: 1
+
+  web:
+    <<: *service
+    # One process (E-54) with a few threads; the web only reads (PRAGMA query_only). The data
+    # directory stays writable: SQLite readers in WAL mode need the -shm file.
+    command: ["gunicorn", "--workers", "1", "--threads", "4", "--timeout", "60", "--bind", "0.0.0.0:8050", "fever.web.app:server"]
+    environment:
+      FEVER_DATA: /data
+    ports:
+      - "0.0.0.0:${FEVER_WEB_PORT:?FEVER_WEB_PORT fehlt in .env (siehe docs/einrichtung.md)}:8050"
+    healthcheck:
+      # 200 when the database can be read; only the standard library, no extra packages.
+      test: ["CMD", "python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8050/health', timeout=10).status == 200 else 1)"]
+      interval: 1m
+      timeout: 15s
+      start_period: 30s
+      retries: 3

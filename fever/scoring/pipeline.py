@@ -8,7 +8,7 @@ import pandas as pd
 from fever.config import Indicator, ScoringConfig
 from fever.release import estimated_release
 from fever.scoring.composite import CompositeScore, IndicatorHistory, IndicatorScore, compute
-from fever.scoring.percentile import mid_rank_percentiles
+from fever.scoring.percentile import mid_rank_percentiles, window_quantiles
 from fever.scoring.transforms import indicator_values
 
 
@@ -25,7 +25,8 @@ def build_history(indicator: Indicator, inputs: list[pd.Series], config: Scoring
             indicator,
             mid_rank_percentiles(dates, numbers, config.display_window_years, config.display_window_years),
         )
-    return IndicatorHistory(indicator, dates, numbers, available, percentiles, display)
+    bands = window_quantiles(dates, numbers, config.window_years, config.min_history_years)
+    return IndicatorHistory(indicator, dates, numbers, available, percentiles, display, bands)
 
 
 def score(

@@ -27,6 +27,7 @@ COPY alembic.ini ./
 COPY migrations/ migrations/
 COPY fever/ fever/
 COPY config/ config/
+COPY assets/ assets/
 RUN python -m compileall -q fever migrations
 
 # No VOLUME instruction on purpose: a forgotten bind mount must fail loudly

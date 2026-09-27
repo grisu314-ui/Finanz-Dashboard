@@ -1,6 +1,6 @@
 # Einrichtung und Betrieb auf TrueNAS mit Dockge
 
-Stand: 26.09.2026 · Für: dich als Anwender · Status: **Worker läuft auf TrueNAS seit 26.09.2026 („healthy“).** Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind zusätzlich in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Die Oberfläche folgt mit Meilenstein M6 (siehe `docs/umsetzungsplan.md`).
+Stand: 26.09.2026 · Für: dich als Anwender · Status: **Worker läuft auf TrueNAS seit 26.09.2026 („healthy“).** Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind zusätzlich in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Die Oberfläche (Dienst `web`, seit M6) ist in der Entwicklungsumgebung geprüft, auf TrueNAS ⏳ (siehe `docs/umsetzungsplan.md`).
 
 Markierungen:
 - ✅ geprüft: ausgeführt, mit Datum und Ort
@@ -157,6 +157,7 @@ Einmalig vor dem ersten Start. Der Hilfsbefehl `$RUN` startet einen Einmal-Conta
 
 ```bash
 RUN='sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v /mnt/Daten-Z1/apps/feewer/data:/data fever:local'
+echo "$RUN"    # erwartet: sudo docker run --rm --user 568:568 … fever:local  (leer? Zeile darüber erneut ausführen)
 $RUN alembic upgrade head
 #   erwartet u. a.: Running upgrade  -> 0001, Initial schema: …
 $RUN alembic current
@@ -185,7 +186,7 @@ Ohne diesen Schritt startet der Worker nicht, sondern meldet im Log „Datenbank
 | `FRED_API_KEY` | FRED-Schlüssel (Schritt 4) | Start bricht mit „FRED_API_KEY fehlt in .env“ ab |
 | `FEVER_DATA_DIR` | Datenordner `/mnt/Daten-Z1/apps/feewer/data` | Start bricht mit „FEVER_DATA_DIR fehlt in .env“ ab |
 | `FEVER_UID`, `FEVER_GID` | Benutzer der Container, 568 (`apps`) | Start bricht mit „FEVER_UID fehlt in .env“ bzw. „FEVER_GID fehlt …“ ab |
-| `FEVER_WEB_PORT` | Port des Dashboards (ab M6), 8003 | – |
+| `FEVER_WEB_PORT` | Port des Dashboards, 8003 | Start bricht mit „FEVER_WEB_PORT fehlt in .env“ ab |
 
 Ein fehlender Datenordner ist ein Fehler und wird nicht stillschweigend angelegt.
 
@@ -193,7 +194,7 @@ Prüfen:
 
 ```bash
 sudo docker logs --tail 20 finanz-dashboard-worker-1
-#   erwartet u. a.: INFO __main__: Worker gestartet: 60 Reihen in 32 Abrufgruppen, Takt 15 Minuten
+#   erwartet u. a.: INFO __main__: Worker gestartet: 61 Reihen in 33 Abrufgruppen, Takt 15 Minuten
 #                   INFO __main__: Tägliches Backup erstellt und geprüft: fever-…-daily.sqlite3
 sudo docker exec finanz-dashboard-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"
 #   erwartet: gesund: letzter Heartbeat vor 0 Minuten
@@ -208,23 +209,38 @@ Dockge zeigt den Worker nach spätestens rund 5 Minuten als „healthy“; vorhe
 ```bash
 sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
 #   erwartet je Reihe eine Zeile, z. B.: INFO __main__: ecb_ciss: 12199 neue Zeilen (Erstabruf)
-#   am Ende: INFO __main__: Sofort-Abruf beendet: 60 Reihen, 0 mit Problemen   (Exit-Code 0)
+#   am Ende: INFO __main__: Sofort-Abruf beendet: 61 Reihen, 0 mit Problemen   (Exit-Code 0)
 #   der erste Abruf der VX-Futures (Gruppe cfe_vx) lädt rund 175 Dateien und dauert etwa 3 Minuten
 #   ein zweiter Lauf meldet je Reihe "0 neue Zeilen"
 ```
 
-✅ 26.09.2026, TrueNAS nach den Updates auf M4b (41 Reihen) und M4c (44 Reihen), jeweils 0 mit Problemen. Mit M4d (60 Reihen): ✅ TrueNAS 26.09.2026 („60 Reihen, 0 mit Problemen“); ✅ Entwicklungsumgebung (Worker-Startzeile ebenfalls; Shiller dort nur mit Proxy-Abbrüchen der Cloud-Umgebung). Meldet es „mit Problemen“ (Exit-Code 1), nennen die `ERROR`-Zeilen darüber Reihe und Grund.
+✅ 26.09.2026, TrueNAS nach den Updates auf M4b (41 Reihen) und M4c (44 Reihen), jeweils 0 mit Problemen. Mit M4d (60 Reihen): ✅ TrueNAS 26.09.2026 („60 Reihen, 0 mit Problemen“); ✅ Entwicklungsumgebung (Worker-Startzeile ebenfalls; Shiller dort nur mit Proxy-Abbrüchen der Cloud-Umgebung). Mit der Rezessionsreihe `usrec` (61 Reihen, 33 Abrufgruppen): ✅ Entwicklungsumgebung 26.09.2026 (Zählung aus Katalog und Abrufgruppen, Abruf von `USREC`); ⏳ TrueNAS. Meldet es „mit Problemen“ (Exit-Code 1), nennen die `ERROR`-Zeilen darüber Reihe und Grund.
 
-## 8. Dashboard aufrufen ⏳ (ab M6)
+## 8. Dashboard aufrufen
+
+✅ 26.09.2026, Entwicklungsumgebung: Dienst `web` über `compose.dockge.yaml` als 568:568, „healthy“, `0.0.0.0:8003`; `/health`, `/`, `/datenstand` liefern 200. ✅ 26.09.2026, TrueNAS: Dashboard läuft (Rückmeldung des Nutzers).
+
+Der Stack enthält seit M6 zwei Dienste, `worker` und `web`. Nach dem Update auf M6 muss die Kopie in Dockge den neuen Inhalt von `compose.dockge.yaml` bekommen (Schritt 7.2), sonst startet nur der Worker.
 
 Im Browser eines Geräts im Heimnetz: `http://<IP-von-TrueNAS>:8003`.
+
+```bash
+curl -s http://127.0.0.1:8003/health       # auf TrueNAS; erwartet: {"status":"ok"}
+sudo docker logs --tail 20 finanz-dashboard-web-1
+#   erwartet u. a.: [INFO] Listening at: http://0.0.0.0:8050
+#                   [INFO] Using worker: gthread
+```
+
+Dockge zeigt `web` nach rund einer Minute als „healthy“.
 
 - Es gibt **kein Passwort**. Jedes Gerät in deinem Heimnetz kann das Dashboard öffnen. Es zeigt nur öffentliche Marktdaten, keine Kontodaten.
 - **Keine Portweiterleitung** im Router einrichten; sonst wäre das Dashboard aus dem Internet erreichbar.
 
 ## 9. Update auf eine neue Version
 
-✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ⏳ TrueNAS.
+✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ⏳ TrueNAS.
+
+**Update auf M7 (Migration 0003):** Das neue Dashboard liest die Spalten der Perzentilbänder. Der Stack darf deshalb erst nach `alembic upgrade head` wieder starten, sonst zeigen die Seiten „Datenbank nicht lesbar“. Nach dem Start einmal `python -m fever.score` (unten), damit die Bänder sofort gefüllt sind.
 
 Standardablauf, alles in der SSH-Shell auf TrueNAS; nur Stopp und Start des Stacks in Dockge. Er schadet nie: Gibt es keine neue Migration, ändert `alembic upgrade head` nichts, und die Sicherung davor ist nur eine zusätzliche Kopie. Ob eine neue Migration dabei ist, zeigt die Zeile mit `migrations/`.
 
@@ -236,12 +252,13 @@ git diff --stat HEAD@{1} -- migrations/                          # Ausgabe = neu
 sudo docker compose build
 # in Dockge: Stack "finanz-dashboard" stoppen
 RUN='sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v /mnt/Daten-Z1/apps/feewer/data:/data fever:local'    # wie Schritt 6, gilt bis zum Abmelden
+echo "$RUN"    # erwartet: sudo docker run --rm --user 568:568 … fever:local; leer heißt: neue Sitzung, Zeile darüber erneut ausführen
 $RUN python -m fever.backup        # Sicherung vor der Migration
 #   erwartet: INFO __main__: Backup erstellt und geprüft: /data/backup/fever-…-manual.sqlite3
 $RUN alembic upgrade head
 #   erwartet ohne neue Migration nur zwei Zeilen "INFO [alembic.runtime.migration] …", kein "Running upgrade"
 $RUN alembic current
-#   erwartet: die neueste Nummer mit "(head)", derzeit 0002 (head)
+#   erwartet: die neueste Nummer mit "(head)", derzeit 0003 (head)
 # in Dockge: Stack "finanz-dashboard" starten
 sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update    # nur wenn neue Reihen dazukamen (Schritt 7)
 ```
@@ -258,7 +275,7 @@ sudo mkdir -p $PROBE
 sudo cp "data/backup/$(sudo ls -t data/backup | grep manual | head -1)" $PROBE/fever.sqlite3    # Kopie des Backups, nicht der laufenden Datenbank
 sudo chown -R 568:568 $PROBE
 sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v $PROBE:/data fever:local alembic upgrade head
-#   erwartet u. a.: Running upgrade 0001 -> 0002, Score tables: indicator_score, composite_score …
+#   erwartet u. a. (Update auf M7): Running upgrade 0002 -> 0003, Percentile bands 10/50/90 in indicator_score …
 sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v $PROBE:/data fever:local python -m fever.score
 #   erwartet: INFO __main__: Scores berechnet: … Tage ab …, zuletzt …: Stress …, Fallhöhe …, Ampel …, Konfidenz … % (… s)
 sudo rm -r $PROBE
@@ -266,7 +283,7 @@ sudo rm -r $PROBE
 
 Klappt beides, weiter mit dem Standardablauf oben ab „Stack stoppen“. Scheitert die Probe, nichts an der Produktivdatenbank ändern und die Ausgabe melden.
 
-**Scores (ab M5):** Nach neuen Daten oder einer geänderten `scoring.toml` rechnet der Worker am Ende seines Takts alle Scores neu; im Log steht dann `INFO __main__: Scores berechnet: …`. Nach dem ersten Start mit Migration 0002 geschieht das im ersten Takt. Sofort, unabhängig davon:
+**Scores (ab M5):** Nach neuen Daten oder einer geänderten `scoring.toml` rechnet der Worker am Ende seines Takts alle Scores neu; im Log steht dann `INFO __main__: Scores berechnet: …`. Nach dem ersten Start mit Migration 0002 geschieht das im ersten Takt. Eine neue Programmversion allein löst keine Neuberechnung aus; nach dem Update auf M7 deshalb einmal sofort rechnen (füllt die Perzentilbänder, dauert rund 10–15 s):
 
 ```bash
 sudo docker exec finanz-dashboard-worker-1 python -m fever.score
@@ -331,6 +348,10 @@ Den Ordner `alt-…` erst löschen, wenn wieder alles korrekt läuft. Zeigt `ale
 | Im Log steht `api_key=***` | Gewollt: Der FRED-Schlüssel wird in Logs und Fehlermeldungen nie ausgegeben |
 | Log-Zeilen „Abruf fehlgeschlagen …, Versuch 1/3“ | Einzelne Aussetzer sind normal. Erst „nach 3 Versuchen“ ist ein echter Fehler; der Worker versucht es nach einer Stunde erneut |
 | Werte fälschlich „veraltet“ | Uhrzeit: Schritt 2.2 |
+| Dashboard nicht erreichbar | `sudo docker ps` zeigt `finanz-dashboard-web-1`? Sonst fehlt der Dienst in der Compose-Kopie von Dockge (Schritt 8). Dann `curl -s http://127.0.0.1:8003/health` und `sudo docker logs finanz-dashboard-web-1` |
+| Rotes Banner „Worker ohne Lebenszeichen“ | Der Worker schreibt seit über 45 Minuten keinen Heartbeat: Worker-Log und Healthcheck prüfen |
+| Rotes Banner „Keine Verbindung zum Server“ | Der Browser erreicht den Dienst `web` nicht mehr; die angezeigten Werte stammen von der genannten Uhrzeit |
+| `$RUN …` meldet `ImportError` mit Pfad `/usr/lib/python3/dist-packages` | Die Variable `RUN` ist in dieser Shell leer (etwa nach neuem Anmelden); der Befehl lief ohne Container mit dem Python von TrueNAS und brach beim Import ab, ohne etwas zu ändern. `RUN` neu setzen (Schritt 6), mit `echo "$RUN"` prüfen, Befehl wiederholen |
 | Log-Zeile „Scoring fehlgeschlagen“ | Die Abrufe laufen weiter; der Fehler steht unter `scoring` im Datenstand. Mit `sudo docker exec finanz-dashboard-worker-1 python -m fever.score` wiederholen und die Ausgabe melden |
 
 Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
@@ -350,5 +371,7 @@ Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
 | Sofort-Abruf aller Reihen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update` | ✅ TrueNAS und Entwicklungsumgebung 26.09.2026 |
 | Mountpunkt und Benutzer prüfen | `sudo docker inspect finanz-dashboard-worker-1 --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{end}} user={{.Config.User}}'` (erwartet: `/mnt/Daten-Z1/apps/feewer/data -> /data user=568:568`) | ✅ TrueNAS 26.09.2026 |
 | Sofort-Backup | `sudo docker exec finanz-dashboard-worker-1 python -m fever.backup` (Stack gestoppt: `$RUN python -m fever.backup`) | ✅ Entwicklungsumgebung 25.09.2026 |
-| Migration (Ablauf) | Probe an einer Backup-Kopie (Schritt 9) → Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten | ✅ Entwicklungsumgebung 26.09.2026 (Probe 0001 → 0002), ⏳ TrueNAS |
-| Scores sofort neu berechnen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.score` | ✅ Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
+| Migration (Ablauf) | Probe an einer Backup-Kopie (Schritt 9) → Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten | ✅ TrueNAS 26.09.2026 (0001 → 0002; Scoring danach erfolgreich) und Entwicklungsumgebung (mit Probe, zuletzt 0002 → 0003 am 27.09.2026) |
+| Dashboard-Log | `sudo docker logs -f finanz-dashboard-web-1` | ✅ Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
+| Dashboard-Health | `curl -s http://127.0.0.1:8003/health` (erwartet `{"status":"ok"}`) | ✅ Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
+| Scores sofort neu berechnen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.score` | ✅ TrueNAS und Entwicklungsumgebung 26.09.2026 |
