@@ -39,6 +39,7 @@ Details, Begründungen und Entscheidungsprotokoll (E-1 bis E-7): `docs/umsetzung
 - Reine Anzeigereihen sind Kennzahlen in `texts.DISPLAYS`: mit Text, Steckbrief und „nur Anzeige, kein Score“; nie in einem Score.
 - Linienfarben in der Reihenfolge der Referenzpalette; ab drei Linien Endbeschriftungen. Violett = markierte Phasen (Backwardation, Inversion), Grau = Rezessionen, Statusfarben nur für die Ampel und die Ampelmatrix.
 - Verläufe der Ansichten starten mit der ganzen Historie ab dem ersten Wert.
+- Ansicht 7 ist ein statischer Rahmen mit eigenen Callbacks; Schalter und Auswahl tragen `persistence`, damit die Aktualisierung sie nicht zurücksetzt. Perzentilbänder kommen aus dem Scoring (Spalten `band_p10/p50/p90`), die Oberfläche rechnet sie nie selbst.
 
 ## Aktualität
 - `dcc.Interval` alle 5 Minuten liest Daten und Status neu.

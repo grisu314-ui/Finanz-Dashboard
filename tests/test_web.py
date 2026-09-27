@@ -479,3 +479,80 @@ def test_small_values_keep_two_significant_digits():
 def test_display_pages_link_their_view(data):
     page = rendered(views.kennzahl("hy_oas", "light", NOW))
     assert "/ansicht/makro" in page and "nur Anzeige" in page
+
+
+# --- view 7 (M7, E-63, E-64, E-66) ------------------------------------------------------------------------
+
+
+def test_crisis_episodes_are_sorted_dated_and_sourced(tmp_path):
+    from fever.config import ConfigError, crisis_episodes
+    episodes = crisis_episodes()
+    assert len(episodes) == 13 and [e.start for e in episodes] == sorted(e.start for e in episodes)
+    assert all(e.start <= e.end and e.source and e.label for e in episodes)
+    assert (episodes[0].start, episodes[0].end) == (date(1998, 7, 17), date(1998, 8, 31))
+    (tmp_path / "episodes.toml").write_text('[episode.x]\nlabel = "X"\nstart = 2020-03-23\nend = 2020-02-19\nsource = "Q"\n')
+    with pytest.raises(ConfigError, match="start <= end"):
+        crisis_episodes(tmp_path)
+
+
+def test_stress_history_carries_the_crisis_strip():
+    days = [date(2020, 1, 2), date(2020, 6, 1)]
+    chart = Chart("stress-crises", "Stress", "eigene Berechnung", [Line("Stress", days, [40.0, 60.0])], "Wert",
+                  episodes=((date(2020, 2, 19), date(2020, 3, 23), "März 2020"),))
+    figure, _ = time_series(chart, "light")
+    strips = [s for s in figure.layout.shapes if s.y0 == 0.94]
+    assert len(strips) == 1 and "Krisen" in figure.layout.annotations[-1].text
+    assert figure.data[-1].text == ("März 2020: 19.02.2020 bis 23.03.2020",)
+
+
+def test_view_7_parts_render(data):
+    for part in (views.vis_stress("light", NOW), views.vis_regime("light", NOW), views.vis_heatmap("weekly", "light", NOW),
+                 views.vis_heatmap("daily", "dark", NOW), views.vis_bands("vix", "light", NOW), views.vis_sparklines("light", NOW)):
+        assert "Datenbank nicht lesbar" not in rendered(part)
+    assert "Bitte einen Indikator" in rendered(views.vis_bands("gibt_es_nicht", "light", NOW))
+
+
+def test_heatmap_grains_pick_stored_days_and_leave_invalid_blank(data, monkeypatch):
+    days = [date(2024, 1, 1) + timedelta(days=i) for i in range(1000)]
+    rows = [{"score_date": d, "indicator_id": "vix", "status": "ok" if i % 10 else "stale", "percentile": float(i % 100)}
+            for i, d in enumerate(days)]
+    monkeypatch.setattr(web_db, "percentile_matrix", lambda: rows)
+    weekly = next(c for c in _walk_components(views.vis_heatmap("weekly", "light", NOW)) if type(c).__name__ == "Graph")
+    x = weekly.figure.data[0].x
+    assert all(a.isocalendar()[:2] != b.isocalendar()[:2] for a, b in zip(x, x[1:]))  # one column per week
+    assert x[-1] == days[-1] and x[0] == date(2024, 1, 7)  # the last day of each week
+    daily = next(c for c in _walk_components(views.vis_heatmap("daily", "light", NOW)) if type(c).__name__ == "Graph")
+    assert len(daily.figure.data[0].x) == 730 and daily.figure.data[0].x[-1] == days[-1]
+    row = views._ordered_indicators().index("vix")
+    z = daily.figure.data[0].z[row]
+    assert z[list(daily.figure.data[0].x).index(date(2026, 9, 17))] is None  # day 990: stale stays blank
+
+
+def test_bands_chart_draws_the_stored_band(data, monkeypatch):
+    history = [{"score_date": date(2026, 9, 21 + i), "status": "ok", "value": 15.0 + i, "band_p10": 12.0, "band_p50": 16.0,
+                "band_p90": 27.0, "obs_date": date(2026, 9, 21 + i), "percentile": 50.0} for i in range(5)]
+    monkeypatch.setattr(web_db, "indicator_history", lambda indicator_id: history)
+    graph = next(c for c in _walk_components(views.vis_bands("vix", "light", NOW)) if type(c).__name__ == "Graph")
+    low, high, mid, value = graph.figure.data
+    assert low.y == (12.0,) * 5 and high.y == (27.0,) * 5 and high.fill == "tonexty" and mid.y == (16.0,) * 5
+    assert value.y == tuple(15.0 + i for i in range(5))
+
+
+def test_regime_heatmap_and_sparkline_follow_the_standard():
+    from fever.web.figures import Heatmap, Regime, heatmap, regime, sparkline
+    days = [date(2026, 9, 24), date(2026, 9, 25)]
+    figure, config = regime(Regime("regime", "Ampel", "x", days, [0, 3], texts.LEVEL_NAMES), "dark")
+    assert config["showSendToCloud"] is False and [list(row) for row in figure.data[0].customdata] == [["Grün", "Rot"]]
+    figure, config = heatmap(Heatmap("heatmap", "H", "x", ["VIX"], days, [[10.0, None]]), "light")
+    assert config["showSendToCloud"] is False and figure.data[0].zmax == 100 and figure.data[0].colorscale[0][1] == "#cde2fb"
+    figure, config = sparkline(days, [1.0, 2.0], "light")
+    assert config["staticPlot"] is True
+
+
+def test_visualisation_frame_keeps_switch_and_selection(client):
+    from fever.web.pages import ansicht
+    frame = ansicht.layout(name="visualisierung")
+    components = {c.id: c for c in _walk_components(frame) if isinstance(getattr(c, "id", None), str)}
+    assert components["heatmap-grain"].value == "weekly" and components["heatmap-grain"].persistence is True
+    assert components["bands-indicator"].persistence is True and "vis-heatmap" in components
+    assert "Yardeni" in rendered(frame) and client.get("/ansicht/visualisierung").status_code == 200

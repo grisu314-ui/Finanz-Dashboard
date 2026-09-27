@@ -11,7 +11,7 @@ from fever.config import indicator_catalog, scoring_config
 from fever.release import estimated_release
 from fever.scoring import composite
 from fever.scoring.composite import HISTORY, MISSING, OK, STALE, IndicatorHistory, compute, end_of_day, indicator_score
-from fever.scoring.percentile import mid_rank_percentiles
+from fever.scoring.percentile import mid_rank_percentiles, window_quantiles
 from fever.scoring.pipeline import build_history, score
 from fever.scoring.transforms import indicator_values
 
@@ -51,6 +51,35 @@ def test_window_and_minimum_history():
     # 2002 sees [2, 2] -> 1/2; 2003 sees [2, 3] -> (1 + 1/2)/2; 2004 sees [3, 2] -> (1/2)/2
     assert np.isnan(result[:2]).all()
     assert result[2:] == pytest.approx([50.0, 75.0, 25.0])
+
+
+def test_percentile_bands_by_hand():
+    """E-64: quantiles 10/50/90 of the same window, linear interpolation between order statistics."""
+    dates = [date(2000 + year, 6, 1) for year in range(5)]
+    values = np.array([1.0, 2.0, 2.0, 3.0, 2.0])
+    result = window_quantiles(dates, values, window_years=10, min_history_years=0)
+    # [1] -> 1, 1, 1; [1,2] -> 1.1, 1.5, 1.9; sorted [1,2,2,2,3]: positions 0.4, 2, 3.6 -> 1.4, 2, 2.6
+    assert result[0] == pytest.approx([1.0, 1.0, 1.0]) and result[1] == pytest.approx([1.1, 1.5, 1.9])
+    assert result[4] == pytest.approx([1.4, 2.0, 2.6])
+
+
+def test_percentile_bands_follow_window_and_minimum_history():
+    dates = [date(2000 + year, 6, 1) for year in range(5)]
+    values = np.array([1.0, 2.0, 2.0, 3.0, 2.0])
+    result = window_quantiles(dates, values, window_years=2, min_history_years=2)
+    assert np.isnan(result[:2]).all()
+    # 2002 sees [2, 2]; 2003 sees [2, 3]; 2004 sees [3, 2]
+    assert result[2] == pytest.approx([2.0, 2.0, 2.0]) and result[3] == pytest.approx([2.1, 2.5, 2.9])
+    assert result[4] == pytest.approx([2.1, 2.5, 2.9])
+
+
+def test_bands_are_raw_values_and_reach_the_indicator_score():
+    indicator = INDICATORS["ecy"]  # low orientation: the percentile flips, the bands do not
+    raw = pd.Series([3.0, 1.0, 2.0], index=[date(2005, 1, 1), date(2010, 1, 1), date(2014, 1, 1)])
+    history = build_history(indicator, [raw], replace(CONFIG, min_history_years=1))
+    assert history.bands[2] == pytest.approx([1.2, 2.0, 2.8])
+    row = indicator_score(history, date(2014, 6, 1))
+    assert (row.band_p10, row.band_p50, row.band_p90) == pytest.approx((1.2, 2.0, 2.8))
 
 
 def test_low_orientation_is_the_complement():

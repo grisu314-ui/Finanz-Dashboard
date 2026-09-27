@@ -45,6 +45,14 @@ def indicator_history(indicator_id: str) -> list[dict]:
         return [dict(row._mapping) for row in rows]
 
 
+def percentile_matrix() -> list[dict]:
+    """score_date, indicator_id, status and percentile of every stored indicator score (heatmap, view 7)."""
+    columns = [indicator_score.c.score_date, indicator_score.c.indicator_id, indicator_score.c.status,
+               indicator_score.c.percentile]
+    with engine().connect() as conn:
+        return [dict(row._mapping) for row in conn.execute(select(*columns).order_by(indicator_score.c.score_date))]
+
+
 def first_observation(series_ids: list[str]) -> date | None:
     with engine().connect() as conn:
         return conn.execute(select(func.min(observation.c.obs_date)).where(observation.c.series_id.in_(series_ids))).scalar()

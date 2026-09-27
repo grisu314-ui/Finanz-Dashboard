@@ -93,7 +93,12 @@ Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar 
 **Zwei Versionen nebeneinander (Stand 27.09.2026, E-62):** Die Startseite „Übersicht“ zeigt Ampel, Stress, Fallhöhe, Konfidenz und darunter die aufklappbaren Bereiche. Die Ansichten 1–7 stehen zusätzlich in der zweiten Navigationszeile „Ansichten“:
 - **Übersicht B:** Ampel, Konfidenz, Diffusionsindex, die Ampelmatrix (Stress nach rechts, Fallhöhe nach oben; die farbigen Flächen zeigen, welche Ampelstufe die Regeln aus Stress und Fallhöhe ergeben; die Linie ist die Spur der letzten 60 Handelstage) und die letzte Aktualisierung je Quelle. Rot über VIX/VIX3M und Gelb über den Diffusionsindex stehen nicht in den Flächen; die Ampel kann deshalb höher stehen, als der Punkt vermuten lässt.
 - **Signale, Breite, Positionierung, Makro, Fallhöhe:** je Kennzahl der Verlauf mit der ganzen Historie; Grau sind US-Rezessionen, Violett Backwardation (VIX über VIX3M) bzw. eine inverse Zinskurve. „Nur Anzeige, kein Score“ steht bei Reihen, die nicht in Stress oder Fallhöhe eingehen (etwa HY-OAS oder SKEW).
-- **Visualisierung:** folgt.
+- **Visualisierung:**
+  - *Stress-Historie mit Krisen:* die dunklen Balken oben markieren Krisen vom Hoch bis zum Tief des S&P 500; Maus darüber nennt Krise und Daten, die Tabelle darunter die Quellen.
+  - *Regime-Zeitleiste:* die Ampelstufe an jedem Handelstag.
+  - *Heatmap:* jede Zeile ein Indikator, die Farbe sein Perzentil (dunkler = höher); der Schalter wechselt zwischen wöchentlich über die ganze Historie und täglich für die letzten zwei Jahre. Leere Stellen: an diesem Tag nicht gültig (veraltet oder zu kurze Historie).
+  - *Perzentilbänder:* für den gewählten Indikator der Wert, der Bereich zwischen dem 10. und 90. Perzentil seines Vergleichsfensters (hellblau) und der Median (gestrichelt). Liegt der Wert über dem Band, ist er ungewöhnlich hoch.
+  - *Sparklines:* alle Indikatoren der letzten 12 Monate auf einen Blick, mit Wert, Perzentil und Stand.
 
 Welche Übersicht bleibt, wird später entschieden.
 

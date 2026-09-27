@@ -18,9 +18,10 @@ CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
 _ALLOWED_TABLES = {
     "series": {"series", "indicator"},
     "scoring": {"percentile", "transforms", "composite", "smoothing", "rules"},
+    "episodes": {"episode"},
 }
 # Files whose tables hold one sub-table per entry ([series.vix]); the others hold values.
-_NESTED = {"series"}
+_NESTED = {"series", "episodes"}
 
 
 class ConfigError(Exception):
@@ -390,3 +391,29 @@ def scoring_config(config_dir: Path = CONFIG_DIR) -> ScoringConfig:
         if getattr(config, key) > 100:
             raise ConfigError(f"scoring.rules.{key}: höchstens 100 (Perzentilskala)")
     return config
+
+
+@dataclass(frozen=True)
+class Episode:
+    """A crisis mark in the stress history (E-63): S&P 500 closing high to closing low; display only."""
+
+    id: str
+    label: str
+    start: date
+    end: date
+    source: str
+
+
+def crisis_episodes(config_dir: Path = CONFIG_DIR) -> tuple[Episode, ...]:
+    """config/episodes.toml, sorted by start; every field is required and start <= end."""
+    episodes = []
+    for episode_id, entry in load("episodes", config_dir).get("episode", {}).items():
+        fields = {"label", "start", "end", "source"}
+        if set(entry) != fields:
+            raise ConfigError(f"episode.{episode_id}: Felder müssen genau {', '.join(sorted(fields))} sein")
+        if not (isinstance(entry["start"], date) and isinstance(entry["end"], date) and entry["start"] <= entry["end"]):
+            raise ConfigError(f"episode.{episode_id}: start und end müssen Daten mit start <= end sein")
+        if not (isinstance(entry["label"], str) and entry["label"] and isinstance(entry["source"], str) and entry["source"]):
+            raise ConfigError(f"episode.{episode_id}: label und source dürfen nicht leer sein")
+        episodes.append(Episode(episode_id, entry["label"], entry["start"], entry["end"], entry["source"]))
+    return tuple(sorted(episodes, key=lambda e: e.start))

@@ -9,12 +9,9 @@ from dash import dcc, html
 
 from fever.web import format as fmt
 from fever.web import texts
-from fever.web.figures import Chart, time_series
+from fever.web.figures import PERCENTILE_RAMP, Chart, time_series
 
 LEVEL_CLASSES = ("level-green", "level-yellow", "level-orange", "level-red")
-# Sequential blue ramp of the reference palette, light -> dark (E-1: percentile colours).
-PERCENTILE_RAMP = ["#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7", "#3987e5",
-                   "#2a78d6", "#256abf", "#1c5cab", "#184f95", "#104281", "#0d366b"]
 
 
 def kennzahl_head(kennzahl_id: str, *, tag=html.H2) -> html.Div:
@@ -60,13 +57,13 @@ def chart_card(graph_id: str, chart: Chart, theme: str) -> html.Div:
     return figure_card(graph_id, *time_series(chart, theme))
 
 
-def figure_card(graph_id: str, figure, config: dict) -> html.Div:
+def figure_card(graph_id: str, figure, config: dict, box: str = "chart-box") -> html.Div:
     """Card with full-screen button around any figure of the chart factory."""
     return html.Div(className="card chart-card", children=[
         html.Button("Vollbild", className="fullscreen-toggle", type="button", **{"aria-label": "Chart im Vollbild zeigen"}),
         # The box has the height; the responsive graph fills it (dcc.Graph sets height: 100% inline,
         # which collapses to 0 after a relayout inside a box without a height).
-        html.Div(className="chart-box", children=dcc.Graph(
+        html.Div(className=box, children=dcc.Graph(
             id=graph_id, figure=figure, config=config, responsive=True, className="chart", style={"height": "100%"})),
     ])
 

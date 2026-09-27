@@ -1,0 +1,84 @@
+# Crisis episodes of the report (docs/recherche.md, 6.3 view 7) as marks in the stress history of
+# view 7 (decision E-63, gap L-13). Display only: no score reads this file.
+# start = closing high of the S&P 500 before the decline, end = closing low (peak to trough).
+# Only dates and labels, no index levels (S&P Dow Jones Indices licence). Retrieved 27.09.2026.
+#   label   text on the mark
+#   source  where start and end come from; "Sekundärquelle" marks dates without a primary source
+
+[episode.1998]
+label = "1998"
+start = 1998-07-17
+end = 1998-08-31
+source = "Yardeni, Predicting the Markets, Anhang 15.4 (S&P 500 Bear Markets and Corrections Since 1928)"
+
+[episode.2000]
+label = "2000–02"
+start = 2000-03-24
+end = 2002-10-09
+source = "Yardeni, Predicting the Markets, Anhang 15.4"
+
+[episode.2007]
+label = "2007–09"
+start = 2007-10-09
+end = 2009-03-09
+source = "Yardeni, Predicting the Markets, Anhang 15.4"
+
+[episode.2011]
+label = "2011"
+start = 2011-04-29
+end = 2011-10-03
+source = "Yardeni, Predicting the Markets, Anhang 15.4"
+
+[episode.2015]
+label = "2015"
+start = 2015-05-21
+end = 2015-08-25
+source = "Yardeni, Predicting the Markets, Anhang 15.4 (erste von zwei Korrekturen 2015/16)"
+
+[episode.2016]
+label = "2015/16"
+start = 2015-11-03
+end = 2016-02-11
+source = "Yardeni, Predicting the Markets, Anhang 15.4 (zweite Korrektur 2015/16)"
+
+[episode.2018_feb]
+label = "Feb. 2018"
+start = 2018-01-26
+end = 2018-02-08
+source = "Yardeni, Predicting the Markets, Anhang 15.4"
+
+[episode.2018_q4]
+label = "Q4 2018"
+start = 2018-09-20
+end = 2018-12-24
+source = "Yardeni, Predicting the Markets, Anhang 15.4"
+
+[episode.2020]
+label = "März 2020"
+start = 2020-02-19
+end = 2020-03-23
+source = "Yardeni, Predicting the Markets, Anhang 15.4"
+
+[episode.2022]
+label = "2022"
+start = 2022-01-03
+end = 2022-10-12
+source = "S&P Dow Jones Indices, U.S. Equities Market Attributes Oktober und November 2022 (Hoch 03.01.2022, Tief 12.10.2022)"
+
+[episode.2024_aug]
+label = "Aug. 2024"
+start = 2024-07-16
+end = 2024-08-05
+source = "S&P Dow Jones Indices, U.S. Equities Market Attributes August 2024 (Rückgang vom Hoch am 16.07. bis 05.08.2024)"
+
+[episode.2025_apr]
+label = "Apr. 2025"
+start = 2025-02-19
+end = 2025-04-08
+source = "S&P Dow Jones Indices, Market Attributes April 2025 (Hoch 19.02.2025); CNBC, Live-Updates 08.04.2025 (Tief)"
+
+[episode.2026]
+label = "2026"
+start = 2026-01-27
+end = 2026-03-30
+source = "docs/recherche.md, Abschn. 3 (Rekordhoch 27.01. laut Yardeni via Fortune, 30.03.2026; Tief 30.03. laut IO Fund); PBS News, April 2026 – Sekundärquellen"

@@ -43,6 +43,7 @@ class IndicatorHistory:
     available: list[datetime]  # estimated publication (UTC), non-decreasing
     percentiles: np.ndarray  # oriented (high = more stress or vulnerability); NaN below min history
     display_percentiles: np.ndarray | None = None  # shorter display window (display_window = true)
+    bands: np.ndarray | None = None  # quantiles 10/50/90 of the percentile window, one row per date (E-64)
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,9 @@ class IndicatorScore:
     value: float | None
     percentile: float | None
     percentile_display: float | None
+    band_p10: float | None = None  # raw values: 10th, 50th and 90th percentile of the window (E-64)
+    band_p50: float | None = None
+    band_p90: float | None = None
 
 
 @dataclass(frozen=True)
@@ -91,7 +95,8 @@ def indicator_score(history: IndicatorHistory, day: date) -> IndicatorScore:
         status = HISTORY
     else:
         status = OK
-    return IndicatorScore(day, indicator.id, status, obs_date, float(history.values[index]), percentile, display)
+    bands = (None, None, None) if history.bands is None else tuple(_number(b) for b in history.bands[index])
+    return IndicatorScore(day, indicator.id, status, obs_date, float(history.values[index]), percentile, display, *bands)
 
 
 def compute(

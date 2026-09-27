@@ -35,6 +35,9 @@ PALETTE = {
     },
 }
 FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif'
+# Sequential blue ramp of the reference palette, light -> dark (E-1: percentile colours).
+PERCENTILE_RAMP = ["#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7", "#3987e5",
+                   "#2a78d6", "#256abf", "#1c5cab", "#184f95", "#104281", "#0d366b"]
 RANGE_BUTTONS = [
     {"count": 1, "label": "1 M", "step": "month", "stepmode": "backward"},
     {"count": 6, "label": "6 M", "step": "month", "stepmode": "backward"},
@@ -79,6 +82,16 @@ class Line:
 
 
 @dataclass(frozen=True)
+class Band:
+    """Percentile band of an indicator (E-64): 10th to 90th percentile of its window, with the median."""
+
+    x: list[date]
+    low: list[float | None]
+    mid: list[float | None]
+    high: list[float | None]
+
+
+@dataclass(frozen=True)
 class Chart:
     kennzahl_id: str
     title: str
@@ -95,6 +108,8 @@ class Chart:
     shaded_label: str = ""  # what the violet phases mean, one line under the dating lines
     zero_line: bool = False
     end_labels: bool = False  # name at the end of each line (relief rule for more than two series)
+    episodes: tuple[tuple[date, date, str], ...] = ()  # crisis marks as a strip on top (E-63)
+    band: Band | None = None
 
 
 def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go.Figure, dict]:
@@ -102,6 +117,16 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go
     mode = theme if theme in PALETTE else "light"
     palette = PALETTE[mode]
     figure = go.Figure()
+    if chart.band is not None:
+        band, colour = chart.band, palette["series"][0]
+        figure.add_trace(go.Scatter(x=band.x, y=band.low, mode="lines", line={"width": 0}, connectgaps=False,
+                                    showlegend=False, hoverinfo="skip"))
+        figure.add_trace(go.Scatter(x=band.x, y=band.high, mode="lines", line={"width": 0}, connectgaps=False,
+                                    fill="tonexty", fillcolor=_tint(colour, palette["surface"], 0.25),
+                                    name="10–90 % des Fensters", hovertemplate="%{y:,.4~g}<extra>90 %</extra>"))
+        figure.add_trace(go.Scatter(x=band.x, y=band.mid, mode="lines", connectgaps=False, name="Median des Fensters",
+                                    line={"width": 1, "dash": "dash", "color": palette["secondary"]},
+                                    hovertemplate="%{y:,.4~g}<extra>Median</extra>"))
     for index, line in enumerate(chart.lines):
         figure.add_trace(go.Scatter(
             x=line.x, y=line.y, name=line.name, mode="lines", connectgaps=False,
@@ -130,6 +155,15 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go
             for kind, periods in (("recession", chart.recessions), ("shaded", chart.shaded))
             for start, end in periods if end >= first and start <= last
         ]
+    for start, end, label in chart.episodes:
+        shapes.append({"type": "rect", "xref": "x", "yref": "paper", "x0": start, "x1": end, "y0": 0.94, "y1": 1,
+                       "fillcolor": palette["secondary"], "opacity": 0.55, "line": {"width": 0}})
+    if chart.episodes:  # hover over the strip names the episode
+        figure.add_trace(go.Scatter(
+            x=[start + (end - start) / 2 for start, end, _ in chart.episodes], y=[1.0] * len(chart.episodes), yaxis="y2",
+            mode="markers", marker={"size": 14, "opacity": 0}, showlegend=False,
+            text=[f"{label}: {fmt.day(start)} bis {fmt.day(end)}" for start, end, label in chart.episodes],
+            hovertemplate="%{text}<extra>Krise</extra>"))
     if chart.zero_line:
         shapes.append({"type": "line", "xref": "paper", "yref": "y", "x0": 0, "x1": 1, "y0": 0, "y1": 0,
                        "line": {"width": 1, "color": palette["axis"]}, "layer": "below"})
@@ -148,16 +182,18 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go
     figure.update_layout(
         template=f"fever_{mode}", separators=",.", uirevision=chart.kennzahl_id,
         title={"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
-        margin={"l": 56, "r": 16, "t": 124 if len(chart.lines) > 1 else 84,
-                "b": 62 + 14 * (3 + bool(chart.recessions) + bool(chart.shaded_label))},
+        margin={"l": 56, "r": 16, "t": 124 if len(chart.lines) > 1 or chart.band is not None else 84,
+                "b": 62 + 14 * (3 + bool(chart.recessions) + bool(chart.shaded_label) + bool(chart.episodes))},
         hovermode="x unified",
-        showlegend=len(chart.lines) > 1,
+        showlegend=len(chart.lines) > 1 or chart.band is not None,
         # own row between title and range buttons, so it never covers them on a narrow screen
         legend={"orientation": "h", "x": 0, "xanchor": "left", "y": 1.15, "yanchor": "bottom"},
         xaxis=xaxis, yaxis=yaxis, shapes=shapes,
+        **({"yaxis2": {"overlaying": "y", "range": [0, 1.03], "visible": False, "fixedrange": True}} if chart.episodes else {}),
         annotations=[*labels, stamp_annotation(
             stamp(chart.source, chart.observed, chart.retrieved, recessions=bool(chart.recessions))
-            + (f"<br>{chart.shaded_label}" if chart.shaded_label else ""), mode)],
+            + (f"<br>{chart.shaded_label}" if chart.shaded_label else "")
+            + ("<br>Balken oben: Krisen, S&P 500 vom Hoch bis zum Tief" if chart.episodes else ""), mode)],
     )
     return figure, graph_config(chart.kennzahl_id, today)
 
@@ -297,6 +333,88 @@ def curve(chart: Curve, theme: str, today: date | None = None) -> tuple[go.Figur
         annotations=[stamp_annotation(text, mode, yshift=-54)],
     )
     return figure, graph_config(chart.chart_id, today)
+
+
+@dataclass(frozen=True)
+class Heatmap:
+    """Indicators x time in the percentile colours (E-1, E-66); None stays blank (not valid that day)."""
+
+    chart_id: str
+    title: str
+    source: str
+    rows: list[str]  # names, top to bottom
+    x: list[date]
+    z: list[list[float | None]]  # one list per row
+    observed: date | None = None
+    retrieved: datetime | None = None
+    note: str = ""
+
+
+def heatmap(chart: Heatmap, theme: str, today: date | None = None) -> tuple[go.Figure, dict]:
+    mode = theme if theme in PALETTE else "light"
+    steps = len(PERCENTILE_RAMP) - 1
+    scale = [[i / steps, colour] for i, colour in enumerate(PERCENTILE_RAMP)]
+    figure = go.Figure(go.Heatmap(
+        x=chart.x, y=chart.rows, z=chart.z, zmin=0, zmax=100, colorscale=scale, hoverongaps=False,
+        colorbar={"title": {"text": "Perzentil"}, "thickness": 10, "len": 0.8},
+        hovertemplate="%{y}<br>%{x|%d.%m.%Y}: Perzentil %{z:.0f}<extra></extra>",
+    ))
+    text = stamp(chart.source, chart.observed, chart.retrieved) + (f"<br>{chart.note}" if chart.note else "")
+    figure.update_layout(
+        template=f"fever_{mode}", separators=",.", uirevision=chart.chart_id,
+        title={"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
+        margin={"l": 8, "r": 8, "t": 56, "b": 62 + 14 * (4 + chart.note.count("<br>"))},
+        xaxis={"type": "date", "tickformatstops": DATE_FORMATS, "tickangle": 0},
+        yaxis={"autorange": "reversed", "automargin": True, "tickfont": {"size": 11}},
+        annotations=[stamp_annotation(text, mode)],
+    )
+    return figure, graph_config(chart.chart_id, today)
+
+
+@dataclass(frozen=True)
+class Regime:
+    """Traffic light level per score day as one coloured strip (report 6.3, view 7)."""
+
+    chart_id: str
+    title: str
+    source: str
+    x: list[date]
+    levels: list[int | None]
+    names: tuple[str, ...]  # level names, index = level
+    observed: date | None = None
+    retrieved: datetime | None = None
+
+
+def regime(chart: Regime, theme: str, today: date | None = None) -> tuple[go.Figure, dict]:
+    mode = theme if theme in PALETTE else "light"
+    n = len(STATUS)
+    scale = [item for level, colour in enumerate(STATUS) for item in ([level / n, colour], [(level + 1) / n, colour])]
+    figure = go.Figure(go.Heatmap(
+        x=chart.x, y=["Ampel"], z=[chart.levels], zmin=-0.5, zmax=n - 0.5, colorscale=scale, showscale=False,
+        customdata=[[chart.names[v] if v is not None else "–" for v in chart.levels]], hoverongaps=False,
+        hovertemplate="%{x|%d.%m.%Y}: %{customdata}<extra></extra>",
+    ))
+    text = stamp(chart.source, chart.observed, chart.retrieved) + "<br>Farben: " + ", ".join(chart.names)
+    figure.update_layout(
+        template=f"fever_{mode}", separators=",.", uirevision=chart.chart_id,
+        title={"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
+        margin={"l": 56, "r": 16, "t": 84, "b": 62 + 14 * 4},
+        xaxis={"type": "date", "tickformatstops": DATE_FORMATS, "tickangle": 0,
+               "rangeselector": {"buttons": RANGE_BUTTONS, "x": 0, "y": 1.02, "yanchor": "bottom"}},
+        yaxis={"visible": False, "fixedrange": True},
+        annotations=[stamp_annotation(text, mode)],
+    )
+    return figure, graph_config(chart.chart_id, today)
+
+
+def sparkline(x: list[date], y: list[float | None], theme: str) -> tuple[go.Figure, dict]:
+    """Small line without axes; its date and value stand as text next to it (view 7)."""
+    mode = theme if theme in PALETTE else "light"
+    figure = go.Figure(go.Scatter(x=x, y=y, mode="lines", connectgaps=False, hoverinfo="skip",
+                                  line={"width": 1.5, "color": PALETTE[mode]["series"][0]}))
+    figure.update_layout(template=f"fever_{mode}", margin={"l": 0, "r": 0, "t": 2, "b": 2}, showlegend=False,
+                         xaxis={"visible": False}, yaxis={"visible": False})
+    return figure, {"staticPlot": True, "displayModeBar": False, "responsive": True}
 
 
 def stamp(source: str, observed: date | None, retrieved: datetime | None, *, recessions: bool = False) -> str:

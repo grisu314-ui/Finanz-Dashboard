@@ -10,13 +10,15 @@ from datetime import date, datetime, timedelta
 from dash import dcc, html
 from sqlalchemy.exc import SQLAlchemyError
 
-from fever.config import VULNERABILITY, indicator_catalog, scoring_config, series_catalog
+from fever.config import VULNERABILITY, crisis_episodes, indicator_catalog, scoring_config, series_catalog
 from fever.release import NEW_YORK, is_stale
 from fever.store.db import DataDirError
 from fever.web import components as ui
 from fever.web import db, texts
 from fever.web import format as fmt
-from fever.web.figures import Chart, Curve, CurvePoint, Line, Matrix, Region, curve, matrix
+from fever.web.figures import (
+    Band, Chart, Curve, CurvePoint, Heatmap, Line, Matrix, Regime, Region, curve, heatmap, matrix, regime, sparkline,
+)
 from fever.worker import HEARTBEAT_MAX_AGE  # same limit as the container healthcheck (E-33)
 
 SOURCE_NAMES = {
@@ -564,8 +566,8 @@ def view(name: str | None, theme: str, now: datetime) -> list:
                 "makro": _view_macro, "fallhoehe": _view_vulnerability}
     if name not in VIEW_TITLES:
         return [html.H1("Ansicht nicht gefunden"), dcc.Link("Zur Übersicht", href="/")]
-    if name not in builders:
-        return [html.H1(VIEW_TITLES[name]), ui.note("Diese Ansicht folgt.")]
+    if name == "visualisierung":
+        return visualisation_frame()
     context = _Context(theme, now)
     return [html.H1(VIEW_TITLES[name]), *builders[name](context), ui.note(HISTORY_NOTE)]
 
@@ -764,3 +766,152 @@ def _view_vulnerability(ctx: _Context) -> list:
         ui.note("Nicht enthalten: die Konzentration der größten Werte im S&P 500 (keine Kursquelle, O-1) und Margin Debt "
                 "relativ zur Marktkapitalisierung (die Fallhöhe nutzt die Veränderung ggü. Vorjahr, Entscheidung E-49)."),
     ]
+
+
+# --- view 7: visualisation (M7, E-63, E-64, E-66) -------------------------------------------------
+
+HEATMAP_GRAINS = {"weekly": "Wöchentlich, ganze Historie", "daily": "Täglich, letzte 2 Jahre"}
+SPARK_DAYS = 365
+
+
+def _ordered_indicators() -> list[str]:
+    return [i for area in texts.AREAS for i in area_indicators(area)]
+
+
+def visualisation_frame() -> list:
+    """Static frame of view 7; callbacks fill each part, so switch and selection survive the refresh."""
+    episodes = crisis_episodes()
+    table = html.Div(className="table-scroll", children=html.Table(className="table", children=[
+        html.Thead(html.Tr([html.Th("Krise"), html.Th("Hoch"), html.Th("Tief"), html.Th("Quelle")])),
+        html.Tbody([html.Tr([html.Td(e.label), html.Td(fmt.day(e.start)), html.Td(fmt.day(e.end)), html.Td(e.source)])
+                    for e in episodes]),
+    ]))
+    options = [{"label": texts.text(i).title, "value": i} for i in _ordered_indicators()]
+    return [
+        html.H1("Visualisierung"),
+        html.Section(className="card card-wide", children=[
+            html.H2("Stress-Historie mit Krisen"), html.Div(id="vis-stress"),
+            html.Details([html.Summary("Krisen: Daten und Quellen"), table]),
+        ]),
+        html.Section(className="card card-wide", children=[html.H2("Regime-Zeitleiste"), html.Div(id="vis-regime")]),
+        html.Section(className="card card-wide", children=[
+            html.H2("Heatmap der Perzentile"),
+            dcc.RadioItems(id="heatmap-grain", options=[{"label": v, "value": k} for k, v in HEATMAP_GRAINS.items()],
+                           value="weekly", inline=True, persistence=True, persistence_type="session", className="switch"),
+            html.Div(id="vis-heatmap"),
+        ]),
+        html.Section(className="card card-wide", children=[
+            html.H2("Perzentilbänder"),
+            ui.note("Wert des Indikators mit dem Bereich zwischen dem 10. und 90. Perzentil seines Fensters und dem Median."),
+            dcc.Dropdown(id="bands-indicator", options=options, value=options[0]["value"] if options else None,
+                         clearable=False, persistence=True, persistence_type="session", className="select"),
+            html.Div(id="vis-bands"),
+        ]),
+        html.Section(className="card card-wide", children=[
+            html.H2("Sparklines"), ui.note("Letzte 12 Monate je Indikator; Stand und Abruf stehen darunter."),
+            html.Div(id="vis-sparklines", className="spark-grid"),
+        ]),
+        ui.note(HISTORY_NOTE),
+    ]
+
+
+@guarded
+def vis_stress(theme: str, now: datetime) -> list:
+    latest = db.latest_composite()
+    if latest is None:
+        return [ui.note("Noch keine Scores berechnet.")]
+    history = db.composite_history("stress")
+    chart = Chart("stress-crises", "Stress (geglättet) mit Krisen", "eigene Berechnung (Scoring)",
+                  [Line("Stress", [r["score_date"] for r in history], [r["stress"] for r in history])], "Wert (0–100)",
+                  observed=latest["score_date"], retrieved=latest["computed_at"], y_range=(0, 100),
+                  recessions=db.recessions(), episodes=tuple((e.start, e.end, e.label) for e in crisis_episodes()),
+                  full_history=True)
+    return [ui.chart_card("vis-stress-chart", chart, theme)]
+
+
+@guarded
+def vis_regime(theme: str, now: datetime) -> list:
+    latest = db.latest_composite()
+    if latest is None:
+        return [ui.note("Noch keine Scores berechnet.")]
+    history = db.composite_history("level")
+    chart = Regime("regime", "Ampelstufe je Handelstag", "eigene Berechnung (Scoring)", [r["score_date"] for r in history],
+                   [r["level"] for r in history], texts.LEVEL_NAMES, observed=latest["score_date"],
+                   retrieved=latest["computed_at"])
+    return [ui.figure_card("vis-regime-chart", *regime(chart, theme), box="chart-box chart-box-short")]
+
+
+@guarded
+def vis_heatmap(grain: str, theme: str, now: datetime) -> list:
+    latest = db.latest_composite()
+    if latest is None:
+        return [ui.note("Noch keine Scores berechnet.")]
+    rows = db.percentile_matrix()
+    days = sorted({r["score_date"] for r in rows})
+    if grain == "daily":
+        start = days[-1] - timedelta(days=730)
+        columns = [d for d in days if d > start]
+    else:  # last score day of every ISO week: shows the stored daily percentile, nothing is averaged
+        last_of_week = {}
+        for d in days:
+            last_of_week[d.isocalendar()[:2]] = d
+        columns = sorted(last_of_week.values())
+    wanted = set(columns)
+    values = {(r["indicator_id"], r["score_date"]): r["percentile"] for r in rows
+              if r["score_date"] in wanted and r["status"] == "ok"}
+    indicators = _ordered_indicators()
+    chart = Heatmap("heatmap", "Perzentile der Indikatoren", "eigene Berechnung (Scoring)",
+                    [texts.text(i).title for i in indicators], columns,
+                    [[values.get((i, d)) for d in columns] for i in indicators],
+                    observed=latest["score_date"], retrieved=latest["computed_at"],
+                    note=f"{HEATMAP_GRAINS.get(grain, HEATMAP_GRAINS['weekly'])}; leer = nicht gültig (veraltet, zu kurze Historie)")
+    return [ui.figure_card("vis-heatmap-chart", *heatmap(chart, theme), box="chart-box chart-box-tall")]
+
+
+@guarded
+def vis_bands(indicator_id: str | None, theme: str, now: datetime) -> list:
+    if indicator_id not in indicator_catalog():
+        return [ui.note("Bitte einen Indikator wählen.")]
+    latest = db.latest_composite()
+    row = db.indicator_scores_on(latest["score_date"]).get(indicator_id) if latest else None
+    if row is None:
+        return [ui.note("Noch kein berechneter Wert.")]
+    history = db.indicator_history(indicator_id)
+    days = [r["score_date"] for r in history]
+    indicator = indicator_catalog()[indicator_id]
+    source = ", ".join(sorted({SOURCE_NAMES.get(s.source, s.source) for s in indicator.series}))
+    band = Band(days, [r["band_p10"] for r in history], [r["band_p50"] for r in history], [r["band_p90"] for r in history])
+    chart = Chart(f"bands-{indicator_id}", f"{texts.text(indicator_id).title}: Wert und Perzentilband", source,
+                  [Line("Wert", days, [r["value"] if r["status"] in ("ok", "history") else None for r in history],
+                        hover_decimals=None, shape="hv")],
+                  "Wert", observed=row["obs_date"], retrieved=_retrieved(indicator_id, db.series_freshness()),
+                  recessions=db.recessions(), band=band, full_history=True)
+    return [ui.chart_card("vis-bands-chart", chart, theme)]
+
+
+@guarded
+def vis_sparklines(theme: str, now: datetime) -> list:
+    latest = db.latest_composite()
+    if latest is None:
+        return [ui.note("Noch keine Scores berechnet.")]
+    rows = db.indicator_scores_on(latest["score_date"])
+    fresh = db.series_freshness()
+    config = scoring_config()
+    start = latest["score_date"] - timedelta(days=SPARK_DAYS)
+    cards = []
+    for indicator_id in _ordered_indicators():
+        history = [r for r in db.indicator_history(indicator_id) if r["score_date"] > start]
+        row = rows.get(indicator_id)
+        figure, graph = sparkline([r["score_date"] for r in history],
+                                  [r["value"] if r["status"] in ("ok", "history") else None for r in history], theme)
+        cards.append(html.Div(className="spark", children=[
+            ui.kennzahl_head(indicator_id, tag=html.H3),
+            html.Div([html.Span(_value(row["value"] if row else None), className="number"),
+                      ui.percentile_chip(row["percentile"] if row else None, config.yellow_diffusion_percentile)],
+                     className="indicator-summary"),
+            html.Div(className="spark-box", children=dcc.Graph(figure=figure, config=graph, className="chart",
+                                                               style={"height": "100%"})),
+            ui.freshness(row["obs_date"] if row else None, _retrieved(indicator_id, fresh),
+                         stale=bool(row and row["status"] == "stale"), now=now),
+        ]))
+    return cards
