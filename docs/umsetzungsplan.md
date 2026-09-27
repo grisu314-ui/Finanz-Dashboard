@@ -23,7 +23,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ☑ 26.09.2026 (M4a bis M4d, E-37) | M3 | M4a bis M4d erteilt 26.09.2026 |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026) | M4, L-1 bis L-12 | erteilt 26.09.2026 |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026; Nachtrag Rezessionsbalken E-56 dort ⏳) | M1 (Lesen), M3 (Heartbeat) | erteilt 26.09.2026 |
-| M7 | Ansichten 1–7 | ☑ 27.09.2026: M7a (Bereiche und Einzelreihen, E-57 bis E-61), Übersicht B und Ansichten 2–6 (E-62, E-65), Perzentilbänder (E-64, Migration 0003) und Ansicht 7 (E-63, E-66); auf TrueNAS ⏳ | M5, M6, L-13 | M7a erteilt 26.09.2026, M7 erteilt 27.09.2026 |
+| M7 | Ansichten 1–7 | ☑ 27.09.2026: Übersicht (vormals Übersicht B) und Ansichten 2–6 (E-62, E-65, E-67), Perzentilbänder (E-64, Migration 0003) und Ansicht 7 (E-63, E-66); die Variante M7a ist wieder entfernt (E-67); auf TrueNAS ⏳ | M5, M6, L-13 | M7a erteilt 26.09.2026, M7 erteilt 27.09.2026 |
 | M8 | Erklärtexte je Kennzahl | ◐ 29 Texte (alle 19 Indikatoren, 3 Blöcke, 4 Scores, 3 Begriffe); Prüfung durch den Nutzer ausstehend | parallel zu M6/M7 | ja (Texte prüfen) |
 | M9 | Abnahme Phase 1 | ☐ | M0–M8 | – |
 
@@ -101,6 +101,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 27.09.2026 | E-64 | Perzentilbänder 10/50/90 | Im Scoring berechnet und gespeichert (Migration 0003, drei Spalten in `indicator_score`), aus den eigenen Werten im selben Fenster wie das Perzentil, nur mit Daten bis t | Auf TrueNAS Migration mit Probe an einer Backup-Kopie; der Scoring-Lauf wird länger |
 | 27.09.2026 | E-65 | Re-Steepening der Zinskurve (L-10) | Violette Fläche, solange 10J − 3M unter null liegt; das Ende einer Fläche ist das Re-Steepening | Keine neuen Parameter; kurze Unterschreitungen erscheinen als schmale Flächen |
 | 27.09.2026 | E-66 | Raster der Heatmap | Schalter: Start wöchentlich über die ganze Historie (Perzentil vom letzten Handelstag der Woche), umschaltbar auf täglich für die letzten 2 Jahre | Geladen wird nur das gewählte Raster |
+| 27.09.2026 | E-67 | Welche Übersicht bleibt (E-62) | Die Variante nach Bericht 6.3: Übersicht B wird Startseite `/` und bekommt Karten für Stress und Fallhöhe; die bisherige Übersicht mit den aufklappbaren Bereichen und Einzelreihen (M7a) entfällt ganz; Navigation in einer Zeile | Die Einzelreihen stehen in den Ansichten 2–6, „So fließt der Wert in den Bereich ein“ bleibt auf den Erklärseiten; `/uebersicht-b` leitet auf `/` um; in `CLAUDE.md` unter „NICHT gebaut“ eingetragen |
 
 ---
 
@@ -726,6 +727,12 @@ Laut Bericht 6.3, soweit Daten vorhanden:
 - **7 Visualisierung:** Heatmap (Perzentilskala nach E-1), Perzentilbänder 10/50/90, Sparklines mit Zeitstempel, Composite-Historie mit Krisenmarken (L-13), Regime-Zeitleiste.
 - Historienansicht mit Hinweis: je Beobachtung zählt der neueste Stand (Phase-1-Ausnahme, `CLAUDE.md`).
 
+**Nachtrag 27.09.2026: eine Version (E-67)**
+- Übersicht B ist die Startseite `/` (Karten Ampel, Stress, Fallhöhe, Konfidenz, Diffusionsindex; Ampelmatrix; Hinweis zum neuesten Stand; Aktualisierung je Quelle); `/uebersicht-b` leitet mit 301 auf `/` um
+- Entfernt: die alte Übersicht mit den Bereichen und Einzelreihen (M7a: Rahmen, Callbacks mit `MATCH`, Auf- und Zuklappen, Stile, Tests); geblieben sind die 22 Texte, „So fließt der Wert in den Bereich ein“ auf den Erklärseiten und die Korrektur „Historie ab“
+- Navigation in einer Zeile: Übersicht, Signale, Breite, Positionierung, Makro, Fallhöhe, Visualisierung, Datenstand, Erklärungen
+- Belege: `pytest -q` 388 passed; Seiten 200, `/uebersicht-b` 301; Browser 1440 px hell und 390 px dunkel ohne Konsolenfehler und ohne seitliches Scrollen
+
 **Ergebnis M7, Teil 1 (27.09.2026, umgesetzt; auf TrueNAS ⏳): Übersicht B und Ansichten 2–6 (E-62, E-65)**
 - **Umgesetzt:**
   - Zweite Navigationszeile „Ansichten“ (`fever/web/app.py`, `VIEWS`); die bisherige Übersicht bleibt Startseite (E-62)
@@ -922,13 +929,12 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (27.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt: Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-66; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026.
-  - M7 vollständig umgesetzt, noch nicht auf TrueNAS: Rezessionsbalken (E-56, 61 Reihen), M7a (Bereiche und Einzelreihen), Übersicht B und Ansichten 2–7, Perzentilbänder mit Migration 0003; 396 Tests grün. Beide Übersichten bestehen nebeneinander (E-62).
+  - Entscheidungen bis E-67; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026.
+  - M7 vollständig umgesetzt, noch nicht auf TrueNAS: Rezessionsbalken (E-56, 61 Reihen), Übersicht nach Bericht 6.3 als Startseite und Ansichten 2–7 (E-67; die Variante M7a ist entfernt), Perzentilbänder mit Migration 0003; 388 Tests grün.
   - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“); das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
   1. Update auf TrueNAS mit Migration 0003 nach `docs/einrichtung.md`, Schritt 9: Probe an einer Backup-Kopie, Stack stoppen, Backup, `alembic upgrade head`, Stack starten, `python -m fever.score`, Sofort-Abruf (61 Reihen).
   2. Nutzer prüft die Texte: sechs aus E-52, `recessions.md`, die 22 aus E-58 und die 9 aus M7 (M8), dazu die Krisendaten in `config/episodes.toml`.
-  3. Nutzer entscheidet später, welche Übersicht bleibt oder wie beide zusammengehen (E-62).
   4. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen; dann M3 abschließen (Woche ab 28.09.2026).
   5. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9).
   6. Danach M8 (Prüfung der Texte) und M9 (Abnahme Phase 1).
@@ -937,7 +943,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`); später: Übersicht mit Bereichen oder Übersicht B (E-62).
+- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`).
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---

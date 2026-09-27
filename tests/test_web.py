@@ -130,7 +130,7 @@ def test_text_rules_are_enforced(change, message):
 
 def test_every_displayed_kennzahl_has_a_text(data):
     """Render every page; a Kennzahl without text raises in kennzahl_head (rule of 7.2)."""
-    pages = [views.overview("light", NOW), views.areas(), views.data_status(NOW), views.explanations()]
+    pages = [views.overview("light", NOW), views.data_status(NOW), views.explanations()]
     pages += [views.kennzahl(k, "light", NOW) for k in texts.all_ids() if texts.has_text(k)]
     shown = set(re.findall(r"/kennzahl/([a-z0-9_]+)", rendered(pages)))
     assert shown and all(texts.has_text(k) for k in shown)
@@ -232,23 +232,6 @@ def component_ids(component) -> list:
     return found
 
 
-def test_areas_frame_lists_the_four_areas_with_exactly_their_indicators():
-    from fever.config import indicator_catalog
-    frame = views.areas()
-    toggles = [i for i in component_ids(frame) if isinstance(i, dict) and i["type"] == "area-toggle"]
-    assert [t["area"] for t in toggles] == ["volatility", "credit", "macro", "vulnerability"]
-    shown = []
-    for section in (c for c in frame if getattr(c, "className", "") == "card card-wide area"):
-        area = next(i["area"] for i in component_ids(section) if isinstance(i, dict) and i["type"] == "area-toggle")
-        rows = [i["id"] for i in component_ids(section) if isinstance(i, dict) and i["type"] == "indicator-toggle"]
-        assert rows == [k for k, ind in indicator_catalog().items() if ind.block == area], area
-        shown += rows
-    assert sorted(shown) == sorted(indicator_catalog())  # all 19, each once
-    bodies = [c for c in _walk_components(frame) if isinstance(getattr(c, "id", None), dict) and c.id["type"].endswith("-body")]
-    assert bodies and all(body.hidden is True for body in bodies)  # everything starts closed
-    assert "Breite/Internals" in rendered(frame) and "Positionierung/Sentiment" in rendered(frame)
-
-
 def _walk_components(node):
     if isinstance(node, (list, tuple)):
         for child in node:
@@ -256,49 +239,6 @@ def _walk_components(node):
     elif hasattr(node, "to_plotly_json"):
         yield node
         yield from _walk_components(getattr(node, "children", None))
-
-
-def test_areas_live_outside_the_refreshed_overview(client):
-    """The 5-minute refresh replaces overview-content only, so open sections stay open."""
-    from fever.web.pages import uebersicht
-    page = uebersicht.layout()
-    assert [c.id for c in page.children[1:]] == ["overview-content", "areas"]
-    assert page.children[1].children is None
-    dependencies = json.dumps(client.get("/_dash-dependencies").get_json())
-    for output in ("area-chart", "indicator-body", "area-summary", "indicator-summary", "aria-expanded"):
-        assert output in dependencies, output
-
-
-def test_sections_build_charts_only_when_open():
-    assert [views.is_open(n) for n in (None, 0, 1, 2, 3)] == [False, False, True, False, True]
-
-
-def test_open_area_and_indicator_charts_carry_recession_bars(data):
-    engine = make_engine(data)
-    with engine.begin() as conn:
-        months = [date(2026, m, 1) for m in range(1, 10)]  # the scores of the fixture cover September 2026
-        append_observations(conn, "usrec", [NewObservation(d, 1.0 if d.month == 9 else 0.0, NOW, True) for d in months],
-                            retrieved_at=NOW)
-    for part in (views.area_chart("volatility", "light", NOW), views.indicator_detail("vix", "light", NOW)):
-        graphs = [c for c in _walk_components(part) if type(c).__name__ == "Graph"]
-        assert graphs and all(g.figure.layout.shapes for g in graphs)
-    detail = rendered(views.indicator_detail("vix", "light", NOW))
-    assert "So fließt der Wert in den Bereich ein" in detail and "Umrechnung: Niveau der Reihe." in detail
-
-
-def test_summaries_follow_the_order_dash_asks_for(data):
-    areas, indicators = views.summaries(["credit", "volatility"], ["vvix", "vix"], NOW)
-    assert len(areas) == 2 and len(indicators) == 2
-    assert "0 von 4 gültig" in rendered(areas[0]) and "Median" in rendered(areas[1])
-    assert "noch kein veröffentlichter Wert" in rendered(indicators[0]) and "Stand 25.09.2026" in rendered(indicators[1])
-
-
-def test_summaries_without_scores(migrated_dir, monkeypatch):
-    monkeypatch.setenv("FEVER_DATA", str(migrated_dir))
-    web_db.engine.cache_clear()
-    areas, indicators = views.summaries(["macro"], ["nfci"], NOW)
-    assert "Noch keine Scores berechnet." in rendered(areas + indicators)
-    web_db.engine.cache_clear()
 
 
 def test_contribution_steps_come_from_the_configuration(monkeypatch):
@@ -351,32 +291,12 @@ def test_indicator_page_explains_its_contribution(data):
 
 def test_every_history_view_names_the_latest_vintage_rule(data):
     """CLAUDE.md: in phase 1 the newest vintage counts per observation, and the history view says so."""
-    for page in (views.overview("light", NOW), views.areas(), views.kennzahl("vix", "light", NOW),
+    for page in (views.overview("light", NOW), views.view("makro", "light", NOW), views.kennzahl("vix", "light", NOW),
                  views.kennzahl("stress", "light", NOW)):
         assert views.HISTORY_NOTE in rendered(page)
 
 
-def test_area_charts_start_with_the_whole_history():
-    """E-61: charts in the areas start with all years (all recessions visible); others with the last years."""
-    days = [date(2000, 1, 3), date(2026, 9, 25)]
-    chart = Chart("vix", "VIX", "Cboe", [Line("VIX", days, [20.0, 15.0])], "Punkte")
-    assert time_series(chart, "light")[0].layout.xaxis.range[0] > date(2020, 1, 1)
-    assert time_series(replace(chart, full_history=True), "light")[0].layout.xaxis.range[0] == date(2000, 1, 3)
-
-
-def test_area_and_indicator_charts_use_the_whole_history(data, monkeypatch):
-    charts = []
-    real = views.ui.chart_card
-    monkeypatch.setattr(views.ui, "chart_card", lambda graph_id, chart, theme: charts.append(chart) or real(graph_id, chart, theme))
-    views.area_chart("volatility", "light", NOW)
-    views.indicator_detail("vix", "light", NOW)
-    assert len(charts) == 3 and all(chart.full_history for chart in charts)
-    charts.clear()
-    views.kennzahl("vix", "light", NOW)  # the Kennzahl page keeps the last years
-    assert charts and not any(chart.full_history for chart in charts)
-
-
-# --- overview B (M7, report 6.3 view 1, E-62) -----------------------------------------------------------
+# --- overview (report 6.3 view 1; start page since E-67) -----------------------------------------------------
 
 
 def test_matrix_regions_follow_the_rules_in_scoring_toml(monkeypatch):
@@ -403,32 +323,32 @@ def test_matrix_chart_standard_and_labels():
     assert figure.data[1].text == ("Stand 25.09.2026",) and "Hinweis" in figure.layout.annotations[-1].text
 
 
-def test_overview_b_shows_matrix_confidence_diffusion_and_sources(data):
-    page = views.overview_b("light", NOW)
+def test_overview_shows_cards_matrix_and_sources(data):
+    page = views.overview("light", NOW)
     text = rendered(page)
-    for kennzahl in ("traffic_light", "confidence", "diffusion"):
+    for kennzahl in ("traffic_light", "stress", "vulnerability", "confidence", "diffusion"):
         assert f"/kennzahl/{kennzahl}" in text
     graph = next(c for c in _walk_components(page) if type(c).__name__ == "Graph")
     assert graph.id == "matrix" and len(graph.figure.layout.shapes) == 5
     assert "Letzte Aktualisierung je Quelle" in text and "Cboe (Indizes)" in text
 
 
-def test_overview_b_trace_covers_the_last_60_score_days(data, monkeypatch):
+def test_overview_trace_covers_the_last_60_score_days(data, monkeypatch):
     rows = [{"score_date": date(2026, 1, 1) + timedelta(days=i), "stress": 30.0 + i / 10, "vulnerability": 70.0} for i in range(100)]
     monkeypatch.setattr(web_db, "composite_history", lambda *columns: rows)
-    graph = next(c for c in _walk_components(views.overview_b("light", NOW)) if type(c).__name__ == "Graph")
+    graph = next(c for c in _walk_components(views.overview("light", NOW)) if type(c).__name__ == "Graph")
     trace, today = graph.figure.data
     assert len(trace.x) == views.TRACE_DAYS == 60 and trace.x[0] == rows[40]["stress"]
     assert today.x == (rows[-1]["stress"],) and today.text == ("Stand 10.04.2026",)
 
 
-def test_views_navigation_and_overview_b_page(client):
-    from fever.web.app import VIEWS
-    html = client.get("/uebersicht-b").get_data(as_text=True)
-    assert client.get("/uebersicht-b").status_code == 200
+def test_one_navigation_row_and_the_old_overview_b_address(client):
+    from fever.web.app import NAVIGATION
+    assert [path for path, _ in NAVIGATION][:2] == ["/", "/ansicht/signale"] and len(NAVIGATION) == 9
     layout = json.dumps(client.get("/_dash-layout").get_json(), ensure_ascii=False)
-    assert all(path in layout for path, _ in VIEWS) and "Übersicht B" in layout
-
+    assert all(path in layout for path, _ in NAVIGATION) and "Übersicht B" not in layout
+    moved = client.get("/uebersicht-b")  # old address of the overview (E-67)
+    assert moved.status_code == 301 and moved.headers["Location"].endswith("/")
 
 
 # --- views 2 to 6 (M7) ----------------------------------------------------------------------------------

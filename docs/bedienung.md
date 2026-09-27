@@ -80,26 +80,20 @@ Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar 
 
 ## 7. Ansichten
 
-1. **Übersicht:** Ampel, Stress, Fallhöhe und Konfidenz mit Verlauf; die Stress-Fallhöhe-Matrix mit 60-Tage-Spur folgt. Auf dem Smartphone lesbar.
-   - **Bereiche und Einzelreihen** (darunter): Volatilität/Optionen, Kredit/Funding, Makro/Finanzierungsbedingungen und Fallhöhe, jeweils mit aktuellem Bereichswert und Zahl der gültigen Indikatoren. „Verlauf und … Einzelreihen“ klappt den Verlauf des Bereichs und die Liste seiner Indikatoren auf; „Charts und Berechnung“ klappt je Indikator den Wert- und den Perzentil-Chart und die Erklärung auf, wie er in den Bereich einfließt. Charts laden erst beim Aufklappen und zeigen zu Beginn die ganze Historie mit allen Rezessionsflächen; „5 J“ oder „1 J“ zoomt auf die jüngere Zeit. Offene Abschnitte bleiben bei der automatischen Aktualisierung offen. Reine Anzeige-Reihen wie HY-OAS oder SKEW folgen später.
-2. **Schnelle Marktsignale:** VIX-Termstruktur, VIX/VIX3M, VRP, VVIX, SKEW, USD/JPY.
-3. **Marktbreite:** in Phase 1 ohne Datenquelle (O-1); die Ansicht sagt das.
-4. **Sentiment und Positionierung:** Positionierung am VIX-Futures-Markt (COT), Margin Debt.
-5. **Makro und Liquidität:** Financial-Conditions-Indizes, Stressindizes, Kreditspreads, Zinskurve, Arbeitsmarkt.
-6. **Fallhöhe:** Bewertung (CAPE), Margin Debt.
-7. **Visualisierung:** Heatmap aller Kennzahlen über die Zeit, Perzentilbänder, Composite-Historie mit markierten Krisen, Regime-Zeitleiste.
+1. **Übersicht** (Startseite): Ampel mit den zutreffenden Regeln, Stress und Fallhöhe (geglättet, dazu ungeglättet), Konfidenz und Diffusionsindex; die Ampelmatrix (Stress nach rechts, Fallhöhe nach oben; die farbigen Flächen zeigen, welche Ampelstufe die Regeln aus Stress und Fallhöhe ergeben; die Linie ist die Spur der letzten 60 Handelstage) und die letzte Aktualisierung je Quelle. Rot über VIX/VIX3M und Gelb über den Diffusionsindex stehen nicht in den Flächen; die Ampel kann deshalb höher stehen, als der Punkt vermuten lässt. Auf dem Smartphone lesbar.
+2. **Signale:** VIX-Termstruktur (heute), VIX/VIX3M mit violett markierter Backwardation, VIX, VRP, VVIX, SKEW, USD/JPY.
+3. **Breite:** in Phase 1 ohne Datenquelle (O-1); die Seite sagt das.
+4. **Positionierung:** Positionierung am VIX-Futures-Markt (COT) mit Perzentil über 10 und 3 Jahre, Margin Debt; AAII folgt in Phase 2.
+5. **Makro:** Financial-Conditions- und Stressindizes, OFR FSI nach Kategorien und Regionen, Kreditspreads (HY-OAS, CCC − BB nur als Anzeige), Zinskurve mit violett markierter Inversion, Arbeitsmarkt.
+6. **Fallhöhe:** CAPE, Excess CAPE Yield, Margin Debt.
+7. **Visualisierung:**
+   - *Stress-Historie mit Krisen:* die dunklen Balken oben markieren Krisen vom Hoch bis zum Tief des S&P 500; Maus darüber nennt Krise und Daten, die Tabelle darunter die Quellen.
+   - *Regime-Zeitleiste:* die Ampelstufe an jedem Handelstag.
+   - *Heatmap:* jede Zeile ein Indikator, die Farbe sein Perzentil (dunkler = höher); der Schalter wechselt zwischen wöchentlich über die ganze Historie und täglich für die letzten zwei Jahre. Leere Stellen: an diesem Tag nicht gültig (veraltet oder zu kurze Historie).
+   - *Perzentilbänder:* für den gewählten Indikator der Wert, der Bereich zwischen dem 10. und 90. Perzentil seines Vergleichsfensters (hellblau) und der Median (gestrichelt). Liegt der Wert über dem Band, ist er ungewöhnlich hoch.
+   - *Sparklines:* alle Indikatoren der letzten 12 Monate auf einen Blick, mit Wert, Perzentil und Stand.
 8. **Datenstand** und **Erklärungen.**
 
-**Zwei Versionen nebeneinander (Stand 27.09.2026, E-62):** Die Startseite „Übersicht“ zeigt Ampel, Stress, Fallhöhe, Konfidenz und darunter die aufklappbaren Bereiche. Die Ansichten 1–7 stehen zusätzlich in der zweiten Navigationszeile „Ansichten“:
-- **Übersicht B:** Ampel, Konfidenz, Diffusionsindex, die Ampelmatrix (Stress nach rechts, Fallhöhe nach oben; die farbigen Flächen zeigen, welche Ampelstufe die Regeln aus Stress und Fallhöhe ergeben; die Linie ist die Spur der letzten 60 Handelstage) und die letzte Aktualisierung je Quelle. Rot über VIX/VIX3M und Gelb über den Diffusionsindex stehen nicht in den Flächen; die Ampel kann deshalb höher stehen, als der Punkt vermuten lässt.
-- **Signale, Breite, Positionierung, Makro, Fallhöhe:** je Kennzahl der Verlauf mit der ganzen Historie; Grau sind US-Rezessionen, Violett Backwardation (VIX über VIX3M) bzw. eine inverse Zinskurve. „Nur Anzeige, kein Score“ steht bei Reihen, die nicht in Stress oder Fallhöhe eingehen (etwa HY-OAS oder SKEW).
-- **Visualisierung:**
-  - *Stress-Historie mit Krisen:* die dunklen Balken oben markieren Krisen vom Hoch bis zum Tief des S&P 500; Maus darüber nennt Krise und Daten, die Tabelle darunter die Quellen.
-  - *Regime-Zeitleiste:* die Ampelstufe an jedem Handelstag.
-  - *Heatmap:* jede Zeile ein Indikator, die Farbe sein Perzentil (dunkler = höher); der Schalter wechselt zwischen wöchentlich über die ganze Historie und täglich für die letzten zwei Jahre. Leere Stellen: an diesem Tag nicht gültig (veraltet oder zu kurze Historie).
-  - *Perzentilbänder:* für den gewählten Indikator der Wert, der Bereich zwischen dem 10. und 90. Perzentil seines Vergleichsfensters (hellblau) und der Median (gestrichelt). Liegt der Wert über dem Band, ist er ungewöhnlich hoch.
-  - *Sparklines:* alle Indikatoren der letzten 12 Monate auf einen Blick, mit Wert, Perzentil und Stand.
-
-Welche Übersicht bleibt, wird später entschieden.
+In den Ansichten starten die Verläufe mit der ganzen Historie; Grau sind US-Rezessionen. „Nur Anzeige, kein Score“ steht bei Reihen, die nicht in Stress oder Fallhöhe eingehen.
 
 Hinweis zur Historie: Für vergangene Tage zählt je Beobachtung der neueste veröffentlichte Stand (auch nach späteren Revisionen). Die historische Kurve kann deshalb etwas anders aussehen als das, was man an dem jeweiligen Tag gesehen hätte. Die revisionsgenaue Rückrechnung ist für Phase 2 geplant. Unter jedem Verlauf steht dazu ein kurzer Hinweis.

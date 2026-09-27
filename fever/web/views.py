@@ -72,30 +72,6 @@ def _value(value: float | None) -> str:
 # --- overview --------------------------------------------------------------------------------------
 
 
-@guarded
-def overview(theme: str, now: datetime) -> list:
-    latest = db.latest_composite()
-    if latest is None:
-        return [ui.note("Noch keine Scores berechnet. Der Worker rechnet nach dem nächsten Abruf; "
-                        "sofort mit python -m fever.score (docs/einrichtung.md).")]
-    stamp = _score_stamp(latest, now)
-    cards = [
-        _traffic_card(latest, stamp),
-        _number_card("stress", latest["stress"], f"ungeglättet {fmt.number(latest['stress_raw'])}", stamp, PLACEHOLDERS),
-        _number_card("vulnerability", latest["vulnerability"], f"ungeglättet {fmt.number(latest['vulnerability_raw'])}", stamp),
-        _number_card("confidence", latest["confidence"], "Anteil aktueller Daten, gewichtet nach Vorlauf", stamp, unit=" %"),
-    ]
-    history = db.composite_history("stress", "vulnerability")
-    chart = Chart(
-        "stress", "Stress und Fallhöhe (geglättet)", "eigene Berechnung (Scoring)",
-        [Line("Stress", [r["score_date"] for r in history], [r["stress"] for r in history]),
-         Line("Fallhöhe", [r["score_date"] for r in history], [r["vulnerability"] for r in history])],
-        "Wert (0–100)", observed=latest["score_date"], retrieved=latest["computed_at"], y_range=(0, 100),
-        recessions=db.recessions(),
-    )
-    return [html.Div(cards, className="grid"), ui.chart_card("overview-history", chart, theme), ui.note(HISTORY_NOTE)]
-
-
 def _score_stamp(latest: dict, now: datetime):
     return ui.freshness(latest["score_date"], latest["computed_at"], stale=_scores_stale(latest, now), now=now,
                         retrieved_label="berechnet")
@@ -113,7 +89,7 @@ def _traffic_card(latest: dict, stamp) -> html.Div:
     ])
 
 
-# --- overview B (M7, report 6.3 view 1) ------------------------------------------------------------
+# --- overview (report 6.3 view 1; start page since E-67) ------------------------------------------------------------
 
 TRACE_DAYS = 60  # report 6.3: current point with a 60-day trace
 MATRIX_NOTE = ("Nicht in den Flächen: Rot über VIX/VIX3M,<br>Gelb über den Diffusionsindex, Hysterese;<br>"
@@ -133,13 +109,17 @@ def matrix_regions() -> tuple[Region, ...]:
 
 
 @guarded
-def overview_b(theme: str, now: datetime) -> list:
+def overview(theme: str, now: datetime) -> list:
+    """Start page (E-67): cards, traffic light matrix with trace, last update per source."""
     latest = db.latest_composite()
     if latest is None:
-        return [ui.note("Noch keine Scores berechnet.")]
+        return [ui.note("Noch keine Scores berechnet. Der Worker rechnet nach dem nächsten Abruf; "
+                        "sofort mit python -m fever.score (docs/einrichtung.md).")]
     stamp = _score_stamp(latest, now)
     cards = [
         _traffic_card(latest, stamp),
+        _number_card("stress", latest["stress"], f"ungeglättet {fmt.number(latest['stress_raw'])}", stamp, PLACEHOLDERS),
+        _number_card("vulnerability", latest["vulnerability"], f"ungeglättet {fmt.number(latest['vulnerability_raw'])}", stamp),
         _number_card("confidence", latest["confidence"], "Anteil aktueller Daten, gewichtet nach Vorlauf", stamp, unit=" %"),
         _number_card("diffusion", latest["diffusion"], "Anteil der gültigen Stress-Indikatoren über „erhöht“", stamp, unit=" %"),
     ]
@@ -153,6 +133,7 @@ def overview_b(theme: str, now: datetime) -> list:
     return [
         html.Div(cards, className="grid grid-3"),
         ui.figure_card("matrix", *matrix(chart, theme)),
+        ui.note(HISTORY_NOTE),
         _sources_card(now),
     ]
 
@@ -318,16 +299,15 @@ def _indicator_state(kennzahl_id, theme, now):
         html.P(f"Status: {STATUS_NAMES[row['status']]}", className="detail"),
         ui.freshness(row["obs_date"], retrieved, stale=row["status"] == "stale", now=now),
     ])
-    return state, _indicator_charts(kennzahl_id, theme, row, retrieved, "chart"), db.history_start(series_ids)
+    return state, _indicator_charts(kennzahl_id, theme, row, retrieved), db.history_start(series_ids)
 
 
 def _retrieved(indicator_id: str, fresh: dict) -> datetime | None:
     return max((fresh[s.id]["retrieved_at"] for s in indicator_catalog()[indicator_id].series if s.id in fresh), default=None)
 
 
-def _indicator_charts(kennzahl_id, theme, row, retrieved, prefix) -> list:
-    """Value and percentile over time, both with the recession bars (E-56, E-59); in the areas with the
-    whole history from the start (E-61), on the Kennzahl page with the last years."""
+def _indicator_charts(kennzahl_id, theme, row, retrieved) -> list:
+    """Value and percentile over time on the Kennzahl page, both with the recession bars (E-56)."""
     indicator = indicator_catalog()[kennzahl_id]
     history = db.indicator_history(kennzahl_id)
     shown = {"ok", "history"}
@@ -335,17 +315,16 @@ def _indicator_charts(kennzahl_id, theme, row, retrieved, prefix) -> list:
     source = ", ".join(sorted({SOURCE_NAMES.get(s.source, s.source) for s in indicator.series}))
     title = texts.text(kennzahl_id).title
     recessions = db.recessions()
-    full = prefix == "area"
     return [
-        ui.chart_card(f"{prefix}-{kennzahl_id}-value", Chart(
+        ui.chart_card(f"chart-{kennzahl_id}-value", Chart(
             kennzahl_id, f"{title}: Wert", source,
             [Line("Wert", days, [r["value"] if r["status"] in shown else None for r in history], hover_decimals=2, shape="hv")],
-            "Wert", observed=row["obs_date"], retrieved=retrieved, recessions=recessions, full_history=full), theme),
-        ui.chart_card(f"{prefix}-{kennzahl_id}-percentile", Chart(
+            "Wert", observed=row["obs_date"], retrieved=retrieved, recessions=recessions), theme),
+        ui.chart_card(f"chart-{kennzahl_id}-percentile", Chart(
             f"{kennzahl_id}-percentile", f"{title}: Perzentil", source,
             [Line("Perzentil", days, [r["percentile"] if r["status"] == "ok" else None for r in history], hover_decimals=0, shape="hv")],
             "Perzentil (0–100)", observed=row["obs_date"], retrieved=retrieved, y_range=(0, 100),
-            recessions=recessions, full_history=full), theme),
+            recessions=recessions), theme),
     ]
 
 
@@ -380,89 +359,12 @@ def _role_today(indicator_id: str, latest: dict | None, rows: dict) -> str:
             f"im Bereich; Bereichswert (Median) {fmt.number(latest[f'block_{block}'])}.")
 
 
-# --- areas on the overview (E-57 to E-60) ---------------------------------------------------------
-
-AREA_NOTE = ("Nicht als Bereich enthalten: Breite/Internals (keine Kursquelle, O-1) und Positionierung/Sentiment "
-             "(erst Phase 2).")
-AREA_LINES = {  # (column in composite_score, name) per area: lines of the chart and values in the head
-    "volatility": (("block_volatility", "Median"), ("fast_block_smoothed", "geglättet")),
-    "credit": (("block_credit", "Median"),),
-    "macro": (("block_macro", "Median"),),
-    VULNERABILITY: (("vulnerability_raw", "ungeglättet"), ("vulnerability", "geglättet")),
-}
-
-
-def is_open(clicks: int | None) -> bool:
-    return (clicks or 0) % 2 == 1
+# --- indicator rows shared by the views -----------------------------------------------------------
 
 
 def area_indicators(area: str) -> list[str]:
     """Indicators of an area in catalogue order; one without text is never shown (7.2)."""
     return [i for i, indicator in indicator_catalog().items() if indicator.block == area and texts.has_text(i)]
-
-
-def areas() -> list:
-    """Static frame of the areas below the overview: values and charts come from callbacks, charts only when open."""
-    sections = []
-    for area, head in texts.AREAS.items():
-        if not texts.has_text(head):
-            continue
-        indicators = area_indicators(area)
-        sections.append(html.Section(className="card card-wide area", children=[
-            ui.kennzahl_head(head),
-            html.Div(id={"type": "area-summary", "area": area}, className="area-summary"),
-            ui.toggle({"type": "area-toggle", "area": area}, f"Verlauf und {len(indicators)} Einzelreihen"),
-            html.Div(id={"type": "area-body", "area": area}, hidden=True, className="area-body", children=[
-                html.Div(id={"type": "area-chart", "area": area}),
-                html.Div([_indicator_row(i) for i in indicators], className="indicator-list"),
-            ]),
-        ]))
-    return [
-        html.H2("Bereiche und Einzelreihen", className="section-title"),
-        ui.note("Jeder Bereich zeigt seinen Wert und die Indikatoren, aus denen er entsteht. Charts laden erst beim Aufklappen."),
-        ui.note(HISTORY_NOTE),
-        *sections,
-        ui.note(AREA_NOTE),
-    ]
-
-
-def _indicator_row(indicator_id: str) -> html.Div:
-    return html.Div(className="indicator-row", children=[
-        html.Div(className="indicator-head", children=[
-            ui.kennzahl_head(indicator_id, tag=html.H3),
-            html.Div(id={"type": "indicator-summary", "id": indicator_id}, className="indicator-summary"),
-            ui.toggle({"type": "indicator-toggle", "id": indicator_id}, "Charts und Berechnung"),
-        ]),
-        html.Div(id={"type": "indicator-body", "id": indicator_id}, hidden=True, className="indicator-body"),
-    ])
-
-
-def summaries(area_ids: list[str], indicator_ids: list[str], now: datetime) -> tuple[list, list]:
-    """Current values of the areas and indicators, in the order Dash asks for them; one database read."""
-    try:
-        latest = db.latest_composite()
-        rows = db.indicator_scores_on(latest["score_date"]) if latest else {}
-        fresh = db.series_freshness()
-    except (DataDirError, SQLAlchemyError) as exc:
-        notice = ui.note(f"Datenbank nicht lesbar: {exc}")
-        return [notice for _ in area_ids], [notice for _ in indicator_ids]
-    if latest is None:
-        empty = ui.note("Noch keine Scores berechnet.")
-        return [empty for _ in area_ids], [empty for _ in indicator_ids]
-    stamp = ui.freshness(latest["score_date"], latest["computed_at"], stale=_scores_stale(latest, now), now=now,
-                         retrieved_label="berechnet")
-    return ([_area_summary(a, latest, rows, stamp) for a in area_ids],
-            [_indicator_summary(i, rows.get(i), fresh, now) for i in indicator_ids])
-
-
-def _area_summary(area: str, latest: dict, rows: dict, stamp) -> list:
-    indicators = [i for i, indicator in indicator_catalog().items() if indicator.block == area]
-    valid = sum(1 for i in indicators if rows.get(i, {}).get("status") == "ok")
-    values = [f"{name} {fmt.number(latest[column])}" for column, name in AREA_LINES[area]]
-    if all(latest[column] is None for column, _ in AREA_LINES[area]):
-        values = ["Bereichswert fehlt: kein gültiger Indikator" if area != VULNERABILITY else "Fallhöhe fehlt: zu wenige Komponenten"]
-    return [html.Span(" · ".join(values), className="number"),
-            html.Span(f"{valid} von {len(indicators)} gültig", className="detail"), stamp]
 
 
 def _indicator_summary(indicator_id: str, row: dict | None, fresh: dict, now: datetime) -> list:
@@ -475,33 +377,6 @@ def _indicator_summary(indicator_id: str, row: dict | None, fresh: dict, now: da
         html.Span(STATUS_NAMES[row["status"]], className="detail"),
         ui.freshness(row["obs_date"], _retrieved(indicator_id, fresh), stale=row["status"] == "stale", now=now),
     ]
-
-
-@guarded
-def area_chart(area: str, theme: str, now: datetime) -> list:
-    latest = db.latest_composite()
-    if latest is None:
-        return [ui.note("Noch keine Scores berechnet.")]
-    columns = AREA_LINES[area]
-    history = db.composite_history(*(column for column, _ in columns))
-    days = [r["score_date"] for r in history]
-    head = texts.text(texts.AREAS[area]).title
-    chart = Chart(f"area-{area}", f"{head}: Verlauf", "eigene Berechnung (Scoring)",
-                  [Line(name, days, [r[column] for r in history]) for column, name in columns],
-                  "Wert (0–100)", observed=latest["score_date"], retrieved=latest["computed_at"], y_range=(0, 100),
-                  recessions=db.recessions(), full_history=True)
-    return [ui.chart_card(f"area-{area}-history", chart, theme)]
-
-
-@guarded
-def indicator_detail(indicator_id: str, theme: str, now: datetime) -> list:
-    latest = db.latest_composite()
-    rows = db.indicator_scores_on(latest["score_date"]) if latest else {}
-    row = rows.get(indicator_id)
-    if row is None:
-        return [ui.note("Noch kein berechneter Wert.")]
-    retrieved = _retrieved(indicator_id, db.series_freshness())
-    return [*_indicator_charts(indicator_id, theme, row, retrieved, "area"), _contribution_card(indicator_id, latest, rows)]
 
 
 _SCORE_COLUMNS = {"stress": ("stress", "Stress (geglättet)"), "vulnerability": ("vulnerability", "Fallhöhe (geglättet)"),

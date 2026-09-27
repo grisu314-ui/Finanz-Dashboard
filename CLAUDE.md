@@ -110,6 +110,7 @@ Ein Assistent ergänzt diese Dinge erfahrungsgemäß ungefragt. Hier nicht. Bei 
 - Kein Scraping gegen Nutzungsbedingungen, keine Umgehung von Lizenzgrenzen, keine Weitergabe lizenzierter Daten (ICE, Moody's, S&P).
 - Keine Optimierung ohne Messung: keine vorsorglichen Indizes, keine Pagination, keine Denormalisierung.
 - Keine generischen Basisklassen oder Plugin-Mechanismen. Zwischen einfacher und erweiterbarer Lösung wählst du die einfache.
+- Keine zweite Übersicht mit aufklappbaren Bereichen und Einzelreihen (Variante M7a, entfernt 27.09.2026, E-67): Die Übersicht folgt Bericht 6.3, die Einzelreihen stehen in den Ansichten.
 
 Entscheidet der Nutzer gegen eine Funktion, trägst du sie hier ein.
 

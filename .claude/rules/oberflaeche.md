@@ -28,18 +28,14 @@ Details, Begründungen und Entscheidungsprotokoll (E-1 bis E-7): `docs/umsetzung
 - `separators=",."` und numerische Datumsformate (`%d.%m.%Y`).
 - In Plotly-Titeln, Annotationen und Hovertexten nur Texte aus der Konfiguration und selbst formatierte Werte, nie Rohtexte aus Quellen (Plotly interpretiert eine HTML-Teilmenge).
 
-## Bereiche und Einzelreihen (M7a)
-- Die Bereiche stehen als statischer Rahmen außerhalb des alle 5 Minuten ersetzten Inhalts; nur so bleiben offene Abschnitte offen.
-- Charts entstehen nur für geöffnete Abschnitte (Callbacks mit `MATCH`); Auf- und Zuklappen setzt `hidden` im Browser und löst ein `resize` aus. Sie starten mit der ganzen Historie (`full_history`, E-61), alle übrigen Verläufe mit 5 Jahren.
-- „So fließt der Wert in den Bereich ein“ wird aus `series.toml` und `scoring.toml` erzeugt (`texts.contribution`); die heutige Rolle kommt aus den gespeicherten Scores, nie aus einer Berechnung im Web.
-- Unter jedem Verlauf steht der Hinweis, dass je Beobachtung der neueste Stand zählt (`views.HISTORY_NOTE`).
-
-## Ansichten nach Bericht 6.3 (M7, E-62)
-- Zwei Versionen nebeneinander: `/` (Übersicht mit Bereichen) und `/uebersicht-b` plus `/ansicht/<name>`; nichts davon ersetzt das andere, bis der Nutzer entscheidet.
+## Übersicht und Ansichten (Bericht 6.3; eine Version seit E-67)
+- `/` ist die Übersicht (Ansicht 1: Karten, Ampelmatrix, Quellen); `/ansicht/<name>` die Ansichten 2–7; Navigation in einer Zeile. Die alte Adresse `/uebersicht-b` leitet auf `/` um.
 - Reine Anzeigereihen sind Kennzahlen in `texts.DISPLAYS`: mit Text, Steckbrief und „nur Anzeige, kein Score“; nie in einem Score.
 - Linienfarben in der Reihenfolge der Referenzpalette; ab drei Linien Endbeschriftungen. Violett = markierte Phasen (Backwardation, Inversion), Grau = Rezessionen, Statusfarben nur für die Ampel und die Ampelmatrix.
-- Verläufe der Ansichten starten mit der ganzen Historie ab dem ersten Wert.
+- Verläufe der Ansichten starten mit der ganzen Historie ab dem ersten Wert; die Erklärseiten mit 5 Jahren.
 - Ansicht 7 ist ein statischer Rahmen mit eigenen Callbacks; Schalter und Auswahl tragen `persistence`, damit die Aktualisierung sie nicht zurücksetzt. Perzentilbänder kommen aus dem Scoring (Spalten `band_p10/p50/p90`), die Oberfläche rechnet sie nie selbst.
+- „So fließt der Wert in den Bereich ein“ auf der Erklärseite jedes Indikators wird aus `series.toml` und `scoring.toml` erzeugt (`texts.contribution`); die heutige Rolle kommt aus den gespeicherten Scores.
+- Unter jedem Verlauf steht der Hinweis, dass je Beobachtung der neueste Stand zählt (`views.HISTORY_NOTE`).
 
 ## Aktualität
 - `dcc.Interval` alle 5 Minuten liest Daten und Status neu.

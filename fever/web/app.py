@@ -19,11 +19,10 @@ from fever.worker import HEARTBEAT_MAX_AGE
 ASSETS = Path(__file__).resolve().parents[2] / "assets"
 REFRESH_MS = 5 * 60 * 1000  # E-7
 WATCHDOG_MS = 30 * 1000
-NAVIGATION = [("/", "Übersicht"), ("/datenstand", "Datenstand"), ("/erklaerungen", "Erklärungen")]
-# Views of report 6.3 (M7), next to the overview with the areas (M7a); both are kept for now (E-62).
-VIEWS = [("/uebersicht-b", "Übersicht B"), ("/ansicht/signale", "Signale"), ("/ansicht/breite", "Breite"),
-         ("/ansicht/positionierung", "Positionierung"), ("/ansicht/makro", "Makro"), ("/ansicht/fallhoehe", "Fallhöhe"),
-         ("/ansicht/visualisierung", "Visualisierung")]
+# One row (E-67): the views of report 6.3, then data status and explanations.
+NAVIGATION = [("/", "Übersicht"), ("/ansicht/signale", "Signale"), ("/ansicht/breite", "Breite"),
+              ("/ansicht/positionierung", "Positionierung"), ("/ansicht/makro", "Makro"), ("/ansicht/fallhoehe", "Fallhöhe"),
+              ("/ansicht/visualisierung", "Visualisierung"), ("/datenstand", "Datenstand"), ("/erklaerungen", "Erklärungen")]
 NOTICES = [
     "This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.",
     "Source: ECB statistics.",
@@ -55,10 +54,6 @@ app.layout = html.Div(className="page", children=[
     html.Header(className="top", children=[
         dcc.Link("Fieberthermometer", href="/", className="brand"),
         html.Nav(className="nav", children=[dcc.Link(label, href=path, className="nav-link") for path, label in NAVIGATION]),
-        html.Nav(className="nav nav-views", **{"aria-label": "Ansichten"}, children=[
-            html.Span("Ansichten", className="nav-label"),
-            *[dcc.Link(label, href=path, className="nav-link") for path, label in VIEWS],
-        ]),
         html.Div(id="status-line", className="status-line"),
     ]),
     html.Div(id="banner-worker"),
