@@ -34,6 +34,12 @@ Details, Begründungen und Entscheidungsprotokoll (E-1 bis E-7): `docs/umsetzung
 - „So fließt der Wert in den Bereich ein“ wird aus `series.toml` und `scoring.toml` erzeugt (`texts.contribution`); die heutige Rolle kommt aus den gespeicherten Scores, nie aus einer Berechnung im Web.
 - Unter jedem Verlauf steht der Hinweis, dass je Beobachtung der neueste Stand zählt (`views.HISTORY_NOTE`).
 
+## Ansichten nach Bericht 6.3 (M7, E-62)
+- Zwei Versionen nebeneinander: `/` (Übersicht mit Bereichen) und `/uebersicht-b` plus `/ansicht/<name>`; nichts davon ersetzt das andere, bis der Nutzer entscheidet.
+- Reine Anzeigereihen sind Kennzahlen in `texts.DISPLAYS`: mit Text, Steckbrief und „nur Anzeige, kein Score“; nie in einem Score.
+- Linienfarben in der Reihenfolge der Referenzpalette; ab drei Linien Endbeschriftungen. Violett = markierte Phasen (Backwardation, Inversion), Grau = Rezessionen, Statusfarben nur für die Ampel und die Ampelmatrix.
+- Verläufe der Ansichten starten mit der ganzen Historie ab dem ersten Wert.
+
 ## Aktualität
 - `dcc.Interval` alle 5 Minuten liest Daten und Status neu.
 - Kopfzeile: letzte Worker-Aktualisierung und letzte Seitenaktualisierung.

@@ -71,6 +71,12 @@ def series_freshness() -> dict[str, dict]:
         return {row.series_id: dict(row._mapping) for row in conn.execute(query)}
 
 
+def series_history(series_id: str) -> list[tuple[date, float]]:
+    """Observations of a raw series, newest vintage per date (phase-1 rule), oldest first."""
+    with engine().connect() as conn:
+        return [(row.obs_date, row.value) for row in latest_values(conn, series_id)]
+
+
 RECESSION_SERIES = "usrec"
 
 

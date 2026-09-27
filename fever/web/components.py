@@ -57,7 +57,11 @@ def percentile_chip(percentile: float | None, elevated_above: float) -> html.Spa
 
 
 def chart_card(graph_id: str, chart: Chart, theme: str) -> html.Div:
-    figure, config = time_series(chart, theme)
+    return figure_card(graph_id, *time_series(chart, theme))
+
+
+def figure_card(graph_id: str, figure, config: dict) -> html.Div:
+    """Card with full-screen button around any figure of the chart factory."""
     return html.Div(className="card chart-card", children=[
         html.Button("Vollbild", className="fullscreen-toggle", type="button", **{"aria-label": "Chart im Vollbild zeigen"}),
         # The box has the height; the responsive graph fills it (dcc.Graph sets height: 100% inline,

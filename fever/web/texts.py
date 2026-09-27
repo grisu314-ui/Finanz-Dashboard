@@ -37,10 +37,23 @@ GROUPS = {
     "positioning": "Positionierung/Sentiment",
     VULNERABILITY: "Fallhöhe",
     "scores": "Gesamtbild",
+    "display": "Nur Anzeige (kein Score)",
     "concepts": "Begriffe",
 }
 SCORES = ("traffic_light", "stress", "vulnerability", "confidence", "diffusion") + tuple(f"block_{b}" for b in STRESS_BLOCKS)
 CONCEPTS = ("percentile", "staleness", "recessions")
+# Display-only Kennzahlen of the views (M7, E-49): raw series shown as they are, never in a score.
+DISPLAYS = {
+    "vix_term": ("vix9d", "vix", "vix3m", "vix6m", *(f"cfe_vx{n}" for n in range(1, 9))),
+    "skew": ("skew",),
+    "hy_oas": ("bamlh0a0hym2",),
+    "ccc_bb": ("bamlh0a3hyc", "bamlh0a1hybb"),
+    "anfci": ("anfci",),
+    "ofr_fsi": ("ofr_fsi", "ofr_fsi_credit", "ofr_fsi_equity_valuation", "ofr_fsi_funding", "ofr_fsi_safe_assets",
+                "ofr_fsi_volatility", "ofr_fsi_united_states", "ofr_fsi_other_advanced", "ofr_fsi_emerging_markets"),
+    "yield_curve": ("t10y3m", "t10y2y"),
+    "cape": ("shiller_cape",),
+}
 # Areas on the overview with their indicators (E-57): the stress blocks with indicators in phase 1, then
 # the vulnerability; each with the Kennzahl that heads it. Breadth and positioning have none yet.
 AREAS = {"volatility": "block_volatility", "credit": "block_credit", "macro": "block_macro", VULNERABILITY: VULNERABILITY}
@@ -105,7 +118,7 @@ def has_text(kennzahl_id: str) -> bool:
 
 
 def all_ids() -> list[str]:
-    return [*SCORES, *indicator_catalog(), *CONCEPTS]
+    return [*SCORES, *indicator_catalog(), *DISPLAYS, *CONCEPTS]
 
 
 def group_of(kennzahl_id: str) -> str:
@@ -113,6 +126,8 @@ def group_of(kennzahl_id: str) -> str:
         return "scores"
     if kennzahl_id in CONCEPTS:
         return "concepts"
+    if kennzahl_id in DISPLAYS:
+        return "display"
     return indicator_catalog()[kennzahl_id].block
 
 
@@ -143,6 +158,15 @@ def steckbrief(kennzahl_id: str, history_from=None) -> list[tuple[str, str]]:
                 ("Lizenz", series.license or "–")]
     if kennzahl_id in CONCEPTS:
         return []
+    if kennzahl_id in DISPLAYS:
+        catalog = series_catalog()
+        series = [catalog[s] for s in DISPLAYS[kennzahl_id]]
+        licenses = sorted({s.license for s in series if s.license})
+        return [("Reihen", ", ".join(f"{s.name} ({s.source}: {s.source_id})" for s in series)),
+                ("Frequenz", ", ".join(sorted({FREQUENCY_NAMES[s.frequency] for s in series}))),
+                ("Verwendung", "nur Anzeige in den Ansichten, in keinem Indikator und keinem Score"),
+                ("Historie ab", "–" if history_from is None else f"{history_from:%d.%m.%Y}"),
+                *([("Lizenz", "; ".join(licenses))] if licenses else [])]
     if kennzahl_id in SCORES:
         return _score_facts(kennzahl_id, config)
     indicator: Indicator = indicator_catalog()[kennzahl_id]
@@ -257,6 +281,10 @@ def thresholds(kennzahl_id: str) -> list[str]:
         return [f"Fenster {c.window_years} Jahre, Mindesthistorie {c.min_history_years} Jahre.", f"Markierung „erhöht“ über Perzentil {_n(c.yellow_diffusion_percentile)}."]
     if kennzahl_id == "recessions":
         return ["Keine Schwelle; die Flächen sind reine Anzeige und gehen in keinen Score ein."]
+    if kennzahl_id == "yield_curve":
+        return ["Farbige Fläche: 10 Jahre minus 3 Monate unter null (Inversion); keine Schwelle, kein Score."]
+    if kennzahl_id in DISPLAYS:
+        return ["Keine Schwelle und keine Farbe: reine Anzeige, geht in keinen Score ein."]
     if kennzahl_id == "staleness":
         return [f"{FREQUENCY_NAMES[f]}: veraltet nach mehr als {FREQUENCY_DAYS[f]} Tagen plus Toleranz der Reihe seit der erwarteten Veröffentlichung." for f in FREQUENCY_DAYS]
     if kennzahl_id.startswith("block_"):

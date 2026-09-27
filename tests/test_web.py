@@ -3,7 +3,7 @@
 import json
 from dataclasses import replace
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -374,3 +374,108 @@ def test_area_and_indicator_charts_use_the_whole_history(data, monkeypatch):
     charts.clear()
     views.kennzahl("vix", "light", NOW)  # the Kennzahl page keeps the last years
     assert charts and not any(chart.full_history for chart in charts)
+
+
+# --- overview B (M7, report 6.3 view 1, E-62) -----------------------------------------------------------
+
+
+def test_matrix_regions_follow_the_rules_in_scoring_toml(monkeypatch):
+    from fever.config import scoring_config
+    c = scoring_config()
+    regions = views.matrix_regions()
+    assert [r.level for r in regions] == [0, 1, 2, 2, 3]  # drawn low to high: the highest level covers the rest
+    assert (regions[1].y0, regions[4].x0, regions[3].x0) == (c.yellow_vulnerability, c.red_stress, c.orange_stress)
+    assert (regions[2].x0, regions[2].y0) == (c.orange_stress_with_vulnerability, c.orange_vulnerability)
+    monkeypatch.setattr(views, "scoring_config", lambda: replace(c, red_stress=95, yellow_vulnerability=70))
+    assert (views.matrix_regions()[4].x0, views.matrix_regions()[1].y0) == (95, 70)
+
+
+def test_matrix_chart_standard_and_labels():
+    from fever.web.figures import Matrix, matrix
+    days = [date(2026, 9, 24), date(2026, 9, 25)]
+    chart = Matrix("matrix", "Ampelmatrix", "eigene Berechnung", days, [30.0, 35.0], [70.0, 80.0], views.matrix_regions(),
+                   observed=days[-1], retrieved=NOW, note="Hinweis")
+    figure, config = matrix(chart, "dark", today=date(2026, 9, 26))
+    assert config["showSendToCloud"] is False and config["toImageButtonOptions"]["filename"] == "matrix_26-09-2026"
+    assert len(figure.layout.shapes) == 5 and figure.layout.xaxis.range == (0, 100)
+    labels = [(a.text, a.textangle) for a in figure.layout.annotations if a.text in ("Grün", "Gelb", "Orange", "Rot")]
+    assert labels == [("Grün", 0), ("Gelb", 0), ("Orange", 0), ("Orange", -90), ("Rot", -90)]  # full-height bands upright
+    assert figure.data[1].text == ("Stand 25.09.2026",) and "Hinweis" in figure.layout.annotations[-1].text
+
+
+def test_overview_b_shows_matrix_confidence_diffusion_and_sources(data):
+    page = views.overview_b("light", NOW)
+    text = rendered(page)
+    for kennzahl in ("traffic_light", "confidence", "diffusion"):
+        assert f"/kennzahl/{kennzahl}" in text
+    graph = next(c for c in _walk_components(page) if type(c).__name__ == "Graph")
+    assert graph.id == "matrix" and len(graph.figure.layout.shapes) == 5
+    assert "Letzte Aktualisierung je Quelle" in text and "Cboe (Indizes)" in text
+
+
+def test_overview_b_trace_covers_the_last_60_score_days(data, monkeypatch):
+    rows = [{"score_date": date(2026, 1, 1) + timedelta(days=i), "stress": 30.0 + i / 10, "vulnerability": 70.0} for i in range(100)]
+    monkeypatch.setattr(web_db, "composite_history", lambda *columns: rows)
+    graph = next(c for c in _walk_components(views.overview_b("light", NOW)) if type(c).__name__ == "Graph")
+    trace, today = graph.figure.data
+    assert len(trace.x) == views.TRACE_DAYS == 60 and trace.x[0] == rows[40]["stress"]
+    assert today.x == (rows[-1]["stress"],) and today.text == ("Stand 10.04.2026",)
+
+
+def test_views_navigation_and_overview_b_page(client):
+    from fever.web.app import VIEWS
+    html = client.get("/uebersicht-b").get_data(as_text=True)
+    assert client.get("/uebersicht-b").status_code == 200
+    layout = json.dumps(client.get("/_dash-layout").get_json(), ensure_ascii=False)
+    assert all(path in layout for path, _ in VIEWS) and "Übersicht B" in layout
+
+
+
+# --- views 2 to 6 (M7) ----------------------------------------------------------------------------------
+
+
+def test_every_view_renders_and_every_display_kennzahl_is_shown(data):
+    shown = set()
+    for name in views.VIEW_TITLES:
+        page = rendered(views.view(name, "light", NOW))
+        assert "Datenbank nicht lesbar" not in page, name
+        shown |= set(re.findall(r"/kennzahl/([a-z0-9_]+)", page))
+    assert set(texts.DISPLAYS) <= shown and set(views.DISPLAY_VIEWS) == set(texts.DISPLAYS)
+    assert "nicht gefunden" in rendered(views.view("gibt_es_nicht", "light", NOW))
+    assert "O-1" in rendered(views.view("breite", "light", NOW))
+
+
+def test_view_pages_answer(client):
+    for name in views.VIEW_TITLES:
+        assert client.get(f"/ansicht/{name}").status_code == 200
+
+
+def test_runs_mark_consecutive_days_and_keep_single_days_visible():
+    days = [date(2026, 9, d) for d in range(1, 8)]
+    assert views.runs(days, [False, True, True, False, True, False, False]) == (
+        (date(2026, 9, 2), date(2026, 9, 4)), (date(2026, 9, 5), date(2026, 9, 6)))
+    assert views.runs(days[:2], [True, True]) == ((date(2026, 9, 1), date(2026, 9, 3)),)
+
+
+def test_ccc_bb_uses_only_common_days_and_the_curve_shading(data, monkeypatch):
+    series = {"bamlh0a3hyc": [(date(2026, 9, 1), 9.0), (date(2026, 9, 2), 9.5)], "bamlh0a1hybb": [(date(2026, 9, 2), 2.0)],
+              "t10y3m": [(date(2026, 9, 1), -0.1), (date(2026, 9, 2), 0.2)]}
+    monkeypatch.setattr(web_db, "series_history", lambda sid: series.get(sid, []))
+    charts = []
+    real = views.ui.chart_card
+    monkeypatch.setattr(views.ui, "chart_card", lambda graph_id, chart, theme: charts.append(chart) or real(graph_id, chart, theme))
+    views.view("makro", "light", NOW)
+    by_id = {c.kennzahl_id: c for c in charts}
+    assert by_id["ccc_bb"].lines[0].x == [date(2026, 9, 2)] and by_id["ccc_bb"].lines[0].y == [7.5]
+    assert by_id["yield_curve"].shaded == ((date(2026, 9, 1), date(2026, 9, 2)),)
+    assert all(c.full_history for c in charts)
+
+
+def test_small_values_keep_two_significant_digits():
+    assert views._value(0.0042) == "0,0042" and views._value(0.045) == "0,045" and views._value(-0.0042) == "-0,0042"
+    assert views._value(0.83) == "0,83" and views._value(14.87) == "14,87" and views._value(0.0) == "0,00"
+
+
+def test_display_pages_link_their_view(data):
+    page = rendered(views.kennzahl("hy_oas", "light", NOW))
+    assert "/ansicht/makro" in page and "nur Anzeige" in page

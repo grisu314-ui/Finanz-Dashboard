@@ -4,7 +4,8 @@ Everything shown comes from the database (read-only) and the configuration; noth
 computed here that the scoring computes. Database errors turn into a visible notice.
 """
 
-from datetime import date, datetime
+import math
+from datetime import date, datetime, timedelta
 
 from dash import dcc, html
 from sqlalchemy.exc import SQLAlchemyError
@@ -15,7 +16,7 @@ from fever.store.db import DataDirError
 from fever.web import components as ui
 from fever.web import db, texts
 from fever.web import format as fmt
-from fever.web.figures import Chart, Line
+from fever.web.figures import Chart, Curve, CurvePoint, Line, Matrix, Region, curve, matrix
 from fever.worker import HEARTBEAT_MAX_AGE  # same limit as the container healthcheck (E-33)
 
 SOURCE_NAMES = {
@@ -56,9 +57,14 @@ def _scores_stale(latest: dict, now: datetime) -> bool:
 
 
 def _value(value: float | None) -> str:
+    """Two decimals, at least two significant digits for small values (a 5-day change of 0.0042 is not 0,00)."""
     if value is None:
         return fmt.DASH
-    return fmt.number(value, 0 if abs(value) >= 1000 else 2)
+    if abs(value) >= 1000:
+        return fmt.number(value, 0)
+    if 0 < abs(value) < 0.1:
+        return fmt.number(value, min(6, 1 - math.floor(math.log10(abs(value)))))
+    return fmt.number(value, 2)
 
 
 # --- overview --------------------------------------------------------------------------------------
@@ -70,19 +76,9 @@ def overview(theme: str, now: datetime) -> list:
     if latest is None:
         return [ui.note("Noch keine Scores berechnet. Der Worker rechnet nach dem nächsten Abruf; "
                         "sofort mit python -m fever.score (docs/einrichtung.md).")]
-    stale = _scores_stale(latest, now)
-    stamp = ui.freshness(latest["score_date"], latest["computed_at"], stale=stale, now=now, retrieved_label="berechnet")
-    rules = [rule for rule in latest["active_rules"].split(",") if rule]
-    traffic = html.Div(className="card card-traffic", children=[
-        ui.kennzahl_head("traffic_light"),
-        html.Div(ui.level_badge(latest["level"]), className="big"),
-        html.Ul([html.Li(texts.rule_text(rule)) for rule in rules] or [html.Li("Keine Regel trifft zu.")], className="rules"),
-        *([ui.note("Der Stress-Composite fehlt (weniger Blöcke als nötig); die Ampel stützt sich auf die übrigen Regeln.")]
-          if latest["stress"] is None else []),
-        stamp,
-    ])
+    stamp = _score_stamp(latest, now)
     cards = [
-        traffic,
+        _traffic_card(latest, stamp),
         _number_card("stress", latest["stress"], f"ungeglättet {fmt.number(latest['stress_raw'])}", stamp, PLACEHOLDERS),
         _number_card("vulnerability", latest["vulnerability"], f"ungeglättet {fmt.number(latest['vulnerability_raw'])}", stamp),
         _number_card("confidence", latest["confidence"], "Anteil aktueller Daten, gewichtet nach Vorlauf", stamp, unit=" %"),
@@ -96,6 +92,86 @@ def overview(theme: str, now: datetime) -> list:
         recessions=db.recessions(),
     )
     return [html.Div(cards, className="grid"), ui.chart_card("overview-history", chart, theme), ui.note(HISTORY_NOTE)]
+
+
+def _score_stamp(latest: dict, now: datetime):
+    return ui.freshness(latest["score_date"], latest["computed_at"], stale=_scores_stale(latest, now), now=now,
+                        retrieved_label="berechnet")
+
+
+def _traffic_card(latest: dict, stamp) -> html.Div:
+    rules = [rule for rule in latest["active_rules"].split(",") if rule]
+    return html.Div(className="card card-traffic", children=[
+        ui.kennzahl_head("traffic_light"),
+        html.Div(ui.level_badge(latest["level"]), className="big"),
+        html.Ul([html.Li(texts.rule_text(rule)) for rule in rules] or [html.Li("Keine Regel trifft zu.")], className="rules"),
+        *([ui.note("Der Stress-Composite fehlt (weniger Blöcke als nötig); die Ampel stützt sich auf die übrigen Regeln.")]
+          if latest["stress"] is None else []),
+        stamp,
+    ])
+
+
+# --- overview B (M7, report 6.3 view 1) ------------------------------------------------------------
+
+TRACE_DAYS = 60  # report 6.3: current point with a 60-day trace
+MATRIX_NOTE = ("Nicht in den Flächen: Rot über VIX/VIX3M,<br>Gelb über den Diffusionsindex, Hysterese;<br>"
+               "die Ampel kann höher stehen als die Fläche.")
+
+
+def matrix_regions() -> tuple[Region, ...]:
+    """Areas of the traffic light rules on stress and vulnerability from scoring.toml, low to high (4.3, step 5)."""
+    c = scoring_config()
+    return (
+        Region(0, "Grün", 0, 100, 0, 100),
+        Region(1, "Gelb", 0, 100, c.yellow_vulnerability, 100),
+        Region(2, "Orange", c.orange_stress_with_vulnerability, 100, c.orange_vulnerability, 100),
+        Region(2, "Orange", c.orange_stress, 100, 0, 100),
+        Region(3, "Rot", c.red_stress, 100, 0, 100),
+    )
+
+
+@guarded
+def overview_b(theme: str, now: datetime) -> list:
+    latest = db.latest_composite()
+    if latest is None:
+        return [ui.note("Noch keine Scores berechnet.")]
+    stamp = _score_stamp(latest, now)
+    cards = [
+        _traffic_card(latest, stamp),
+        _number_card("confidence", latest["confidence"], "Anteil aktueller Daten, gewichtet nach Vorlauf", stamp, unit=" %"),
+        _number_card("diffusion", latest["diffusion"], "Anteil der gültigen Stress-Indikatoren über „erhöht“", stamp, unit=" %"),
+    ]
+    history = db.composite_history("stress", "vulnerability")[-TRACE_DAYS:]
+    chart = Matrix(
+        "matrix", "Ampelmatrix", "eigene Berechnung (Scoring)",
+        [r["score_date"] for r in history], [r["stress"] for r in history], [r["vulnerability"] for r in history],
+        matrix_regions(), observed=latest["score_date"], retrieved=latest["computed_at"],
+        note=f"Linie: Spur der letzten {len(history)} Handelstage<br>{MATRIX_NOTE}",
+    )
+    return [
+        html.Div(cards, className="grid grid-3"),
+        ui.figure_card("matrix", *matrix(chart, theme)),
+        _sources_card(now),
+    ]
+
+
+def _sources_card(now: datetime) -> html.Div:
+    rows = [
+        html.Tr([
+            html.Td(SOURCE_NAMES.get(row["source"], row["source"])),
+            html.Td(f"{fmt.berlin(row['last_success_at'])} ({fmt.age(row['last_success_at'], now)})"),
+            html.Td(fmt.berlin(row["last_error_at"]) if row["last_error_at"] else "–"),
+        ])
+        for row in db.sources()
+    ]
+    return html.Div(className="card card-wide", children=[
+        html.H2("Letzte Aktualisierung je Quelle"),
+        html.Div(className="table-scroll", children=html.Table(className="table", children=[
+            html.Thead(html.Tr([html.Th("Quelle"), html.Th("Letzter Erfolg"), html.Th("Letzter Fehler")])),
+            html.Tbody(rows),
+        ])),
+        dcc.Link("Einzelheiten je Reihe im Datenstand", href="/datenstand"),
+    ])
 
 
 def _number_card(kennzahl_id, value, detail, stamp, notes=(), unit=""):
@@ -173,7 +249,7 @@ def explanations() -> list:
     for kennzahl_id in texts.all_ids():
         if texts.has_text(kennzahl_id):
             groups.setdefault(texts.group_of(kennzahl_id), []).append(kennzahl_id)
-    order = ["scores", "volatility", "credit", "macro", "breadth", "positioning", "vulnerability", "concepts"]
+    order = ["scores", "volatility", "credit", "macro", "breadth", "positioning", "vulnerability", "display", "concepts"]
     sections = []
     for group in order:
         if group not in groups:
@@ -209,6 +285,11 @@ def kennzahl(kennzahl_id: str | None, theme: str, now: datetime) -> list:
         parts.append(_contribution_card(kennzahl_id))
     if kennzahl_id == "recessions":
         history_from = db.first_observation([db.RECESSION_SERIES])
+    if kennzahl_id in texts.DISPLAYS:
+        history_from = db.first_observation(list(texts.DISPLAYS[kennzahl_id]))
+        view_name = DISPLAY_VIEWS[kennzahl_id]
+        parts.insert(2, html.P(["Verlauf: Ansicht ", dcc.Link(VIEW_TITLES[view_name], href=f"/ansicht/{view_name}")],
+                               className="detail"))
     facts = texts.steckbrief(kennzahl_id, history_from)
     if facts:
         parts.append(html.Section(className="card card-wide", children=[html.H2("Steckbrief"), ui.facts_table(facts)]))
@@ -445,3 +526,241 @@ def _score_state(kennzahl_id, theme, now):
                   label, observed=latest["score_date"], retrieved=latest["computed_at"],
                   y_range=(-0.5, 3.5) if ticks else (0, 100), y_ticks=ticks, recessions=db.recessions())
     return [state, ui.chart_card(f"chart-{kennzahl_id}", chart, theme)]
+
+
+# --- views 2 to 6 of report 6.3 (M7, E-62) ---------------------------------------------------------
+
+VIEW_TITLES = {
+    "signale": "Schnelle Marktsignale", "breite": "Marktbreite", "positionierung": "Sentiment und Positionierung",
+    "makro": "Makro und Liquidität", "fallhoehe": "Fallhöhe", "visualisierung": "Visualisierung",
+}
+DISPLAY_VIEWS = {"vix_term": "signale", "skew": "signale", "hy_oas": "makro", "ccc_bb": "makro", "anfci": "makro",
+                 "ofr_fsi": "makro", "yield_curve": "makro", "cape": "fallhoehe"}
+INDEX_HORIZONS = {"vix9d": ("VIX9D", 9), "vix": ("VIX", 30), "vix3m": ("VIX3M", 91), "vix6m": ("VIX6M", 182)}  # nominal
+OFR_CATEGORIES = {"ofr_fsi_credit": "Kredit", "ofr_fsi_equity_valuation": "Aktienbewertung", "ofr_fsi_funding": "Refinanzierung",
+                  "ofr_fsi_safe_assets": "Sichere Anlagen", "ofr_fsi_volatility": "Volatilität"}
+OFR_REGIONS = {"ofr_fsi_united_states": "USA", "ofr_fsi_other_advanced": "Andere Industrieländer",
+               "ofr_fsi_emerging_markets": "Schwellenländer"}
+
+
+def runs(days: list[date], flags: list[bool]) -> tuple[tuple[date, date], ...]:
+    """Consecutive days with a true flag as (first day, day after the last), so single days stay visible."""
+    periods, start, previous = [], None, None
+    for day, flag in zip(days, flags):
+        if flag and start is None:
+            start = day
+        elif not flag and start is not None:
+            periods.append((start, previous + timedelta(days=1)))
+            start = None
+        previous = day
+    if start is not None:
+        periods.append((start, previous + timedelta(days=1)))
+    return tuple(periods)
+
+
+@guarded
+def view(name: str | None, theme: str, now: datetime) -> list:
+    builders = {"signale": _view_signals, "breite": _view_breadth, "positionierung": _view_positioning,
+                "makro": _view_macro, "fallhoehe": _view_vulnerability}
+    if name not in VIEW_TITLES:
+        return [html.H1("Ansicht nicht gefunden"), dcc.Link("Zur Übersicht", href="/")]
+    if name not in builders:
+        return [html.H1(VIEW_TITLES[name]), ui.note("Diese Ansicht folgt.")]
+    context = _Context(theme, now)
+    return [html.H1(VIEW_TITLES[name]), *builders[name](context), ui.note(HISTORY_NOTE)]
+
+
+class _Context:
+    """What every item of a view needs, read once per page."""
+
+    def __init__(self, theme: str, now: datetime):
+        self.theme, self.now = theme, now
+        self.latest = db.latest_composite()
+        self.rows = db.indicator_scores_on(self.latest["score_date"]) if self.latest else {}
+        self.fresh = db.series_freshness()
+        self.recessions = db.recessions()
+        self.config = scoring_config()
+
+
+def _item(kennzahl_id: str, summary: list, charts: list, notes=()) -> html.Section:
+    return html.Section(className="card card-wide view-item", children=[
+        ui.kennzahl_head(kennzahl_id), html.Div(summary, className="indicator-summary"), *[ui.note(n) for n in notes], *charts,
+    ])
+
+
+def _indicator_item(ctx: _Context, indicator_id: str, *, shaded=(), shaded_label="", percentile=False) -> html.Section:
+    row = ctx.rows.get(indicator_id)
+    summary = _indicator_summary(indicator_id, row, ctx.fresh, ctx.now)
+    if row is None:
+        return _item(indicator_id, summary, [])
+    indicator = indicator_catalog()[indicator_id]
+    history = db.indicator_history(indicator_id)
+    days = [r["score_date"] for r in history]
+    source = ", ".join(sorted({SOURCE_NAMES.get(s.source, s.source) for s in indicator.series}))
+    title = texts.text(indicator_id).title
+    retrieved = _retrieved(indicator_id, ctx.fresh)
+    value = [r["value"] if r["status"] in ("ok", "history") else None for r in history]
+    charts = [ui.chart_card(f"view-{indicator_id}-value", Chart(
+        indicator_id, f"{title}: Wert", source, [Line("Wert", days, value, hover_decimals=None, shape="hv")], "Wert",
+        observed=row["obs_date"], retrieved=retrieved, recessions=ctx.recessions, shaded=shaded,
+        shaded_label=shaded_label, full_history=True), ctx.theme)]
+    if percentile:
+        lines = [Line(f"{ctx.config.window_years} Jahre (Score)", days,
+                      [r["percentile"] if r["status"] == "ok" else None for r in history], hover_decimals=0, shape="hv")]
+        if indicator.display_window:
+            lines.append(Line(f"{ctx.config.display_window_years} Jahre (Anzeige)", days,
+                              [r["percentile_display"] for r in history], hover_decimals=0, shape="hv"))
+        charts.append(ui.chart_card(f"view-{indicator_id}-percentile", Chart(
+            f"{indicator_id}-percentile", f"{title}: Perzentil", source, lines, "Perzentil (0–100)",
+            observed=row["obs_date"], retrieved=retrieved, y_range=(0, 100), recessions=ctx.recessions,
+            full_history=True), ctx.theme))
+    return _item(indicator_id, summary, charts)
+
+
+def _series_line(series_id: str, name: str) -> Line:
+    history = db.series_history(series_id)
+    return Line(name, [d for d, _ in history], [v for _, v in history], hover_decimals=None)
+
+
+def _display_summary(ctx: _Context, series_ids) -> list:
+    """Stand, retrieval and stale mark of display-only series (E-10 per series)."""
+    catalog = series_catalog()
+    today = _today_new_york(ctx.now)
+    infos = [(catalog[s], ctx.fresh.get(s)) for s in series_ids]
+    observed = min((i["obs_date"] for _, i in infos if i), default=None)
+    retrieved = max((i["retrieved_at"] for _, i in infos if i), default=None)
+    stale = any(i is None or is_stale(i["obs_date"], s.lag_days, s.frequency, s.tolerance_days, today) for s, i in infos)
+    return [html.Span("nur Anzeige, kein Score", className="detail"), ui.freshness(observed, retrieved, stale=stale, now=ctx.now)]
+
+
+def _display_item(ctx: _Context, display_id: str, lines: list[Line], y_title: str, *, source: str, notes=(),
+                  shaded=(), shaded_label="", zero_line=False, extra_charts=()) -> html.Section:
+    series_ids = texts.DISPLAYS[display_id]
+    summary = _display_summary(ctx, series_ids)
+    observed = max((max(line.x) for line in lines if line.x), default=None)
+    retrieved = max((ctx.fresh[s]["retrieved_at"] for s in series_ids if s in ctx.fresh), default=None)
+    chart = Chart(display_id, texts.text(display_id).title, source, lines, y_title, observed=observed, retrieved=retrieved,
+                  recessions=ctx.recessions, shaded=shaded, shaded_label=shaded_label, zero_line=zero_line,
+                  end_labels=len(lines) > 2, full_history=True)
+    return _item(display_id, summary, [ui.chart_card(f"view-{display_id}", chart, ctx.theme), *extra_charts], notes)
+
+
+def _view_signals(ctx: _Context) -> list:
+    ratio = db.indicator_history("vix_vix3m")
+    backwardation = runs([r["score_date"] for r in ratio], [r["value"] is not None and r["value"] > 1 for r in ratio])
+    return [
+        _term_structure_item(ctx),
+        _indicator_item(ctx, "vix_vix3m", shaded=backwardation, shaded_label="Violett: Backwardation (VIX über VIX3M)"),
+        _indicator_item(ctx, "vix"),
+        _indicator_item(ctx, "vrp"),
+        _indicator_item(ctx, "vvix"),
+        _display_item(ctx, "skew", [_series_line("skew", "SKEW")], "Punkte", source="Cboe (Indizes)"),
+        _indicator_item(ctx, "usdjpy_change"),
+        _indicator_item(ctx, "usdjpy_vol"),
+        ui.note("MOVE (Volatilität am Anleihemarkt) fehlt in Phase 1: Lizenz von ICE (W-6)."),
+    ]
+
+
+def _term_structure_item(ctx: _Context) -> html.Section:
+    """Today's curve: the VIX indices at their nominal horizon, VX futures at their days to expiry."""
+    points, observed = [], []
+    for series_id, (label, horizon) in INDEX_HORIZONS.items():
+        history = db.series_history(series_id)
+        if history:
+            points.append(CurvePoint(label, horizon, history[-1][1], "VIX-Indizes"))
+            observed.append(history[-1][0])
+    futures_day = None
+    for rank in range(1, 9):
+        price, days = db.series_history(f"cfe_vx{rank}"), dict(db.series_history(f"cfe_vx{rank}_days"))
+        if price and price[-1][0] in days:
+            futures_day = futures_day or price[-1][0]
+            if price[-1][0] == futures_day:
+                points.append(CurvePoint(f"VX{rank}", days[price[-1][0]], price[-1][1], "VX-Futures (Settlement)"))
+    retrieved = max((ctx.fresh[s]["retrieved_at"] for s in texts.DISPLAYS["vix_term"] if s in ctx.fresh), default=None)
+    note = (f"Indizes Stand {fmt.day(max(observed)) if observed else '–'}, Futures Stand {fmt.day(futures_day)};"
+            "<br>Indizes auf ihrer nominalen Frist")
+    chart = Curve("vix_term", "VIX-Termstruktur", "Cboe (Indizes), Cboe Futures Exchange", points,
+                  "Tage (Frist bzw. Restlaufzeit)", "Punkte", observed=max(observed) if observed else None,
+                  retrieved=retrieved, note=note)
+    return _item("vix_term", _display_summary(ctx, texts.DISPLAYS["vix_term"][:4]), [ui.figure_card("view-vix_term", *curve(chart, ctx.theme))])
+
+
+def _view_breadth(ctx: _Context) -> list:
+    return [html.Section(className="card card-wide", children=[
+        html.H2("Keine Datenquelle in Phase 1"),
+        html.P("Der Bericht sieht hier RSP/SPY (gleich- gegen marktgewichtet), den Anteil der Aktien über ihrer "
+               "50- bzw. 200-Tage-Linie, Zykliker gegen Defensive, kleine gegen große Werte, Halbleiter und Regionalbanken vor "
+               "(docs/recherche.md, Abschn. 6.3). Dafür fehlt eine Kursquelle für ETFs und Indexmitglieder (offener Punkt O-1)."),
+        html.P("Deshalb fehlt auch der Block Breite/Internals im Stress; der Stress mittelt die vorhandenen Blöcke."),
+    ])]
+
+
+def _view_positioning(ctx: _Context) -> list:
+    return [
+        _indicator_item(ctx, "vx_cot_short", percentile=True),
+        _indicator_item(ctx, "margin_yoy"),
+        ui.note("Die AAII-Umfrage (Bull-Bear-Spread) folgt in Phase 2; der Block Positionierung/Sentiment hat bis dahin "
+                "keinen Indikator im Stress."),
+    ]
+
+
+def _view_macro(ctx: _Context) -> list:
+    t10y3m = db.series_history("t10y3m")
+    inversion = runs([d for d, _ in t10y3m], [v < 0 for _, v in t10y3m])
+    hy = dict(db.series_history("bamlh0a3hyc"))
+    bb = db.series_history("bamlh0a1hybb")
+    ccc_bb = [(d, hy[d] - v) for d, v in bb if d in hy]
+    ofr_source = "Office of Financial Research"
+    ofr_charts = [
+        ui.chart_card("view-ofr_fsi-categories", Chart(
+            "ofr_fsi-categories", "OFR FSI: Beiträge der Kategorien", ofr_source,
+            [_series_line(s, n) for s, n in OFR_CATEGORIES.items()], "Beitrag", recessions=ctx.recessions, zero_line=True,
+            full_history=True,
+            end_labels=True, observed=_newest(OFR_CATEGORIES), retrieved=_retrieved_of(ctx, OFR_CATEGORIES)), ctx.theme),
+        ui.chart_card("view-ofr_fsi-regions", Chart(
+            "ofr_fsi-regions", "OFR FSI: Beiträge der Regionen", ofr_source,
+            [_series_line(s, n) for s, n in OFR_REGIONS.items()], "Beitrag", recessions=ctx.recessions, zero_line=True,
+            full_history=True,
+            end_labels=True, observed=_newest(OFR_REGIONS), retrieved=_retrieved_of(ctx, OFR_REGIONS)), ctx.theme),
+    ]
+    ice = "Lizenz ICE Data Indices: nur für dich selbst, nicht veröffentlichen oder weitergeben."
+    return [
+        _indicator_item(ctx, "nfci"),
+        _display_item(ctx, "anfci", [_series_line("anfci", "ANFCI"), _series_line("nfci", "NFCI")], "Index",
+                      source="Chicago Fed (über FRED)", zero_line=True),
+        _indicator_item(ctx, "stlfsi4"),
+        _display_item(ctx, "ofr_fsi", [_series_line("ofr_fsi", "OFR FSI")], "Index", source=ofr_source, zero_line=True,
+                      extra_charts=ofr_charts),
+        _indicator_item(ctx, "ciss"),
+        _display_item(ctx, "hy_oas", [_series_line("bamlh0a0hym2", "HY-OAS")], "Prozentpunkte",
+                      source="ICE Data Indices (über FRED)", notes=[ice]),
+        _display_item(ctx, "ccc_bb", [Line("CCC − BB", [d for d, _ in ccc_bb], [v for _, v in ccc_bb], hover_decimals=None)],
+                      "Prozentpunkte", source="ICE Data Indices (über FRED)", notes=[ice]),
+        _indicator_item(ctx, "ebp"),
+        _indicator_item(ctx, "sofr_iorb"),
+        _display_item(ctx, "yield_curve", [Line("10J − 3M", [d for d, _ in t10y3m], [v for _, v in t10y3m], hover_decimals=None),
+                                           _series_line("t10y2y", "10J − 2J")], "Prozentpunkte",
+                      source="FRED (US-Finanzministerium)", shaded=inversion,
+                      shaded_label="Violett: Inversion (10J − 3M unter null)", zero_line=True),
+        _indicator_item(ctx, "sahm"),
+        _indicator_item(ctx, "claims"),
+    ]
+
+
+def _newest(series: dict) -> date | None:
+    histories = [db.series_history(s) for s in series]
+    return max((history[-1][0] for history in histories if history), default=None)
+
+
+def _retrieved_of(ctx: _Context, series) -> datetime | None:
+    return max((ctx.fresh[s]["retrieved_at"] for s in series if s in ctx.fresh), default=None)
+
+
+def _view_vulnerability(ctx: _Context) -> list:
+    return [
+        _display_item(ctx, "cape", [_series_line("shiller_cape", "CAPE")], "Verhältnis", source="Robert J. Shiller (Online Data)"),
+        _indicator_item(ctx, "ecy"),
+        _indicator_item(ctx, "margin_yoy"),
+        ui.note("Nicht enthalten: die Konzentration der größten Werte im S&P 500 (keine Kursquelle, O-1) und Margin Debt "
+                "relativ zur Marktkapitalisierung (die Fallhöhe nutzt die Veränderung ggü. Vorjahr, Entscheidung E-49)."),
+    ]

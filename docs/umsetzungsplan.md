@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 26.09.2026 · Status: **M0 bis M2 und M4 bis M6 erledigt, M3: Worker und Dashboard laufen auf TrueNAS; Rezessionsbalken (E-56) und M7a (Bereiche und Einzelreihen, 22 Texte) umgesetzt, beides noch nicht auf TrueNAS** · Nächster Schritt: Update einspielen, Texte prüfen, übriges M7 planen; M3 abschließen nach den ersten Werktags-Abrufen (Abschnitt 9)
+Stand: 26.09.2026 · Status: **M0 bis M2 und M4 bis M6 erledigt, M3: Worker und Dashboard laufen auf TrueNAS; Rezessionsbalken, M7a und M7 Teil 1 (Übersicht B, Ansichten 2–6) umgesetzt, noch nicht auf TrueNAS; M7 Teil 2 in Arbeit** · Nächster Schritt: Perzentilbänder und Ansicht 7, dann Update mit Migration (Abschnitt 9)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -23,7 +23,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ☑ 26.09.2026 (M4a bis M4d, E-37) | M3 | M4a bis M4d erteilt 26.09.2026 |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026) | M4, L-1 bis L-12 | erteilt 26.09.2026 |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026; Nachtrag Rezessionsbalken E-56 dort ⏳) | M1 (Lesen), M3 (Heartbeat) | erteilt 26.09.2026 |
-| M7 | Ansichten 1–7 | ◐ M7a (Bereiche und Einzelreihen auf der Übersicht, E-57 bis E-60) ☑ 26.09.2026, auf TrueNAS ⏳; übrige Teile ☐ | M5, M6, L-13 | M7a erteilt 26.09.2026 |
+| M7 | Ansichten 1–7 | ◐ M7a (Bereiche und Einzelreihen, E-57 bis E-61) ☑ 26.09.2026; Übersicht B und Ansichten 2–6 (E-62, E-65) ☑ 27.09.2026; Perzentilbänder (E-64) und Ansicht 7 (E-63, E-66) ☐; alles auf TrueNAS ⏳ | M5, M6, L-13 | M7a erteilt 26.09.2026, M7 erteilt 27.09.2026 |
 | M8 | Erklärtexte je Kennzahl | ◐ 29 Texte (alle 19 Indikatoren, 3 Blöcke, 4 Scores, 3 Begriffe); Prüfung durch den Nutzer ausstehend | parallel zu M6/M7 | ja (Texte prüfen) |
 | M9 | Abnahme Phase 1 | ☐ | M0–M8 | – |
 
@@ -96,6 +96,11 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 26.09.2026 | E-59 | Charts je Indikator | Wert und Perzentil untereinander, beide mit Rezessionsflächen | Keine zweite y-Achse |
 | 26.09.2026 | E-60 | Aufklappen | Zwei Ebenen: Bereich (Verlauf und Indikatorzeilen), darunter jeder Indikator einzeln; Charts entstehen nur für geöffnete Abschnitte | Gemessen: alle 19 Indikatoren auf einmal wären rund 9,4 MB Chart-Daten je Aufruf und Aktualisierung |
 | 26.09.2026 | E-61 | Startzeitraum der Charts | Bereiche und Einzelreihen starten mit der ganzen Historie (alle Rezessionsflächen sichtbar); der Verlauf oben in der Übersicht und die Erklärseiten bleiben bei 5 Jahren | Die letzte US-Rezession endete im April 2020; im 5-Jahres-Startbild wäre keine Fläche zu sehen |
+| 27.09.2026 | E-62 | M7 neben M7a (Nutzerwunsch: beide Versionen behalten, später entscheiden) | Die bisherige Übersicht mit den Bereichen bleibt Startseite (`/`); die Ansichten nach Bericht 6.3 kommen als eigene Seiten dazu: „Übersicht B“ (`/uebersicht-b`) und `/ansicht/<name>`, in einer zweiten Navigationszeile „Ansichten“ | Erklär- und Datenstand-Seiten bleiben unverändert; welche Version bleibt oder wie beide zusammengehen, entscheidet der Nutzer später |
+| 27.09.2026 | E-63 | Krisenmarken (L-13) | Je Episode des Berichts Start und Ende als Schlusskurs-Hoch und -Tief des S&P 500, recherchiert mit Quelle, in `config/episodes.toml`; nur Anzeige | Unbelegtes wird markiert |
+| 27.09.2026 | E-64 | Perzentilbänder 10/50/90 | Im Scoring berechnet und gespeichert (Migration 0003, drei Spalten in `indicator_score`), aus den eigenen Werten im selben Fenster wie das Perzentil, nur mit Daten bis t | Auf TrueNAS Migration mit Probe an einer Backup-Kopie; der Scoring-Lauf wird länger |
+| 27.09.2026 | E-65 | Re-Steepening der Zinskurve (L-10) | Violette Fläche, solange 10J − 3M unter null liegt; das Ende einer Fläche ist das Re-Steepening | Keine neuen Parameter; kurze Unterschreitungen erscheinen als schmale Flächen |
+| 27.09.2026 | E-66 | Raster der Heatmap | Schalter: Start wöchentlich über die ganze Historie (Perzentil vom letzten Handelstag der Woche), umschaltbar auf täglich für die letzten 2 Jahre | Geladen wird nur das gewählte Raster |
 
 ---
 
@@ -721,6 +726,24 @@ Laut Bericht 6.3, soweit Daten vorhanden:
 - **7 Visualisierung:** Heatmap (Perzentilskala nach E-1), Perzentilbänder 10/50/90, Sparklines mit Zeitstempel, Composite-Historie mit Krisenmarken (L-13), Regime-Zeitleiste.
 - Historienansicht mit Hinweis: je Beobachtung zählt der neueste Stand (Phase-1-Ausnahme, `CLAUDE.md`).
 
+**Ergebnis M7, Teil 1 (27.09.2026, umgesetzt; auf TrueNAS ⏳): Übersicht B und Ansichten 2–6 (E-62, E-65)**
+- **Umgesetzt:**
+  - Zweite Navigationszeile „Ansichten“ (`fever/web/app.py`, `VIEWS`); die bisherige Übersicht bleibt Startseite (E-62)
+  - Übersicht B (`/uebersicht-b`): Ampel, Konfidenz, Diffusionsindex; Ampelmatrix mit den Regeln für Stress und Fallhöhe aus `scoring.toml` als Flächen (opake Tönungen, die höchste Stufe liegt oben, Stufennamen im Chart), Spur der letzten 60 Handelstage und heutigem Punkt; Hinweis, dass VIX/VIX3M-Regel, Diffusionsregel und Hysterese nicht in den Flächen stehen; letzte Aktualisierung je Quelle
+  - `/ansicht/signale`: VIX-Termstruktur als Kurve (Indizes auf nominaler Frist, VX-Futures auf Restlaufzeit), VIX/VIX3M mit violetter Backwardation, VIX, VRP, VVIX, SKEW, USD/JPY; Hinweis zu MOVE (W-6)
+  - `/ansicht/breite`: ausdrücklich ohne Datenquelle (O-1)
+  - `/ansicht/positionierung`: VX-COT mit Perzentil über 10 Jahre (Score) und 3 Jahre (Anzeige), Margin Debt; Hinweis AAII (Phase 2)
+  - `/ansicht/makro`: NFCI, ANFCI, STLFSI4, OFR FSI mit Beiträgen der Kategorien und Regionen, CISS, HY-OAS, CCC − BB (am selben Beobachtungstag gebildet), EBP, SOFR − IORB, Zinskurve mit violetten Inversionsphasen (E-65), Sahm-Regel, Erstanträge; Lizenzhinweis bei den ICE-Reihen
+  - `/ansicht/fallhoehe`: CAPE, Excess CAPE Yield, Margin Debt; Hinweis auf fehlende Konzentration und Margin Debt relativ zur Marktkapitalisierung
+  - Anzeige-Kennzahlen (`texts.DISPLAYS`): `vix_term`, `skew`, `hy_oas`, `ccc_bb`, `anfci`, `ofr_fsi`, `yield_curve`, `cape`, nie in einem Score, mit Steckbrief aus `series.toml` und Link zur Ansicht; 9 neue Texte (die acht und `diffusion`)
+  - Chart-Fabrik: Ampelmatrix (`matrix`), Termstruktur (`curve`), violette Phasen, Nulllinie, Endbeschriftungen ab drei Linien; die Linienfarben folgen der validierten Reihenfolge der Referenzpalette (fünf Farben hell und dunkel mit dem Validator geprüft; im hellen Modus drei Farben unter 3:1 Kontrast, deshalb Endbeschriftungen); gemeinsame Chart-Konfiguration und Datierungszeilen
+  - Charts der Ansichten starten mit der ganzen Historie und beim ersten echten Wert: Plotly skaliert die y-Achse über alle Daten, ein Start mit 5 Jahren ließ NFCI, Sahm-Regel oder Erstanträge flach wirken
+  - Kleine Werte mit mindestens zwei signifikanten Stellen (die Yen-Aufwertung zeigte „0,00“); Tooltips mit vier signifikanten Stellen
+- **Belege (Entwicklungsumgebung, 27.09.2026):**
+  - `pytest -q`: 386 passed; neu: Regionen der Matrix aus `scoring.toml` (geänderte Parameter verschieben die Flächen), Matrix-Standard und Beschriftungen, Übersicht B mit Spur der letzten 60 Tage, Navigation, alle Ansichten rendern und zeigen jede Anzeige-Kennzahl, Seiten 200, `runs`, CCC − BB nur an gemeinsamen Tagen, Inversionsflächen, Werteformat, Link der Anzeige-Seiten
+  - Browser (Chromium, 1440 px hell, 390 px dunkel): alle Seiten ohne Konsolenfehler. Datenmenge je Seite: Signale 1,5 MB, Positionierung 1,0 MB, Makro 3,4 MB (14 Charts, rund 6 s), Fallhöhe 0,7 MB
+- **Nicht geprüft:** TrueNAS; echte Geräte; Druck der neuen Seiten.
+
 **Ergebnis M7a (26.09.2026, umgesetzt; auf TrueNAS ⏳): Bereiche und Einzelreihen (E-57 bis E-60)**
 - **Umgesetzt:**
   - Übersicht: unter dem Verlauf von Stress und Fallhöhe die vier Bereiche als eigener, statischer Rahmen außerhalb des alle 5 Minuten ersetzten Inhalts, damit geöffnete Abschnitte offen bleiben. Kopf je Bereich: Bereichswert (Volatilität: Median und geglättet; Fallhöhe: ungeglättet und geglättet), Zahl der gültigen Indikatoren, Stand. Aufgeklappt: Verlauf des Bereichs und je Indikator eine Zeile mit Wert, Perzentil, Status und Stand; jede Zeile klappt einzeln auf zu Wert- und Perzentil-Chart und „So fließt der Wert in den Bereich ein“
@@ -781,7 +804,7 @@ Nichts davon wird geraten. Die Vorschläge sind begründete Startpunkte, keine E
 | L-10 | Transformationen ohne Definition: Erstanträge „Veränderung ggü. Tief“ (welches Fenster?), USD/JPY-Vola (Fenster), Re-Steepening-Flag (Definition), Aktien-Anleihen-Korrelation (Anleiherendite aus DGS10-Änderung?), COT-Maß und Orientierung, Excess CAPE Yield (Shiller-Spalte: 1/CAPE − (GS10 − 10-Jahres-Inflation), Ergebnis M4c), Margin Debt aus Z.1 quartalsweise (E-42): ggü. Vorjahr oder relativ zur Marktkapitalisierung aus Z.1; Strukturbruch vor 2000:Q1, VIX6M (nicht in 6.1, Endpoint prüfen) | Indikatoren | **Entschieden 26.09.2026 (E-49):** siehe Entscheidung. Je Indikator beim Anlegen in `series.toml` einzeln vorschlagen und fragen. Quelle für USD/JPY: E-17 | – |
 | L-11 | Fallhöhe in Phase 1: Top-10-Konzentration (O-1), HY-OAS-Niveau (O-5) und AAII (Phase 2) fehlen | Fallhöhe | **Entschieden 26.09.2026 (E-49):** wie vorgeschlagen. Mittel der vorhandenen Komponenten (Excess CAPE Yield, Margin Debt ggü. Vorjahr, VX-COT-Short-Vol), mindestens 2; Fehlende sichtbar | – |
 | L-12 | Diffusionsindex: welche Einzelreihen zählen? | Ampel (Gelb) | **Entschieden 26.09.2026 (E-48):** wie vorgeschlagen. Nur Stress-Indikatoren mit gültigem, aktuellem Wert und ausreichender Historie. Fallhöhe-Indikatoren nicht, sonst ginge Fallhöhe doppelt in „Gelb“ ein | – |
-| L-13 | Krisenmarken in der Composite-Historie: genaue Zeiträume | Anzeige | Start und Ende je Episode mit Quelle in einer eigenen Datei `config/episodes.toml` (Anzeige, kein Score) | M7 |
+| L-13 | Krisenmarken in der Composite-Historie: genaue Zeiträume | Anzeige | **Entschieden 27.09.2026 (E-63):** Schlusskurs-Hoch bis -Tief des S&P 500 je Episode, recherchiert mit Quelle, in `config/episodes.toml` (Anzeige, kein Score) | – |
 
 ---
 
@@ -881,24 +904,25 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 ## 9. Übergabe an die nächste Sitzung
 
-- **Stand (26.09.2026):**
+- **Stand (27.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt: Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-61; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026 (Scores identisch mit der Entwicklungsumgebung; Dashboard auf Port 8003 läuft laut Nutzer).
-  - Nachtrag M6 (Commit `5593fea`): Rezessionsbalken (E-56, Reihe `usrec`, 61 Reihen in 33 Abrufgruppen) und vier Korrekturen aus der Sichtprüfung.
-  - M7a: vier Bereiche mit den 19 Score-Indikatoren auf der Übersicht, zwei Ebenen zum Aufklappen, Einfluss je Indikator, 22 neue Texte; Korrektur „Historie ab“; Hinweis zum neuesten Stand unter jedem Verlauf; Charts der Bereiche mit ganzer Historie (E-61); 375 Tests grün. Beides noch nicht auf TrueNAS.
+  - Entscheidungen bis E-66; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026.
+  - Seit dem letzten Update auf TrueNAS neu (noch nicht eingespielt): Rezessionsbalken (E-56, 61 Reihen), M7a (Bereiche und Einzelreihen, E-57 bis E-61), M7 Teil 1 (Übersicht B, Ansichten 2–6, E-62, E-65); 386 Tests grün.
+  - In Arbeit: Perzentilbänder im Scoring (E-64, Migration 0003) und Ansicht 7 (Krisenmarken E-63, Heatmap E-66, Sparklines, Regime-Zeitleiste).
   - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“); das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
 - **Nächster Schritt:**
-  1. Update auf TrueNAS: `git pull`, Build, Stack in Dockge stoppen und starten (Compose unverändert, keine Migration), Sofort-Abruf; erwartet „61 Reihen, 0 mit Problemen“ (`docs/einrichtung.md`, Schritt 9).
-  2. Nutzer prüft die Texte: sechs aus E-52, `recessions.md` und die 22 aus E-58 (M8).
-  3. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen; dann M3 abschließen (Woche ab 28.09.2026).
-  4. Übriges M7 planen: Ampelmatrix, reine Anzeige-Reihen (HY-OAS, SKEW, Zinskurve, CAPE, VX-Termstruktur), Heatmap, Perzentilbänder; vorher L-13 (Krisenmarken) und die Speicherung der Perzentilbänder klären.
-  5. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9), Cboe während der US-Handelszeit (Indizes und VX-Dateien), CFTC nach dem ersten Freitag, Shiller nach dem Oktober-Upload.
+  1. M7 fertigstellen: Perzentilbänder (Scoring, Migration 0003 mit Probe an einer Backup-Kopie), Krisenepisoden recherchieren, Ansicht 7.
+  2. Danach Update auf TrueNAS mit Migration nach `docs/einrichtung.md`, Schritt 9.
+  3. Nutzer prüft die Texte: sechs aus E-52, `recessions.md`, die 22 aus E-58 und die 9 aus M7.
+  4. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen; dann M3 abschließen (Woche ab 28.09.2026).
+  5. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9).
+  6. Nutzer entscheidet später, welche Übersicht bleibt oder wie beide zusammengehen (E-62).
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`), L-13 (Abschnitt 5, vor dem übrigen M7).
+- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`); später: Übersicht mit Bereichen oder Übersicht B (E-62).
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---

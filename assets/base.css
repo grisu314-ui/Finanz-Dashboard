@@ -43,6 +43,9 @@ h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
 .nav { display: flex; gap: 0.25rem; overflow-x: auto; white-space: nowrap; max-width: 100%; }
 .nav-link { padding: 0.35rem 0.6rem; border-radius: 6px; color: var(--ink-2); text-decoration: none; }
 .nav-link:hover, .nav-link:focus { background: var(--grid); color: var(--ink); }
+.nav-views { font-size: 0.85rem; align-items: center; }
+.nav-label { color: var(--muted); padding: 0.35rem 0.2rem 0.35rem 0; }
+@media (min-width: 720px) { .grid.grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .status-line { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; font-size: 0.8rem; color: var(--muted); width: 100%; }
 
 .banner { margin: 0.75rem 0; padding: 0.6rem 0.8rem; border-radius: 8px; font-weight: 600; }

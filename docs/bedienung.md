@@ -90,4 +90,11 @@ Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar 
 7. **Visualisierung:** Heatmap aller Kennzahlen über die Zeit, Perzentilbänder, Composite-Historie mit markierten Krisen, Regime-Zeitleiste.
 8. **Datenstand** und **Erklärungen.**
 
+**Zwei Versionen nebeneinander (Stand 27.09.2026, E-62):** Die Startseite „Übersicht“ zeigt Ampel, Stress, Fallhöhe, Konfidenz und darunter die aufklappbaren Bereiche. Die Ansichten 1–7 stehen zusätzlich in der zweiten Navigationszeile „Ansichten“:
+- **Übersicht B:** Ampel, Konfidenz, Diffusionsindex, die Ampelmatrix (Stress nach rechts, Fallhöhe nach oben; die farbigen Flächen zeigen, welche Ampelstufe die Regeln aus Stress und Fallhöhe ergeben; die Linie ist die Spur der letzten 60 Handelstage) und die letzte Aktualisierung je Quelle. Rot über VIX/VIX3M und Gelb über den Diffusionsindex stehen nicht in den Flächen; die Ampel kann deshalb höher stehen, als der Punkt vermuten lässt.
+- **Signale, Breite, Positionierung, Makro, Fallhöhe:** je Kennzahl der Verlauf mit der ganzen Historie; Grau sind US-Rezessionen, Violett Backwardation (VIX über VIX3M) bzw. eine inverse Zinskurve. „Nur Anzeige, kein Score“ steht bei Reihen, die nicht in Stress oder Fallhöhe eingehen (etwa HY-OAS oder SKEW).
+- **Visualisierung:** folgt.
+
+Welche Übersicht bleibt, wird später entschieden.
+
 Hinweis zur Historie: Für vergangene Tage zählt je Beobachtung der neueste veröffentlichte Stand (auch nach späteren Revisionen). Die historische Kurve kann deshalb etwas anders aussehen als das, was man an dem jeweiligen Tag gesehen hätte. Die revisionsgenaue Rückrechnung ist für Phase 2 geplant. Unter jedem Verlauf steht dazu ein kurzer Hinweis.
