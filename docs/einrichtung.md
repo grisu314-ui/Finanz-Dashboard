@@ -287,7 +287,7 @@ sudo rm -r $PROBE
 
 Klappt beides, weiter mit dem Standardablauf oben ab „Stack stoppen“. Scheitert die Probe, nichts an der Produktivdatenbank ändern und die Ausgabe melden.
 
-**Scores (ab M5):** Nach neuen Daten oder einer geänderten `scoring.toml` rechnet der Worker am Ende seines Takts alle Scores neu; im Log steht dann `INFO __main__: Scores berechnet: …`. Nach dem ersten Start mit Migration 0002 geschieht das im ersten Takt. Eine neue Programmversion allein löst keine Neuberechnung aus; nach dem Update auf M7 deshalb einmal sofort rechnen (füllt die Perzentilbänder, dauert rund 10–15 s):
+**Scores (ab M5):** Nach neuen Daten, einer geänderten `scoring.toml`/`series.toml` oder einer neuen Programmversion des Scorings (seit 28.09.2026) rechnet der Worker am Ende seines Takts alle Scores neu; im Log steht dann `INFO __main__: Scores berechnet: …`. Sofort statt erst im nächsten Takt (dauert rund 15 s):
 
 ```bash
 sudo docker exec finanz-dashboard-worker-1 python -m fever.score

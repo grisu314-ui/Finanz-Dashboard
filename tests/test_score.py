@@ -79,6 +79,17 @@ def test_needs_run_after_new_observations_or_a_changed_configuration(engine, tmp
     assert not score.needs_run(engine, digest) and score.needs_run(engine, score.config_hash(config_dir))
 
 
+def test_a_new_scoring_program_version_changes_the_fingerprint(tmp_path):
+    package = tmp_path / "fever"
+    shutil.copytree(score.PACKAGE, package, ignore=shutil.ignore_patterns("__pycache__"))
+    assert score.config_hash(package=package) == score.config_hash()
+    (package / "web" / "views.py").write_text("# not part of the scoring\n")
+    assert score.config_hash(package=package) == score.config_hash()
+    path = package / "scoring" / "composite.py"
+    path.write_text(path.read_text() + "\n# changed\n")
+    assert score.config_hash(package=package) != score.config_hash()
+
+
 def test_the_worker_scores_after_the_cycle_and_survives_an_error(engine, migrated_dir, monkeypatch):
     calls = []
     monkeypatch.setattr(worker.score, "run", lambda engine, clock: calls.append(clock()) or score.Summary(0, None, None, 0.0))

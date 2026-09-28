@@ -90,7 +90,7 @@ migrations/  tests/  tests/fixtures/  docs/
 ```
 
 - Nur der Worker schreibt. `web` setzt auf jeder Verbindung `PRAGMA query_only = ON` und berechnet keine Scores.
-- Der Worker ist eine einfache Schleife, die alle 15 Minuten fällige Abrufe ausführt; kein Scheduler-Framework, kein Cron im Container. Nach neuen Daten oder geänderter `scoring.toml` rechnet er die Scores neu und speichert sie.
+- Der Worker ist eine einfache Schleife, die alle 15 Minuten fällige Abrufe ausführt; kein Scheduler-Framework, kein Cron im Container. Nach neuen Daten, geänderter `scoring.toml`/`series.toml` oder neuer Programmversion des Scorings rechnet er die Scores neu und speichert sie.
 - Ausgangspunkt für `series.toml` sind die Berichtsabschnitte 2 und 6.1.
 
 ## Was ausdrücklich NICHT gebaut wird

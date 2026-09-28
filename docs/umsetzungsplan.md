@@ -773,7 +773,7 @@ Laut Bericht 6.3, soweit Daten vorhanden:
   - Build-Probe (Dockerfile unverändert; `config/episodes.toml` und die Migration sind im Image)
   - Browser (Chromium, 1440 px hell, 390 px dunkel): keine Konsolenfehler; Seitenaufruf 1,9 MB, Wechsel auf das Tagesraster 0,2 MB; der Schalter bleibt nach einer simulierten Aktualisierung auf „täglich“
 - **Nicht geprüft:** TrueNAS; echte Geräte; Druck. Die Server-Zeit der Sparklines liegt bei rund 2 s, die der Ansicht Makro bei rund 3 s (gemessen, nicht optimiert).
-- **Technische Schuld (neu, nicht behoben):** Eine neue Programmversion des Scorings löst keine Neuberechnung aus; der Worker rechnet nur bei neuen Beobachtungen oder geänderter `scoring.toml`/`series.toml` neu. Nach Updates, die das Scoring ändern, ist deshalb ein Sofort-Lauf nötig (`docs/einrichtung.md`, Schritt 9).
+- **Technische Schuld (behoben 28.09.2026 auf Anweisung):** Eine neue Programmversion des Scorings löste keine Neuberechnung aus. Seitdem gehen `fever/config.py`, `fever/release.py`, `fever/score.py` und `fever/scoring/*.py` in den Fingerabdruck ein, der sonst `scoring.toml` und `series.toml` abdeckt (`score.config_hash`).
 
 **Ergebnis M7a (26.09.2026, umgesetzt; auf TrueNAS ⏳): Bereiche und Einzelreihen (E-57 bis E-60)**
 - **Umgesetzt:**
