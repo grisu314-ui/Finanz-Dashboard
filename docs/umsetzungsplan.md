@@ -19,7 +19,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M0 | Projektgerüst, Image, Compose | ☑ 25.09.2026 | – | erteilt 25.09.2026 |
 | M1 | Speicher, Migrationen, Backup | ☑ 25.09.2026 | M0, Schema-Freigabe, W-5 | erteilt 25.09.2026 |
 | M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ☑ 26.09.2026 | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B erteilt 26.09.2026 |
-| M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ◐ läuft auf TrueNAS seit 26.09.2026, ICE-Archiv ab Beobachtung 26.09.2023; offen: erste Werktags-Abrufe, Schritt 9 | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
+| M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ☑ 28.09.2026: erster Werktag mit planmäßigen Abrufen ohne Fehler (Nutzer, Abruf 15:07); Schritt 9 läuft als Nachprüfung weiter (Abschnitt 9) | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
 | M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ☑ 26.09.2026 (M4a bis M4d, E-37) | M3 | M4a bis M4d erteilt 26.09.2026 |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026) | M4, L-1 bis L-12 | erteilt 26.09.2026 |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026; Nachtrag Rezessionsbalken E-56 dort ⏳) | M1 (Lesen), M3 (Heartbeat) | erteilt 26.09.2026 |
@@ -447,7 +447,7 @@ Für jeden Meilenstein gilt die Definition of Done:
   - Alles auf TrueNAS: ob `git` vorhanden ist, `sudo docker`, das Anlegen des Datasets, Dockge mit `.env`, `timedatectl`. Die Anleitung markiert diese Schritte mit ⏳.
 - **Inbetriebnahme auf TrueNAS (26.09.2026, Nutzer):** Stack `finanz-dashboard`, Container `finanz-dashboard-worker-1` „Up (healthy)“, Healthcheck „gesund“. Dataset-Name `feewer` und Stack-Name bleiben (E-34). Der Klon in das schon vorhandene Dataset scheiterte an `git clone` (nicht leeres Verzeichnis); die Anleitung nutzt seitdem `git init` + `fetch` + `checkout`.
 - **Erstabruf auf TrueNAS (Samstag, 26.09.2026, 11:32 UTC, Sofort-Abruf per `docker exec`):** 23 Reihen, 101 363 Zeilen, keine verworfenen Werte, keine Fehler; Zeilenzahlen identisch mit dem Probelauf in der Entwicklungsumgebung. Das lokale ICE-Archiv beginnt mit dem Beobachtungsdatum 26.09.2023. Datenbank 14,7 MB (plus WAL 6,0 MB). Mountpunkt `/mnt/Daten-Z1/apps/feewer/data -> /data`, Benutzer 568:568, alle Dateien 568:568.
-- **Offen bis ☑:** erster Werktag mit Abrufen nach dem Abrufplan (Montag, 28.09.2026), dann Prüfung der Veröffentlichungszeiten aus dem Rohdatenarchiv (Schritt 9).
+- **Erster Werktag nach dem Abrufplan (Montag, 28.09.2026, Nutzer):** Die planmäßigen Abrufe liefen um 15:07 durch, ohne Fehler. M3 ☑ auf Anweisung des Nutzers. Schritt 9 (Veröffentlichungszeiten aus dem Rohdatenarchiv gegen `release_time`, Cboe-CSV während der Handelszeit) braucht einige Werktage und läuft als Nachprüfung weiter; Abweichungen kommen als Änderung zur Freigabe.
 
 ### M4 – Weitere Quellen
 
@@ -975,7 +975,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
   2. Nutzer schickt die Anfrage an die St. Louis Fed (O-7); Entwurf im Chat vom 28.09.2026.
   3. Plan „Breite und Top-10“ (E-68, E-71, E-74): Festlegungen geklärt, Freigabe des Nutzers ausstehend, dann Umsetzung.
   4. Nutzer prüft die Texte: sechs aus E-52, `recessions.md`, die 22 aus E-58 und die 9 aus M7 (M8), dazu die Krisendaten in `config/episodes.toml`.
-  5. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen; dann M3 abschließen (Woche ab 28.09.2026). Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9).
+  5. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9; M3 selbst ☑ seit 28.09.2026).
   6. Danach M8 (Prüfung der Texte) und M9 (Abnahme Phase 1).
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
