@@ -70,9 +70,10 @@ app.layout = html.Div(className="page", children=[
     Input("url", "pathname"),
 )
 def status(_n, _path):
-    """Header line and worker banner; runs on every page load and every refresh."""
+    """Header line and banners (missing migration, silent worker); runs on every page load and every refresh."""
     now = fmt.utcnow()
     try:
+        migration = db.schema_problem()
         beat = db.heartbeat()
         scoring = next((row for row in db.sources() if row["source"] == "scoring"), None)
     except (DataDirError, SQLAlchemyError) as exc:
@@ -84,21 +85,25 @@ def status(_n, _path):
         html.Span(f"Scores berechnet {fmt.berlin(scored)}"),
         html.Span(f"Seite aktualisiert {fmt.berlin(now)}"),
     ]
-    banner = None
+    banners = []
+    if migration:
+        banners.append(html.Div(migration, className="banner banner-alert", role="alert"))
     if beat is None or now - beat > HEARTBEAT_MAX_AGE:
         since = "nie" if beat is None else fmt.berlin(beat)
-        banner = html.Div(f"Worker ohne Lebenszeichen seit {since}, Werte werden nicht aktualisiert.",
-                          className="banner banner-alert", role="alert")
-    return line, banner
+        banners.append(html.Div(f"Worker ohne Lebenszeichen seit {since}, Werte werden nicht aktualisiert.",
+                                className="banner banner-alert", role="alert"))
+    return line, banners or None
 
 
 @server.route("/health")
 def health():
-    """200 if the database can be read, 503 otherwise (container healthcheck)."""
+    """200 if the database can be read and is on the expected migration, 503 otherwise (container healthcheck)."""
     try:
-        db.heartbeat()
+        migration = db.schema_problem()
     except (DataDirError, SQLAlchemyError) as exc:
         return {"status": "error", "message": str(exc)}, 503
+    if migration:
+        return {"status": "error", "message": migration}, 503
     return {"status": "ok"}, 200
 
 

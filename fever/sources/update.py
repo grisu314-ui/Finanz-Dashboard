@@ -27,6 +27,7 @@ from fever.sources import Row, SourceError, cboe, cfe, cftc, ecb, fed, fred, ofr
 from fever.store.db import DataDirError, data_dir, make_engine
 from fever.store.observations import NewObservation, append_observations, latest_obs_date, latest_values
 from fever.store.raw import archive_raw
+from fever.store.schema import SchemaError, require_current
 from fever.store.status import record_attempt, record_error, record_success
 
 NEW_YORK = ZoneInfo("America/New_York")
@@ -159,7 +160,9 @@ def main() -> int:
         directory = data_dir()
         engine = make_engine(directory)
         catalog = series_catalog()
-    except (DataDirError, ConfigError) as exc:
+        with engine.connect() as conn:
+            require_current(conn)
+    except (DataDirError, ConfigError, SchemaError) as exc:
         logger.error("Abruf nicht gestartet: %s", exc)
         return 2
     client = HttpClient()

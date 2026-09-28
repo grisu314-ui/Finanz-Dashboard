@@ -7,6 +7,7 @@ from functools import cache
 from sqlalchemy import func, select
 from sqlalchemy.engine import Engine
 
+from fever.store import schema
 from fever.store.db import data_dir, make_engine
 from fever.store.observations import latest_values
 from fever.store.status import read_heartbeat, read_status
@@ -120,3 +121,9 @@ def sources() -> list[dict]:
 def heartbeat() -> datetime | None:
     with engine().connect() as conn:
         return read_heartbeat(conn, "worker")
+
+
+def schema_problem() -> str | None:
+    """Message if the database is not on the migration this code expects (E-70)."""
+    with engine().connect() as conn:
+        return schema.problem(conn)

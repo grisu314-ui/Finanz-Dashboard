@@ -102,6 +102,9 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 27.09.2026 | E-65 | Re-Steepening der Zinskurve (L-10) | Violette Fläche, solange 10J − 3M unter null liegt; das Ende einer Fläche ist das Re-Steepening | Keine neuen Parameter; kurze Unterschreitungen erscheinen als schmale Flächen |
 | 27.09.2026 | E-66 | Raster der Heatmap | Schalter: Start wöchentlich über die ganze Historie (Perzentil vom letzten Handelstag der Woche), umschaltbar auf täglich für die letzten 2 Jahre | Geladen wird nur das gewählte Raster |
 | 27.09.2026 | E-67 | Welche Übersicht bleibt (E-62) | Die Variante nach Bericht 6.3: Übersicht B wird Startseite `/` und bekommt Karten für Stress und Fallhöhe; die bisherige Übersicht mit den aufklappbaren Bereichen und Einzelreihen (M7a) entfällt ganz; Navigation in einer Zeile | Die Einzelreihen stehen in den Ansichten 2–6, „So fließt der Wert in den Bereich ein“ bleibt auf den Erklärseiten; `/uebersicht-b` leitet auf `/` um; in `CLAUDE.md` unter „NICHT gebaut“ eingetragen |
+| 28.09.2026 | E-68 | Quelle für die Breite-Reihen (O-1, Befunde unter „O-1: Recherche“) | Nasdaq-Indizes über FRED, gleicher Client und Schlüssel: gleich- gegen kapitalgewichtet `NASDAQNQUS500LCE`/`NASDAQNQUS500LC`, Small/Large `NASDAQNQUSS`/`NASDAQNQUSL`, Halbleiter `NASDAQSOX`, Regionalbanken `NASDAQABAQ`, Zykliker/Defensive `NASDAQNQUSB40`/`NASDAQNQUSB45` oder `…4040`/`…4510`, Gesamtmarkt `NASDAQNQUSB`. Verworfen: MSCI, FTSE Russell, Tiingo, ETF-Dateien von SSGA, IBKR | Umsetzung als eigener Schritt mit Plan und Freigabe; vorher per Auswahlfrage: Transformation, Toleranz, Block, Auswahl Zykliker/Defensive. Der Stress-Composite bekommt 4 statt 3 Blöcke, Stress und Ampel verschieben sich. Anteil über der 50/200-Tage-Linie und Top-10-Konzentration bleiben offen |
+| 28.09.2026 | E-69 | Speicherverbot in den FRED-Bedingungen (W-11) | Der Nutzer bittet die St. Louis Fed schriftlich um Zustimmung für ein privates, nicht kommerzielles lokales Archiv; der Betrieb läuft bis zur Antwort weiter | Offener Punkt O-7; bei Absage neue Entscheidung. Für Reihen von ICE, S&P und Nasdaq kann die Fed nach ihren eigenen Bedingungen keine Rechte einräumen |
+| 28.09.2026 | E-70 | Prüfung der Migration beim Start | Worker, `fever.score` und `fever.sources.update` starten nicht, wenn die Datenbank nicht auf der neuesten Migration des Codes steht („Migration fehlt …“, Exit-Code 2); das Dashboard zeigt dazu ein rotes Banner, `/health` antwortet 503. `fever.backup` prüft nicht, weil die Sicherung vor einer Migration auf dem alten Stand laufen muss | Anlass: TrueNAS am 27.09.2026, Migration 0003 fehlte, Scoring scheiterte mit „no column named band_p10“. Umsetzung `fever/store/schema.py`, Tests `tests/test_schema.py` |
 
 ---
 
@@ -807,6 +810,35 @@ Laut Bericht 6.3, soweit Daten vorhanden:
 3. `docs/bedienung.md` und `docs/einrichtung.md` von ⏳ auf ✅, wo geprüft.
 4. README-Status aktualisieren.
 
+### O-1: Recherche Ausweichquellen (28.09.2026, 10:36–11:30 UTC)
+
+Anlass: Der Block „Breite“ und die Top-10-Konzentration haben keine Datenquelle. Geprüft: Indexanbieter, ETF-Emittenten, Kurs-APIs. Datenstand der FRED-Reihen: letzte Beobachtung 25.09.2026.
+
+| Route | Befund | Ergebnis |
+|---|---|---|
+| MSCI (End-of-Day-Suche) | Terms of Use (Stand 15.07.2026) verbieten „unauthorized bots, scrapers … or any other unauthorized automated means“ und „populate a database with“ MSCI-Material | verworfen |
+| FTSE Russell (LSEG) | Website-Bedingungen: Speichern nur „temporarily“; „You agree not to use … any bot, script, automation software …“, auch bei persönlicher Nutzung; Indexdaten sonst per Abo | verworfen |
+| S&P DJI | lizenzpflichtig (`CLAUDE.md`), nicht weiter geprüft | verworfen |
+| Nasdaq-Indizes über FRED | täglich, per CSV-Abruf geprüft; Status „Copyrighted: Pre-Approval Required“ wie `SP500` und `BAMLH0A0HYM2` (private Nutzung ohne Genehmigung) | gewählt (E-68) |
+| ETF-NAV-Dateien von SSGA (xlsx ohne Login) | SPY, XLY, XLP, XLK, XLI, XLU ab 01.12.2003, KBE ab 15.11.2005, XSD ab 03.02.2006, KRE ab 19.06.2006, SPSM ab 08.07.2013; kein RSP, IWM, SMH. Bedingungen erlauben Kopien nur als „print-outs for your own personal use“; `openpyxl` oder eigener Parser nötig | verworfen (rechtlich unklar) |
+| iShares | Download-Adresse lieferte HTML statt Datei | nicht verfolgt |
+| Tiingo | Starter (0 USD): kein dauerhaftes Speichern („only transiently in volatile memory“); Power 30 USD/Monat erlaubt Speichern, nach Kündigung Löschpflicht einschließlich Backups (ToS vom 05.08.2026) | verworfen |
+| IBKR | historische Daten über die API nur mit Level-1-Echtzeitabo und laufendem Gateway mit Login | Phase 3 |
+
+Ersatzreihen auf FRED (Beginn der Reihe):
+
+| Bericht 6.3 | Reihen | ab | Anmerkung |
+|---|---|---|---|
+| RSP/SPY | `NASDAQNQUS500LCE` / `NASDAQNQUS500LC` | 22.06.2017 / 11.01.2016 | 2.328 gemeinsame Tage; Verhältnis 0,79 (22.06.2017), 0,65 (31.12.2024), 0,60 (25.09.2026) |
+| Small/Large | `NASDAQNQUSS` / `NASDAQNQUSL` | 16.05.2011 | Total-Return-Varianten `…ST`/`…LT` ab 17.05.2011 |
+| SMH relativ | `NASDAQSOX` / `NASDAQNQUSB` | 02.09.2004 / 16.05.2011 | PHLX Semiconductor statt des SMH-Index |
+| KRE | `NASDAQABAQ` / `NASDAQNQUSB` | 02.06.2008 / 16.05.2011 | ABA Community Bank |
+| XLY/XLP | `NASDAQNQUSB40` / `NASDAQNQUSB45` | 22.09.2020 | ICB-Umstellung 2020; länger: Retail `NASDAQNQUSB4040` / Food, Beverage and Tobacco `NASDAQNQUSB4510` ab 23.05.2011 |
+
+Ohne freie, regelkonforme Quelle (Entscheidung offen, O-1):
+- **Top-10-Konzentration:** SEC EDGAR, Form N-PORT des SPDR S&P 500 ETF Trust (CIK 884394): quartalsweise, öffentlich rund 60 Tage nach Quartalsende, ab Stichtag 30.09.2019, alle Positionen mit Anteil (`pctVal`). Probe: Top-10-Positionen 21,59 % (30.09.2019), 36,42 % (30.06.2026); Alphabet steht mit zwei Aktiengattungen darin. SEC: „Information presented on sec.gov is considered public information and may be copied or further distributed … without the SEC's permission“; höchstens 10 Anfragen je Sekunde mit erklärtem User-Agent. SEC ist keine der Phase-1-Quellen in `CLAUDE.md`.
+- **Anteil über der 50/200-Tage-Linie:** braucht Tageskurse aller Mitglieder mit historischen Mitgliederlisten. Frei und speicherbar nicht gefunden. Kostenpflichtig: EODHD „Fundamentals Data Feed“ 59,99 USD/Monat (Mitglieder ab April 2012; Speicherbedingungen nicht geprüft), Sharadar über Nasdaq Data Link (Mitglieder ab 1957, Kurse ab 1998; Preis erst nach Anmeldung sichtbar; Löschpflicht 30 Tage nach Ende), Norgate nur unter Windows. Mitglieder quartalsweise auch aus N-PORT, dann fehlen nur die Kurse.
+
 ---
 
 ## 5. Fachliche Lücken (vor dem betroffenen Meilenstein per Auswahlfrage klären)
@@ -845,6 +877,7 @@ Nichts davon wird geraten. Die Vorschläge sind begründete Startpunkte, keine E
 | W-8 | Bericht 6.1: VIX3M-Historie ab 04.12.2007. Die Cboe-CSV beginnt erst am 18.09.2009 (geprüft 26.09.2026) | Archiviert wird, was die CSV liefert; für das 10-Jahres-Fenster folgenlos |
 | W-9 | `CLAUDE.md` verlangt gekürzte echte Antworten als Fixtures, verbietet aber die Weitergabe lizenzierter Daten; das Repository ist öffentlich | E-27: Format echt, Werte lizenzierter Quellen synthetisch |
 | W-10 | `CLAUDE.md` verlangte FINRA Margin Debt als Download ohne Login und verbietet zugleich Scraping gegen Nutzungsbedingungen; FINRA untersagt Speichern und Datenbanken ohne schriftliche Zustimmung | E-42: Margin Debt aus Fed Z.1 über FRED; `CLAUDE.md` angepasst |
+| W-11 | FRED Terms of Use (abgerufen 28.09.2026): „You may not, without the Bank's prior written consent: … (p) Store, cache, or archive any portion of … FRED® Content; … or incorporate any FRED® Content in any database“; für die API ohne Zustimmungsvorbehalt „(l) Use the FRED® API in connection with storing, caching, or archiving …“. Die allgemeine Lizenz erlaubt dagegen, eine Kopie „solely for your personal, non-commercial use“ herunterzuladen. Der Worker speichert alle FRED-Reihen, auch das ICE-Archiv; derselbe Maßstab wie bei FINRA (W-10) trifft hier den Kern des Projekts. Ob die Klauseln bei der Prüfung in M2 schon bestanden, ließ sich nicht klären (Webarchiv: 429) | E-69: Zustimmung anfragen, O-7 |
 
 ---
 
@@ -927,23 +960,25 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 ## 9. Übergabe an die nächste Sitzung
 
-- **Stand (27.09.2026):**
+- **Stand (28.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt: Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-67; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026.
-  - M7 vollständig umgesetzt, noch nicht auf TrueNAS: Rezessionsbalken (E-56, 61 Reihen), Übersicht nach Bericht 6.3 als Startseite und Ansichten 2–7 (E-67; die Variante M7a ist entfernt), Perzentilbänder mit Migration 0003; 388 Tests grün.
-  - Worker läuft auf TrueNAS seit Samstag, 26.09.2026 („healthy“); das ICE-Archiv beginnt mit dem 26.09.2023. Planmäßige Abrufe ab Montag, 28.09.
+  - Entscheidungen bis E-70; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026.
+  - M7 vollständig umgesetzt: Rezessionsbalken (E-56, 61 Reihen), Übersicht nach Bericht 6.3 als Startseite und Ansichten 2–7 (E-67), Perzentilbänder mit Migration 0003. Auf TrueNAS läuft das M7-Image seit 27.09.2026 **ohne Migration 0003**: Scoring scheitert seitdem mit „table indicator_score has no column named band_p10“ (der Migrationsversuch lief mit leerem `$RUN`).
+  - Neu (E-70): Worker, `fever.score` und `fever.sources.update` starten nicht auf einer Datenbank ohne die neueste Migration; Dashboard-Banner „Migration fehlt“, `/health` 503. 399 Tests grün.
+  - O-1 teilweise entschieden (E-68: Nasdaq-Indizes über FRED; Umsetzung noch nicht geplant). Befund W-11 zu den FRED-Bedingungen, Zustimmung wird angefragt (E-69, O-7).
 - **Nächster Schritt:**
-  1. Update auf TrueNAS mit Migration 0003 nach `docs/einrichtung.md`, Schritt 9: Probe an einer Backup-Kopie, Stack stoppen, Backup, `alembic upgrade head`, Stack starten, `python -m fever.score`, Sofort-Abruf (61 Reihen).
-  2. Nutzer prüft die Texte: sechs aus E-52, `recessions.md`, die 22 aus E-58 und die 9 aus M7 (M8), dazu die Krisendaten in `config/episodes.toml`.
-  4. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen; dann M3 abschließen (Woche ab 28.09.2026).
-  5. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9).
+  1. TrueNAS: `git pull`, `sudo docker compose build`, dann `docs/einrichtung.md`, Abschnitt 9 ab „Stack stoppen“ (Backup, `alembic upgrade head` auf 0003, Stack starten, `python -m fever.score`), danach Sofort-Abruf (61 Reihen).
+  2. Nutzer schickt die Anfrage an die St. Louis Fed (O-7) und entscheidet über Top-10-Konzentration (SEC N-PORT) und Anteil über der 50/200-Tage-Linie (O-1, Befunde in Abschnitt 4 unter „O-1: Recherche“).
+  3. Plan für die Breite-Reihen nach E-68 mit den fachlichen Festlegungen als Auswahlfragen, dann Freigabe.
+  4. Nutzer prüft die Texte: sechs aus E-52, `recessions.md`, die 22 aus E-58 und die 9 aus M7 (M8), dazu die Krisendaten in `config/episodes.toml`.
+  5. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen; dann M3 abschließen (Woche ab 28.09.2026). Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9).
   6. Danach M8 (Prüfung der Texte) und M9 (Abnahme Phase 1).
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
-  - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`.
+  - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`. Am 28.09.2026 zusätzlich erreichbar: `fred.stlouisfed.org` (CSV ohne Schlüssel), `www.ssga.com`, `www.sec.gov`, `data.sec.gov`; `archive.org` antwortete mit 429.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** O-1, O-5, O-6 (`CLAUDE.md`).
+- **Offene Entscheidungen des Nutzers:** O-1 (Anteil über der 50/200-Tage-Linie, Top-10-Konzentration), O-5, O-6, O-7 (`CLAUDE.md`).
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---

@@ -32,6 +32,7 @@ from fever.http import HttpClient
 from fever.sources.update import estimated_release, update_group
 from fever.store.db import DataDirError, data_dir, make_engine
 from fever.store.observations import latest_obs_date
+from fever.store.schema import SchemaError, require_current
 from fever.store.status import read_heartbeat, record_error, record_heartbeat
 
 CYCLE = timedelta(minutes=15)
@@ -206,7 +207,9 @@ def main() -> int:
         directory = data_dir()
         engine = make_engine(directory)
         catalog = series_catalog()
-    except (DataDirError, ConfigError) as exc:
+        with engine.connect() as conn:
+            require_current(conn)
+    except (DataDirError, ConfigError, SchemaError) as exc:
         logger.error("Worker nicht gestartet: %s", exc)
         return 2
     logger.info(

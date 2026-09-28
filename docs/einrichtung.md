@@ -238,9 +238,9 @@ Dockge zeigt `web` nach rund einer Minute als „healthy“.
 
 ## 9. Update auf eine neue Version
 
-✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ⏳ TrueNAS.
+✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ⏳ TrueNAS. Prüfung der Migration beim Start (E-70): ✅ Entwicklungsumgebung 28.09.2026 mit dem gebauten Image auf einer Datenbank mit Stand 0002 (Worker und `fever.score` melden „Migration fehlt“ und starten nicht, `/health` 503, Banner im Browser; `fever.backup` läuft; nach `alembic upgrade head` normaler Start); ⏳ TrueNAS.
 
-**Update auf M7 (Migration 0003):** Das neue Dashboard liest die Spalten der Perzentilbänder. Der Stack darf deshalb erst nach `alembic upgrade head` wieder starten, sonst zeigen die Seiten „Datenbank nicht lesbar“. Nach dem Start einmal `python -m fever.score` (unten), damit die Bänder sofort gefüllt sind.
+**Update auf M7 (Migration 0003):** Das neue Dashboard liest die Spalten der Perzentilbänder. Der Stack darf deshalb erst nach `alembic upgrade head` wieder starten. Seit E-70 prüfen Worker und Dashboard die Migration beim Start: Fehlt sie, startet der Worker nicht, und das Dashboard zeigt das rote Banner „Migration fehlt“ (Fehlersuche, Abschnitt 11). Nach dem Start einmal `python -m fever.score` (unten), damit die Bänder sofort gefüllt sind.
 
 Standardablauf, alles in der SSH-Shell auf TrueNAS; nur Stopp und Start des Stacks in Dockge. Er schadet nie: Gibt es keine neue Migration, ändert `alembic upgrade head` nichts, und die Sicherung davor ist nur eine zusätzliche Kopie. Ob eine neue Migration dabei ist, zeigt die Zeile mit `migrations/`.
 
@@ -340,7 +340,8 @@ Den Ordner `alt-…` erst löschen, wenn wieder alles korrekt läuft. Zeigt `ale
 
 | Symptom | Prüfen |
 |---|---|
-| Worker startet immer wieder neu | `sudo docker logs --tail 50 finanz-dashboard-worker-1`. „Datenbank fehlt“: Schritt 6. „Datenordner fehlt“ oder „Permission denied“: Schritt 3.3 |
+| Worker startet immer wieder neu | `sudo docker logs --tail 50 finanz-dashboard-worker-1`. „Datenbank fehlt“: Schritt 6. „Datenordner fehlt“ oder „Permission denied“: Schritt 3.3. „Migration fehlt“: nächste Zeile |
+| „Migration fehlt: Datenbank auf …, Programm erwartet …“ (Worker-Log, rotes Banner im Dashboard, `/health` mit 503; E-70) | Das Image ist neuer als die Datenbank, `alembic upgrade head` fehlt. Worker, `fever.score` und `fever.sources.update` starten dann nicht und ändern nichts. Standardablauf in Abschnitt 9 ab „Stack stoppen“ ausführen. „die dieses Programm nicht kennt“ heißt umgekehrt: Die Datenbank ist neuer als das Image; Image auf den aktuellen Stand bauen |
 | Worker „unhealthy“ | Das Lebenszeichen ist älter als 45 Minuten (E-33). `sudo docker inspect --format '{{json .State.Health}}' finanz-dashboard-worker-1`, dazu das Log |
 | Keine neuen Werte | Wochenende oder US-Feiertag? Sonst Log: Zeilen mit „Nichts gespeichert“ oder „verworfen“ nennen Reihe und Grund |
 | Einzelne Quelle veraltet | ab M6 Ansicht „Datenstand“: letzter Erfolg, letzter Versuch, letzter Fehler je Quelle |

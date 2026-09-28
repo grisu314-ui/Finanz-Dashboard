@@ -22,6 +22,7 @@ from fever.scoring.composite import CompositeScore
 from fever.scoring.pipeline import score
 from fever.store.db import DataDirError, data_dir, make_engine
 from fever.store.observations import latest_values
+from fever.store.schema import SchemaError, require_current
 from fever.store.scores import newest_retrieval, replace_scores, score_state
 from fever.store.status import record_attempt, record_success
 
@@ -110,8 +111,10 @@ def main() -> int:
     log.setup()
     try:
         engine = make_engine(data_dir())
+        with engine.connect() as conn:
+            require_current(conn)
         summary = run(engine)
-    except (DataDirError, ConfigError) as exc:
+    except (DataDirError, ConfigError, SchemaError) as exc:
         logger.error("Scoring nicht gestartet: %s", exc)
         return 2
     logger.info("%s", describe(summary))
