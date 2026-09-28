@@ -27,7 +27,7 @@ Zweck ist Regime- und Risikoanzeige, keine Crash-Prognose. Ziel ist genau die hi
 
 1. MVP:
    - Worker, Speicher, Serienkatalog, Backups, Healthchecks.
-   - Quellen nur über offizielle APIs, CSVs und Datei-Downloads ohne Login: Cboe, FRED/ALFRED, CFTC, EZB, OFR, Fed-Board (EBP, Z.1 über FRED), Shiller-CAPE; Margin Debt aus Fed Z.1 statt FINRA (E-42).
+   - Quellen nur über offizielle APIs, CSVs und Datei-Downloads ohne Login: Cboe, FRED/ALFRED (auch Nasdaq-Indizes, E-68), CFTC, EZB, OFR, Fed-Board (EBP, Z.1 über FRED), Shiller-CAPE, SEC EDGAR (N-PORT für die Top-10-Konzentration, E-71); Margin Debt aus Fed Z.1 statt FINRA (E-42).
    - Scoring nach Bericht 4.3, Schritte 1–6, Aggregation nur Stufe 1.
    - Ansichten 1–7 aus Bericht 6.3, soweit Daten vorhanden, dazu „Datenstand".
    - Kurzinfo und Erklärseite je Kennzahl, Chart-Bedienung (Zoom, Zeitraum, Bildexport, Vollbild, Druck), Auto-Aktualisierung; Doku für KI und Anwender.
@@ -202,7 +202,7 @@ Vor der Umsetzung des betroffenen Teils klären; Entschiedenes hier mit Antwort 
 
 | Nr. | Frage | Bis zur Entscheidung |
 |---|---|---|
-| O-1 | Kursquelle für ETFs und Indexmitglieder (RSP/SPY, Sektor- und Größenverhältnisse, Breite). FRED `SP500` reicht nur 10 Jahre zurück, genügt aber für VRP und Aktien-Anleihen-Korrelation | **Teilweise entschieden 28.09.2026 (E-68):** Nasdaq-Indizes über FRED für gleich- gegen kapitalgewichtet, Small/Large, Halbleiter, Regionalbanken, Zykliker/Defensive; Umsetzung erst nach Plan und Freigabe. Offen: Anteil über der 50/200-Tage-Linie und Top-10-Konzentration (Befunde: `docs/umsetzungsplan.md`, „O-1: Recherche“); bis dahin weglassen, keine Quelle selbst wählen |
+| O-1 | Kursquelle für ETFs und Indexmitglieder (RSP/SPY, Sektor- und Größenverhältnisse, Breite). FRED `SP500` reicht nur 10 Jahre zurück, genügt aber für VRP und Aktien-Anleihen-Korrelation | **Entschieden 28.09.2026 (E-68, E-71 bis E-73):** Nasdaq-Indizes über FRED für gleich- gegen kapitalgewichtet, Small/Large, Halbleiter, Regionalbanken, Zykliker/Defensive (`NASDAQNQUSB40`/`45`); Top-10-Konzentration aus SEC N-PORT (SPY) in die Fallhöhe; Anteil über der 50/200-Tage-Linie entfällt (sichtbarer Platzhalter). Umsetzung erst nach Plan und Freigabe (Befunde: `docs/umsetzungsplan.md`, „O-1: Recherche“) |
 | O-2 | Zielsystem, RAM, Speichermedium, Pfad des Datenordners | **Entschieden 26.09.2026 (E-21, E-28, E-29):** TrueNAS 25.10.7 statt Pi (Pi: CM4 mit 1,8 GiB RAM, SD-Karte mit 2,6 GB frei). Projekt `/mnt/Daten-Z1/apps/feewer`, Datenordner Kind-Dataset `data/`, Container als `apps` 568:568, Dockge-Stack `finanz-dashboard` (E-34), Betrieb vom Branch `claude-testing` (E-30); Worker läuft seit 26.09.2026 |
 | O-3 | Zugang: nur Heimnetz oder Tailscale, ggf. mit Basic-Auth-Pforte | **Entschieden 25.09.2026:** nur Heimnetz, kein Passwort; Port an `0.0.0.0`; keine Portweiterleitung im Router |
 | O-4 | Backup-Ziel außerhalb des Servers | **Entschieden 26.09.2026 (E-22):** Backups bleiben im Datenordner auf TrueNAS, kein weiteres Ziel; Aufwand für Backups gering halten |
