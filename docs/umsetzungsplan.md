@@ -108,6 +108,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 28.09.2026 | E-71 | Top-10-Konzentration (O-1) | Aus den öffentlichen N-PORT-Meldungen des SPDR S&P 500 ETF Trust (SEC EDGAR, CIK 884394) als Komponente der Fallhöhe; die SEC kommt als Quelle zu Phase 1 dazu | Quartalsweise, rund 60 Tage nach Quartalsende, ab Stichtag 30.09.2019; Veröffentlichung = Einreichungsdatum der Meldung (echte Vintage). Die Fallhöhe verschiebt sich. Details (Aktiengattungen, Vorlaufgewicht, Kontakt im User-Agent) im Plan |
 | 28.09.2026 | E-72 | Anteil über der 50/200-Tage-Linie (O-1) | Weglassen; bleibt sichtbarer Platzhalter | Keine freie, speicherbare Quelle (Befunde unter „O-1: Recherche“); kein Branchen-Behelf |
 | 28.09.2026 | E-73 | Zykliker/Defensive (E-68) | `NASDAQNQUSB40`/`NASDAQNQUSB45` (Nicht-Basiskonsum gegen Basiskonsum) wie XLY/XLP im Bericht | Historie ab 22.09.2020: Mindesthistorie erfüllt, Fenster anfangs rund 6 statt 10 Jahre |
+| 28.09.2026 | E-74 | Festlegungen für Breite und Top-10 (E-68, E-71) | Relative Stärke = Log-Veränderung des Verhältnisses über 63 Handelstage (`scoring.toml`), Orientierung „niedrig = mehr Stress“ (Bericht 4.3); alle fünf Verhältnisse zählen im Block Breite, V = 3 für gleich- gegen kapitalgewichtet (Bericht, Tabelle 2), V = 2 für die übrigen vier; Top-10 je Emittent (Aktiengattungen mit demselben LEI zusammen), V = 1; Kontakt für den SEC-User-Agent als nicht geheime Variable in der `.env` des Stacks, ohne sie kein SEC-Abruf und eine Meldung im Datenstand | Umsetzung erst nach Freigabe des Plans |
 
 ---
 
@@ -965,14 +966,14 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (28.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt: Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-73; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026.
+  - Entscheidungen bis E-74; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026.
   - M7 vollständig umgesetzt: Rezessionsbalken (E-56, 61 Reihen), Übersicht nach Bericht 6.3 als Startseite und Ansichten 2–7 (E-67), Perzentilbänder mit Migration 0003. Auf TrueNAS läuft das M7-Image seit 27.09.2026 **ohne Migration 0003**: Scoring scheitert seitdem mit „table indicator_score has no column named band_p10“ (der Migrationsversuch lief mit leerem `$RUN`).
   - Neu (E-70): Worker, `fever.score` und `fever.sources.update` starten nicht auf einer Datenbank ohne die neueste Migration; Dashboard-Banner „Migration fehlt“, `/health` 503. 399 Tests grün.
   - O-1 entschieden (E-68, E-71 bis E-73: Nasdaq-Indizes über FRED für den Block Breite, Top-10-Konzentration aus SEC N-PORT in die Fallhöhe, kein Anteil über der 50/200-Tage-Linie); Umsetzung noch nicht freigegeben, Plan mit offenen Festlegungen dem Nutzer vorgelegt (28.09.2026). Befund W-11 zu den FRED-Bedingungen, Zustimmung wird angefragt (E-69, O-7).
 - **Nächster Schritt:**
   1. TrueNAS: `git pull`, `sudo docker compose build`, dann `docs/einrichtung.md`, Abschnitt 9 ab „Stack stoppen“ (Backup, `alembic upgrade head` auf 0003, Stack starten, `python -m fever.score`), danach Sofort-Abruf (61 Reihen).
   2. Nutzer schickt die Anfrage an die St. Louis Fed (O-7); Entwurf im Chat vom 28.09.2026.
-  3. Plan „Breite und Top-10“ (E-68, E-71): Festlegungen per Auswahlfrage klären, dann Freigabe und Umsetzung.
+  3. Plan „Breite und Top-10“ (E-68, E-71, E-74): Festlegungen geklärt, Freigabe des Nutzers ausstehend, dann Umsetzung.
   4. Nutzer prüft die Texte: sechs aus E-52, `recessions.md`, die 22 aus E-58 und die 9 aus M7 (M8), dazu die Krisendaten in `config/episodes.toml`.
   5. Nach den ersten Werktags-Abrufen: Log und Zeilenzahlen je Reihe prüfen; dann M3 abschließen (Woche ab 28.09.2026). Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9).
   6. Danach M8 (Prüfung der Texte) und M9 (Abnahme Phase 1).
@@ -981,7 +982,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`. Am 28.09.2026 zusätzlich erreichbar: `fred.stlouisfed.org` (CSV ohne Schlüssel), `www.ssga.com`, `www.sec.gov`, `data.sec.gov`; `archive.org` antwortete mit 429.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** Festlegungen zum Plan „Breite und Top-10“, O-5, O-6, O-7 (`CLAUDE.md`).
+- **Offene Entscheidungen des Nutzers:** Freigabe des Plans „Breite und Top-10“, O-5, O-6, O-7 (`CLAUDE.md`).
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---
