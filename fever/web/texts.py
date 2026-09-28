@@ -54,9 +54,10 @@ DISPLAYS = {
     "yield_curve": ("t10y3m", "t10y2y"),
     "cape": ("shiller_cape",),
 }
-# Areas on the overview with their indicators (E-57): the stress blocks with indicators in phase 1, then
-# the vulnerability; each with the Kennzahl that heads it. Breadth and positioning have none yet.
-AREAS = {"volatility": "block_volatility", "credit": "block_credit", "macro": "block_macro", VULNERABILITY: VULNERABILITY}
+# Areas with their indicators (E-57), in the order of view 7: the stress blocks with indicators in phase 1,
+# then the vulnerability; each with the Kennzahl that heads it. Positioning has none until phase 2.
+AREAS = {"volatility": "block_volatility", "credit": "block_credit", "macro": "block_macro", "breadth": "block_breadth",
+         VULNERABILITY: VULNERABILITY}
 FREQUENCY_NAMES = {"daily": "täglich", "weekly": "wöchentlich", "monthly": "monatlich", "quarterly": "quartalsweise"}
 LEVEL_NAMES = ("Grün", "Gelb", "Orange", "Rot")
 
@@ -144,6 +145,7 @@ _TRANSFORMS = {
     "fx_vol": lambda c: f"annualisierte Volatilität der täglichen Logveränderungen von USD/JPY über {c.fx_vol_window} EZB-Kurstage",
     "yoy": lambda c: "Veränderung gegenüber der Beobachtung ein Jahr zuvor",
     "cot_net_short": lambda c: "(Short − Long) der Non-Commercials geteilt durch das Open Interest",
+    "relative_change": lambda c: f"relative Stärke: Logveränderung des Verhältnisses der ersten zur zweiten Reihe über {c.relative_change_window} gemeinsame Handelstage",
 }
 
 

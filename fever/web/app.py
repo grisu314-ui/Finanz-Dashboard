@@ -28,8 +28,8 @@ NOTICES = [
     "Source: ECB statistics.",
     "Quellen: Cboe Global Markets (nur private, nicht kommerzielle Nutzung), Board of Governors of the Federal Reserve "
     "System, Office of Financial Research, CFTC Commitments of Traders, Robert J. Shiller (Online Data), "
-    "NBER-Rezessionsdatierung (über FRED); über FRED "
-    "auch ICE Data Indices und S&P Dow Jones Indices (nur private Nutzung, keine Weitergabe).",
+    "NBER-Rezessionsdatierung (über FRED), SEC EDGAR (N-PORT-Meldungen); über FRED "
+    "auch ICE Data Indices, S&P Dow Jones Indices und Nasdaq, Inc. (nur private Nutzung, keine Weitergabe).",
     "Regime- und Risikoanzeige, keine Prognose und keine Handelsempfehlung.",
 ]
 

@@ -99,6 +99,14 @@ def _cot_net_short(inputs, config):
     return (short - long) / open_interest.where(open_interest > 0)
 
 
+def _relative_change(inputs, config):
+    """Relative strength: log change of the ratio first / second over `relative_change_window`
+    observations, counted on the days with both values (E-74)."""
+    a, b = _aligned(inputs)
+    ratio = np.log(a.where(a > 0) / b.where(b > 0))
+    return ratio - ratio.shift(config.relative_change_window)
+
+
 def _aligned(inputs):
     frame = pd.concat(inputs, axis=1, join="inner")
     return [frame.iloc[:, index] for index in range(frame.shape[1])]
@@ -122,4 +130,5 @@ _TRANSFORMS = {
     "fx_vol": _fx_vol,
     "yoy": _yoy,
     "cot_net_short": _cot_net_short,
+    "relative_change": _relative_change,
 }

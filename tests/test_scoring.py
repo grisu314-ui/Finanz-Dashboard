@@ -240,6 +240,8 @@ def synthetic_raw(end):
         ("nfci", date(2008, 1, 4), 7, 0.0), ("fed_ebp", date(2008, 1, 1), 0, 0.5),
         ("sofr", date(2008, 1, 1), 1, 2.0), ("iorb", date(2008, 1, 1), 1, 2.0),
         ("shiller_ecy", date(2008, 1, 1), 0, 0.03), ("bogz1fl663067003q", date(2008, 1, 1), -1, 500.0),
+        ("nasdaqnqus500lce", date(2008, 1, 1), 1, 1000.0), ("nasdaqnqus500lc", date(2008, 1, 1), 1, 1000.0),
+        ("sec_spy_top10", date(2008, 1, 1), -1, 25.0),
     ]:
         if step == 0:  # monthly on the first
             index = pd.date_range(start, end, freq="MS").date
@@ -254,7 +256,8 @@ def synthetic_raw(end):
     return raw
 
 
-LOOKAHEAD_INDICATORS = ["vix", "vix_vix3m", "vvix", "vrp", "stock_bond_corr", "nfci", "ebp", "sofr_iorb", "ecy", "margin_yoy"]
+LOOKAHEAD_INDICATORS = ["vix", "vix_vix3m", "vvix", "vrp", "stock_bond_corr", "nfci", "ebp", "sofr_iorb", "ecy", "margin_yoy",
+                        "breadth_equal_weight", "top10_concentration"]
 
 
 def test_result_for_t_is_identical_with_and_without_later_observations():
@@ -328,6 +331,30 @@ def test_yoy_needs_the_observation_one_year_earlier():
 def test_cot_net_short_share():
     short, long, oi = series([300.0, 100.0]), series([100.0, 100.0]), series([1000.0, 0.0])
     assert list(indicator_values(INDICATORS["vx_cot_short"], [short, long, oi], CONFIG)) == [0.2]  # OI 0 left out
+
+
+def test_relative_change_by_hand_on_common_days_only():
+    config = replace(CONFIG, relative_change_window=2)
+    d = days(date(2026, 1, 5), 5)
+    equal = pd.Series([100.0, 102.0, 99.0, 98.0, 97.0], index=d)
+    cap = pd.Series([200.0, 200.0, 210.0, 196.0], index=[d[0], d[1], d[3], d[4]])  # no value on d[2]
+    result = indicator_values(INDICATORS["breadth_equal_weight"], [equal, cap], config)
+    # common days d0, d1, d3, d4 with ratios 0.5, 0.51, 98/210, 97/196; window 2 counts common days
+    assert list(result.index) == [d[3], d[4]]
+    assert list(result) == pytest.approx([np.log((98 / 210) / 0.5), np.log((97 / 196) / 0.51)])
+    assert result.iloc[0] < 0  # equal weight lags: breadth narrows, oriented "low" = more stress
+
+
+def test_breadth_and_concentration_indicators_are_configured_as_decided():
+    breadth = {i: x for i, x in INDICATORS.items() if x.block == "breadth"}
+    assert set(breadth) == {"breadth_equal_weight", "breadth_small_large", "breadth_semis", "breadth_banks", "breadth_cyclicals"}
+    assert all(x.transform == "relative_change" and x.orientation == "low" for x in breadth.values())  # E-74
+    assert {i: x.v_score for i, x in breadth.items()} == {
+        "breadth_equal_weight": 3, "breadth_small_large": 2, "breadth_semis": 2, "breadth_banks": 2, "breadth_cyclicals": 2}
+    assert [s.id for s in INDICATORS["breadth_cyclicals"].series] == ["nasdaqnqusb40", "nasdaqnqusb45"]  # E-73
+    top10 = INDICATORS["top10_concentration"]
+    assert (top10.block, top10.orientation, top10.v_score, top10.frequency) == ("vulnerability", "high", 1, "quarterly")
+    assert CONFIG.relative_change_window == 63
 
 
 def test_display_window_percentile_for_cot():

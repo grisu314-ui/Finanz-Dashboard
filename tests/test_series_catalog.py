@@ -22,6 +22,9 @@ EXPECTED_IDS = {
     "bogz1fl663067003q", "shiller_cape", "shiller_ecy",
     # M4d
     *(f"cfe_vx{n}{suffix}" for n in range(1, 9) for suffix in ("", "_days")),
+    # breadth (E-68, E-73) and top-10 concentration (E-71)
+    "nasdaqnqus500lc", "nasdaqnqus500lce", "nasdaqnquss", "nasdaqnqusl", "nasdaqnqusb", "nasdaqsox", "nasdaqabaq",
+    "nasdaqnqusb40", "nasdaqnqusb45", "sec_spy_top10",
 }
 
 VALID = """
@@ -66,6 +69,7 @@ def test_repository_special_cases_are_configured():
     assert all(s.lead_days == 0 for s in catalog.values() if s.id != "iorb")
     for series_id in ("bamlh0a0hym2", "bamlh0a1hybb", "bamlh0a3hyc", "bamlc0a0cm", "bamlc0a4cbbb", "sp500", "shiller_cape", "shiller_ecy"):
         assert "keine Weitergabe" in catalog[series_id].license
+    assert all("Nasdaq" in s.license and "keine Weitergabe" in s.license for s in catalog.values() if s.id.startswith("nasdaq"))
 
 
 def test_valid_entry_fields(tmp_path):

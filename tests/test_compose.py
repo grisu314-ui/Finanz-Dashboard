@@ -32,6 +32,12 @@ def test_web_service_publishes_the_port_and_checks_health():
     assert "fever.web.app:server" in RUNTIME and '"--workers", "1"' in RUNTIME
     assert "http://127.0.0.1:8050/health" in RUNTIME
     assert "FRED_API_KEY" not in RUNTIME.split("  web:")[1]  # the web never needs the secret
+    assert "FEVER_SEC_CONTACT" not in RUNTIME.split("  web:")[1]
+
+
+def test_worker_gets_the_optional_sec_contact():
+    worker = RUNTIME.split("  worker:")[1].split("  web:")[0]
+    assert "FEVER_SEC_CONTACT: ${FEVER_SEC_CONTACT:-}" in worker  # optional: the stack starts without it (E-74)
 
 
 def test_image_contains_the_assets():
@@ -46,3 +52,4 @@ def test_every_variable_of_the_runtime_file_is_in_the_env_template():
 
 def test_env_template_keeps_secrets_empty():
     assert re.search(r"^FRED_API_KEY=$", ENV_EXAMPLE, flags=re.MULTILINE)
+    assert re.search(r"^FEVER_SEC_CONTACT=$", ENV_EXAMPLE, flags=re.MULTILINE)  # personal: never prefilled

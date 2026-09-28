@@ -178,7 +178,7 @@ Ein falscher Score fällt nicht auf, bis die Ampel eine falsche Lage zeigt.
 - Datenordner als Bind-Mount auf einem Dataset des TrueNAS-Hosts selbst (kein NFS/SMB, auch nicht von einem anderen Rechner eingebunden: SQLite-WAL funktioniert dort nicht), Host-Pfad aus `.env`: das Kind-Dataset `/mnt/Daten-Z1/apps/feewer/data` im Projektverzeichnis, von Git und Docker-Build ignoriert (`data*/`, E-28). Nie `git clean -x` im Projektverzeichnis. Ins Image wird nie geschrieben.
 - Logs nur auf stdout, in Compose begrenzt (`json-file` mit `max-size` und `max-file`), um das Speichermedium zu schonen.
 - Healthchecks ohne Zusatzpakete (`python -c …`): `web` per HTTP-Endpunkt, `worker` per Alter des Heartbeats.
-- Secrets nur in `.env` (wie `data*/` in `.gitignore`); im Repo liegt `.env.example`: Secrets leer, nicht geheime Werte vorbelegt (E-12). Nie loggen, nie ins Image. `.env` liest du nicht. Einziges Secret derzeit: der FRED-API-Schlüssel.
+- Secrets nur in `.env` (wie `data*/` in `.gitignore`); im Repo liegt `.env.example`: Secrets leer, nicht geheime Werte vorbelegt (E-12). Nie loggen, nie ins Image. `.env` liest du nicht. Einziges Secret derzeit: der FRED-API-Schlüssel. In der `.env` steht außerdem `FEVER_SEC_CONTACT` (Name und E-Mail für den SEC-User-Agent, E-74): kein Secret, aber persönlich, also nie ins Repo, nie ins Log.
 - Ausgehende Verbindungen nur über einen zentralen HTTP-Client mit Host-Allowlist, Timeouts, Backoff und eigenem User-Agent; Ratenlimits der Quellen einhalten.
 - Den Web-Port nur so veröffentlichen, wie in O-3 entschieden.
 

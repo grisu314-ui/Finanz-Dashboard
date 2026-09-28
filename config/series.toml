@@ -3,7 +3,7 @@
 # Parameters decided on 26.09.2026 (E-23); evidence per series in docs/umsetzungsplan.md, M2.
 #
 # Fields per raw series (checked by fever/config.py, series_catalog):
-#   source          one of fever.config.SOURCES ("cboe", "fred", "ecb", "ofr", "fed", "cftc", "shiller", "cfe")
+#   source          one of fever.config.SOURCES ("cboe", "fred", "ecb", "ofr", "fed", "cftc", "shiller", "cfe", "sec")
 #   source_id       identifier at the source; the table key is the same in lower case (E-16)
 #   name, unit      display texts
 #   frequency       "daily", "weekly", "monthly" or "quarterly"
@@ -803,6 +803,132 @@ tolerance_days = 3
 bounds = [1, 400]
 license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
 
+# --- FRED: Nasdaq equity indexes for the breadth block (O-1, E-68, E-73). FRED updates them at
+# --- about 23:45 New York on the observation day (checked 28.09.2026), hence lag 1. Price indexes.
+
+[series.nasdaqnqus500lc]
+source = "fred"
+source_id = "NASDAQNQUS500LC"
+name = "Nasdaq US 500 Large Cap Index"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "06:00"
+lag_days = 1
+tolerance_days = 3
+bounds = [10, 1000000]
+license = "Nasdaq, Inc. (Copyright): nur private Nutzung, keine Weitergabe"
+
+[series.nasdaqnqus500lce]
+source = "fred"
+source_id = "NASDAQNQUS500LCE"
+name = "Nasdaq US 500 Large Cap Equal Weight Index"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "06:00"
+lag_days = 1
+tolerance_days = 3
+bounds = [10, 1000000]
+license = "Nasdaq, Inc. (Copyright): nur private Nutzung, keine Weitergabe"
+
+[series.nasdaqnquss]
+source = "fred"
+source_id = "NASDAQNQUSS"
+name = "Nasdaq US Small Cap Index"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "06:00"
+lag_days = 1
+tolerance_days = 3
+bounds = [10, 1000000]
+license = "Nasdaq, Inc. (Copyright): nur private Nutzung, keine Weitergabe"
+
+[series.nasdaqnqusl]
+source = "fred"
+source_id = "NASDAQNQUSL"
+name = "Nasdaq US Large Cap Index"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "06:00"
+lag_days = 1
+tolerance_days = 3
+bounds = [10, 1000000]
+license = "Nasdaq, Inc. (Copyright): nur private Nutzung, keine Weitergabe"
+
+[series.nasdaqnqusb]
+source = "fred"
+source_id = "NASDAQNQUSB"
+name = "Nasdaq US Benchmark Index"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "06:00"
+lag_days = 1
+tolerance_days = 3
+bounds = [10, 1000000]
+license = "Nasdaq, Inc. (Copyright): nur private Nutzung, keine Weitergabe"
+
+[series.nasdaqsox]
+source = "fred"
+source_id = "NASDAQSOX"
+name = "PHLX Semiconductor Index (SOX)"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "06:00"
+lag_days = 1
+tolerance_days = 3
+bounds = [10, 1000000]
+license = "Nasdaq, Inc. (Copyright): nur private Nutzung, keine Weitergabe"
+
+[series.nasdaqabaq]
+source = "fred"
+source_id = "NASDAQABAQ"
+name = "ABA Nasdaq Community Bank Index"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "06:00"
+lag_days = 1
+tolerance_days = 3
+bounds = [10, 1000000]
+license = "Nasdaq, Inc. (Copyright): nur private Nutzung, keine Weitergabe"
+
+[series.nasdaqnqusb40]
+source = "fred"
+source_id = "NASDAQNQUSB40"
+name = "Nasdaq US Benchmark Consumer Discretionary Index"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "06:00"
+lag_days = 1
+tolerance_days = 3
+bounds = [10, 1000000]
+license = "Nasdaq, Inc. (Copyright): nur private Nutzung, keine Weitergabe"
+
+[series.nasdaqnqusb45]
+source = "fred"
+source_id = "NASDAQNQUSB45"
+name = "Nasdaq US Benchmark Consumer Staples Index"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "06:00"
+lag_days = 1
+tolerance_days = 3
+bounds = [10, 1000000]
+license = "Nasdaq, Inc. (Copyright): nur private Nutzung, keine Weitergabe"
+
+# --- SEC EDGAR (E-71): N-PORT filings of the SPDR S&P 500 ETF Trust (CIK 884394), public from
+# --- the quarter-end reports on; filed 49 to 62 days after the report date (28 filings, checked
+# --- 28.09.2026), hence lag 62. Value: share of the ten largest issuers in net assets (E-74).
+
+[series.sec_spy_top10]
+source = "sec"
+source_id = "0000884394"
+name = "SPDR S&P 500 ETF Trust: Anteil der zehn größten Emittenten"
+unit = "Prozent des Fondsvermögens"
+frequency = "quarterly"
+release_time = "18:00"
+lag_days = 62
+tolerance_days = 10
+bounds = [5, 90]
+license = "SEC EDGAR: öffentliche Meldung einer US-Behörde, ohne Genehmigung verwendbar"
 # ================================================================================================
 # Derived indicators (M5, decisions E-47 to E-49). Fields:
 #   name         display text
@@ -970,3 +1096,56 @@ orientation = "high"
 block = "vulnerability"
 v_score = 2
 display_window = true
+
+# --- Breadth block (O-1, E-68, E-73, E-74): relative strength of one Nasdaq index against another.
+# --- Falling relative strength of the broad or cyclical side means narrowing breadth: orientation low.
+
+[indicator.breadth_equal_weight]
+name = "Relative Stärke: gleich- gegen kapitalgewichtet"
+series = ["nasdaqnqus500lce", "nasdaqnqus500lc"]
+transform = "relative_change"
+orientation = "low"
+block = "breadth"
+v_score = 3
+
+[indicator.breadth_small_large]
+name = "Relative Stärke: kleine gegen große Werte"
+series = ["nasdaqnquss", "nasdaqnqusl"]
+transform = "relative_change"
+orientation = "low"
+block = "breadth"
+v_score = 2
+
+[indicator.breadth_semis]
+name = "Relative Stärke: Halbleiter gegen Gesamtmarkt"
+series = ["nasdaqsox", "nasdaqnqusb"]
+transform = "relative_change"
+orientation = "low"
+block = "breadth"
+v_score = 2
+
+[indicator.breadth_banks]
+name = "Relative Stärke: Regionalbanken gegen Gesamtmarkt"
+series = ["nasdaqabaq", "nasdaqnqusb"]
+transform = "relative_change"
+orientation = "low"
+block = "breadth"
+v_score = 2
+
+[indicator.breadth_cyclicals]
+name = "Relative Stärke: Zykliker gegen Defensive"
+series = ["nasdaqnqusb40", "nasdaqnqusb45"]
+transform = "relative_change"
+orientation = "low"
+block = "breadth"
+v_score = 2
+
+# --- Vulnerability (E-71, E-74): concentration of the S&P 500 in its ten largest issuers.
+
+[indicator.top10_concentration]
+name = "Top-10-Konzentration (SPY, je Emittent)"
+series = ["sec_spy_top10"]
+transform = "level"
+orientation = "high"
+block = "vulnerability"
+v_score = 1

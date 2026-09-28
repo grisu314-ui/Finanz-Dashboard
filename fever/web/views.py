@@ -24,7 +24,7 @@ from fever.worker import HEARTBEAT_MAX_AGE  # same limit as the container health
 SOURCE_NAMES = {
     "cboe": "Cboe (Indizes)", "cfe": "Cboe Futures Exchange (VX-Futures)", "fred": "FRED (St. Louis Fed)",
     "ecb": "EZB", "ofr": "Office of Financial Research", "fed": "Federal Reserve Board", "cftc": "CFTC",
-    "shiller": "Robert J. Shiller", "scoring": "Scoring (Berechnung im Worker)",
+    "shiller": "Robert J. Shiller", "sec": "SEC EDGAR (N-PORT)", "scoring": "Scoring (Berechnung im Worker)",
 }
 STATUS_NAMES = {
     "ok": "gültig", "stale": "veraltet", "history": "unter Mindesthistorie: angezeigt, nicht im Score",
@@ -34,7 +34,8 @@ STATUS_NAMES = {
 HISTORY_NOTE = ("Verläufe: Je Beobachtung zählt der neueste veröffentlichte Stand. Revidierte Reihen sahen am "
                 "jeweiligen Tag teils anders aus; die revisionsgenaue Rückrechnung folgt in Phase 2.")
 PLACEHOLDERS = [
-    "Nicht enthalten: Block Breite/Internals (keine Kursquelle, O-1) und Block Positionierung/Sentiment (erst Phase 2).",
+    "Nicht enthalten: Block Positionierung/Sentiment (erst Phase 2) und im Block Breite der Anteil der Aktien über "
+    "ihrer 50- bzw. 200-Tage-Linie (keine freie Quelle, E-72).",
     "Rot-Regel über den Anstieg des HY-OAS: inaktiv, bis O-5 entschieden ist.",
 ]
 
@@ -563,13 +564,15 @@ def _term_structure_item(ctx: _Context) -> html.Section:
 
 
 def _view_breadth(ctx: _Context) -> list:
-    return [html.Section(className="card card-wide", children=[
-        html.H2("Keine Datenquelle in Phase 1"),
-        html.P("Der Bericht sieht hier RSP/SPY (gleich- gegen marktgewichtet), den Anteil der Aktien über ihrer "
-               "50- bzw. 200-Tage-Linie, Zykliker gegen Defensive, kleine gegen große Werte, Halbleiter und Regionalbanken vor "
-               "(docs/recherche.md, Abschn. 6.3). Dafür fehlt eine Kursquelle für ETFs und Indexmitglieder (offener Punkt O-1)."),
-        html.P("Deshalb fehlt auch der Block Breite/Internals im Stress; der Stress mittelt die vorhandenen Blöcke."),
-    ])]
+    nasdaq = "Lizenz Nasdaq, Inc.: nur für dich selbst, nicht veröffentlichen oder weitergeben."
+    return [
+        ui.note("Statt der ETFs des Berichts (RSP/SPY, IWM, SMH, KRE, XLY/XLP) stehen hier Nasdaq-Indizes über FRED "
+                "(Entscheidungen E-68 und E-73). " + nasdaq),
+        *[_indicator_item(ctx, i, percentile=True) for i in area_indicators("breadth")],
+        ui.note("Nicht enthalten: der Anteil der Aktien über ihrer 50- bzw. 200-Tage-Linie. Dafür bräuchte es die Kurse "
+                "aller Indexmitglieder mit historischen Mitgliederlisten; eine freie Quelle, die gespeichert werden darf, "
+                "gibt es nicht (E-72)."),
+    ]
 
 
 def _view_positioning(ctx: _Context) -> list:
@@ -638,8 +641,9 @@ def _view_vulnerability(ctx: _Context) -> list:
         _display_item(ctx, "cape", [_series_line("shiller_cape", "CAPE")], "Verhältnis", source="Robert J. Shiller (Online Data)"),
         _indicator_item(ctx, "ecy"),
         _indicator_item(ctx, "margin_yoy"),
-        ui.note("Nicht enthalten: die Konzentration der größten Werte im S&P 500 (keine Kursquelle, O-1) und Margin Debt "
-                "relativ zur Marktkapitalisierung (die Fallhöhe nutzt die Veränderung ggü. Vorjahr, Entscheidung E-49)."),
+        _indicator_item(ctx, "top10_concentration", percentile=True),
+        ui.note("Nicht enthalten: Margin Debt relativ zur Marktkapitalisierung (die Fallhöhe nutzt die Veränderung "
+                "ggü. Vorjahr, Entscheidung E-49)."),
     ]
 
 

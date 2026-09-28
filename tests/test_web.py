@@ -362,7 +362,11 @@ def test_every_view_renders_and_every_display_kennzahl_is_shown(data):
         shown |= set(re.findall(r"/kennzahl/([a-z0-9_]+)", page))
     assert set(texts.DISPLAYS) <= shown and set(views.DISPLAY_VIEWS) == set(texts.DISPLAYS)
     assert "nicht gefunden" in rendered(views.view("gibt_es_nicht", "light", NOW))
-    assert "O-1" in rendered(views.view("breite", "light", NOW))
+    breadth = rendered(views.view("breite", "light", NOW))
+    assert "E-72" in breadth  # the 50/200-day line is named as missing
+    assert all(f"/kennzahl/{i}" in breadth for i in views.area_indicators("breadth"))
+    assert len(views.area_indicators("breadth")) == 5
+    assert "/kennzahl/top10_concentration" in rendered(views.view("fallhoehe", "light", NOW))
 
 
 def test_view_pages_answer(client):

@@ -31,6 +31,8 @@ ALLOWED_HOSTS = {
     "shillerdata.com": 1.0,  # download page of Shiller's ie_data.xls, from M4c
     "img1.wsimg.com": 1.0,  # file host behind shillerdata.com (the link carries changing ids), from M4c
     "www.cboe.com": 1.0,  # list of the VX futures contracts (CFE), from M4d; files come from cdn.cboe.com
+    "data.sec.gov": 0.2,  # SEC EDGAR submissions (E-71); the SEC allows 10 requests per second
+    "www.sec.gov": 0.2,  # SEC EDGAR filing documents (N-PORT XML)
 }
 USER_AGENT = f"Fieberthermometer/{__version__} (private, non-commercial)"
 TIMEOUT = (10, 60)  # seconds: connect, read
@@ -62,15 +64,18 @@ class HttpClient:
         self._clock = clock
         self._last_request: dict[str, float] = {}
 
-    def get(self, url: str, params: dict | None = None) -> Fetched:
-        """GET with retries on connection errors, timeouts, 429 and 5xx; only HTTP 200 counts."""
+    def get(self, url: str, params: dict | None = None, *, user_agent: str | None = None) -> Fetched:
+        """GET with retries on connection errors, timeouts, 429 and 5xx; only HTTP 200 counts.
+
+        `user_agent` replaces the project's User-Agent for this request (the SEC asks for a contact).
+        """
         try:
             shown = mask(requests.Request("GET", url, params=params).prepare().url)
         except requests.RequestException as exc:
             raise FetchError(f"Ungültige URL: {mask(str(exc))}") from None
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
-                response = self._get_following_redirects(url, params)
+                response = self._get_following_redirects(url, params, user_agent)
             except requests.RequestException as exc:
                 error = f"{type(exc).__name__}: {mask(str(exc))}"
                 wait = BACKOFF_SECONDS[attempt - 1] if attempt < MAX_ATTEMPTS else 0
@@ -90,11 +95,12 @@ class HttpClient:
                 self._sleep(wait)
         raise FetchError(f"{shown}: {error} (nach {MAX_ATTEMPTS} Versuchen)")
 
-    def _get_following_redirects(self, url: str, params: dict | None) -> requests.Response:
+    def _get_following_redirects(self, url: str, params: dict | None, user_agent: str | None) -> requests.Response:
+        headers = {"User-Agent": user_agent} if user_agent else None
         for _ in range(MAX_REDIRECTS + 1):
             host = _check_url(url)
             self._throttle(host)
-            response = self._session.get(url, params=params, timeout=TIMEOUT, allow_redirects=False)
+            response = self._session.get(url, params=params, headers=headers, timeout=TIMEOUT, allow_redirects=False)
             if not response.is_redirect:
                 return response
             url = urljoin(response.url, response.headers["location"])

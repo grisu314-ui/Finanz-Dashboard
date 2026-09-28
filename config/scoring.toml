@@ -15,6 +15,7 @@ correlation_window = 63    # stock_bond_corr
 low_window = 52            # above_low: weekly initial claims against their 52-week low
 fx_change_window = 5       # fx_change: 5 ECB fixing days
 fx_vol_window = 21         # fx_vol
+relative_change_window = 63  # relative_change: strength of one index against another (E-74)
 
 [composite]
 min_blocks = 3             # stress composite = mean of the available blocks, at least this many (E-47, L-4)
