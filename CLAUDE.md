@@ -192,7 +192,8 @@ Ein falscher Score fällt nicht auf, bis die Ampel eine falsche Lage zeigt.
 
 - Keine Floskeln, kein Lob, keine Beschönigung. Direkt und knapp, Fokus auf Korrektheit.
 - Jede Antwort endet mit dem Abschnitt „Offene Fragen": Entscheidungen, die ich treffen muss, deine Annahmen, Stand der offenen Punkte – auch wenn nichts Neues dazukam.
-- Jede Entscheidung stellst du zusätzlich als Auswahlfrage über AskUserQuestion: Empfehlung zuerst und gekennzeichnet, je Option ein Satz zur Folge.
+- Jede Entscheidung stellst du zusätzlich als Auswahlfrage über AskUserQuestion: Empfehlung zuerst und gekennzeichnet, je Option ein Satz zur Folge. **Nur eine Frage je Aufruf** (die App schließt das Menü nach der ersten Antwort; Nutzer, 28.09.2026); mehrere Entscheidungen nacheinander.
+- Chat-Antworten immer kurz, nur das Nötigste (Nutzer, 28.09.2026); Details gehören in `docs/`.
 - Ist eine Vorgabe inkonsistent, fachlich falsch oder gegen das Projektinteresse gerichtet – auch in dieser Datei oder im Bericht –, sag es sachlich.
 - Technische Schulden benennst du, behebst sie aber nicht ungefragt im selben Schritt.
 
