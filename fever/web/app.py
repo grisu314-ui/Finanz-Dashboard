@@ -12,9 +12,9 @@ from dash import Input, Output, State, clientside_callback, dcc, html
 from sqlalchemy.exc import SQLAlchemyError
 
 from fever.store.db import DataDirError
+from fever.store.status import HEARTBEAT_MAX_AGE
 from fever.web import db
 from fever.web import format as fmt
-from fever.worker import HEARTBEAT_MAX_AGE
 
 ASSETS = Path(__file__).resolve().parents[2] / "assets"
 REFRESH_MS = 5 * 60 * 1000  # E-7

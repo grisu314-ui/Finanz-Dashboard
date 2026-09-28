@@ -1,7 +1,8 @@
 # Runtime dependencies, every package pinned.
-# Resolved on 25.09.2026 inside python:3.14-slim-trixie on linux/arm64 with
-# `pip install --only-binary=:all:`: every package installs from an aarch64 wheel,
-# nothing is compiled. Re-check the same way before changing any version.
+# Resolved on 25.09.2026 inside python:3.14-slim-trixie with `pip install --only-binary=:all:`;
+# since E-21 the target is linux/amd64 (TrueNAS), and the image build installs every package
+# from a wheel the same way (build probe 28.09.2026): nothing is compiled. Re-check before
+# changing any version.
 
 # --- direct dependencies ---
 numpy==2.5.3        # vectorised numerics for percentiles and scores

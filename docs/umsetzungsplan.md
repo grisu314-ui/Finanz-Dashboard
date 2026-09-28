@@ -392,7 +392,7 @@ Für jeden Meilenstein gilt die Definition of Done:
   - ob die Cboe-CSV tagsüber eine laufende Tageszeile enthält (frühestens Montag, 28.09.2026, während der US-Handelszeit); der Schutz ist trotzdem aktiv
   - Uhrzeiten, die nur einmal beobachtet wurden (Cboe, ICE, STLFSI4, SP500, T10Y3M, T10Y2Y): in M3 aus dem Rohdatenarchiv prüfen
   - Build und Betrieb auf TrueNAS (M3). Dockerfile und Compose sind unverändert, daher keine Build-Probe.
-- **Technische Schuld (nicht behoben):** Der HTTP-Client verwirft bei HTTP-Fehlern den Antworttext. FREDs eigene Fehlermeldung (etwa bei HTTP 400 für eine eingestellte Reihe) erscheint deshalb weder im Log noch im Datenstand.
+- **Technische Schuld (behoben 28.09.2026 auf Anweisung):** Der HTTP-Client verwarf bei HTTP-Fehlern den Antworttext. Seitdem hängt er einen kurzen Auszug (ohne Tags, höchstens 160 Zeichen, Secrets maskiert) an die Meldung; er erscheint im Log und im Datenstand.
 
 ### M3 – Worker und erste Inbetriebnahme auf TrueNAS
 
@@ -773,6 +773,7 @@ Laut Bericht 6.3, soweit Daten vorhanden:
   - Build-Probe (Dockerfile unverändert; `config/episodes.toml` und die Migration sind im Image)
   - Browser (Chromium, 1440 px hell, 390 px dunkel): keine Konsolenfehler; Seitenaufruf 1,9 MB, Wechsel auf das Tagesraster 0,2 MB; der Schalter bleibt nach einer simulierten Aktualisierung auf „täglich“
 - **Nicht geprüft:** TrueNAS; echte Geräte; Druck. Die Server-Zeit der Sparklines liegt bei rund 2 s, die der Ansicht Makro bei rund 3 s (gemessen, nicht optimiert).
+- **Kleinere Schulden (behoben 28.09.2026 auf Anweisung):** Der Sofort-Abruf läuft nach einem unerwarteten Fehler einer Abrufgruppe weiter wie der Worker (Fehler im Datenstand, Exit-Code 1); `HEARTBEAT_MAX_AGE` steht in `fever/store/status.py`, das Web importiert den Worker nicht mehr; `estimated_release` wird nur noch aus `fever/release.py` importiert; Kopf von `requirements.txt` nennt linux/amd64. Offen bleibt als Schuld: Ansicht Makro rund 3 s, Sparklines rund 2 s Serverzeit (nicht optimiert, Nutzer 28.09.2026).
 - **Technische Schuld (behoben 28.09.2026 auf Anweisung):** Eine neue Programmversion des Scorings löste keine Neuberechnung aus. Seitdem gehen `fever/config.py`, `fever/release.py`, `fever/score.py` und `fever/scoring/*.py` in den Fingerabdruck ein, der sonst `scoring.toml` und `series.toml` abdeckt (`score.config_hash`).
 
 **Ergebnis M7a (26.09.2026, umgesetzt; auf TrueNAS ⏳): Bereiche und Einzelreihen (E-57 bis E-60)**
@@ -994,7 +995,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`. Am 28.09.2026 zusätzlich erreichbar: `fred.stlouisfed.org` (CSV ohne Schlüssel), `www.ssga.com`, `www.sec.gov`, `data.sec.gov`, `indexes.nasdaq.com`; `archive.org` antwortete mit 429. Für SEC-Probeabrufe in der Cloud nur einen Platzhalterkontakt (`…@example.org`) setzen, nie die Adresse des Nutzers.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** O-6, O-7 (`CLAUDE.md`); technische Schulden (unten) auf Nachfrage einzeln.
+- **Offene Entscheidungen des Nutzers:** O-6 (Phase 2), O-7 (Antwort der Fed abwarten).
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---

@@ -13,13 +13,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from fever.config import VULNERABILITY, crisis_episodes, indicator_catalog, scoring_config, series_catalog
 from fever.release import NEW_YORK, is_stale
 from fever.store.db import DataDirError
+from fever.store.status import HEARTBEAT_MAX_AGE
 from fever.web import components as ui
 from fever.web import db, texts
 from fever.web import format as fmt
 from fever.web.figures import (
     Band, Chart, Curve, CurvePoint, Heatmap, Line, Matrix, Regime, Region, curve, heatmap, matrix, regime, sparkline,
 )
-from fever.worker import HEARTBEAT_MAX_AGE  # same limit as the container healthcheck (E-33)
 
 SOURCE_NAMES = {
     "cboe": "Cboe (Indizes)", "cfe": "Cboe Futures Exchange (VX-Futures)", "fred": "FRED (St. Louis Fed)",

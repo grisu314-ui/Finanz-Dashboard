@@ -8,6 +8,7 @@ The retry loop is our own for the same reason: urllib3's Retry logs the URL.
 """
 
 import logging
+import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -41,6 +42,7 @@ BACKOFF_SECONDS = (2, 4)  # wait before the 2nd and 3rd attempt
 MAX_RETRY_AFTER = 60
 MAX_REDIRECTS = 3
 RETRY_STATUS = frozenset({429, 500, 502, 503, 504})
+ERROR_EXCERPT = 160  # characters of an error answer kept in the message (data status view)
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +84,7 @@ class HttpClient:
             else:
                 if response.status_code == 200:
                     return Fetched(response.content, datetime.now(timezone.utc), 200)
-                error = f"HTTP {response.status_code}"
+                error = f"HTTP {response.status_code}{_excerpt(response)}"
                 if response.status_code not in RETRY_STATUS:
                     raise FetchError(f"{shown}: {error}")
                 backoff = BACKOFF_SECONDS[attempt - 1] if attempt < MAX_ATTEMPTS else 0
@@ -123,6 +125,13 @@ def _check_url(url: str) -> str:
     if parts.hostname not in ALLOWED_HOSTS or parts.port not in (None, 443) or parts.username:
         raise FetchError(f"Host nicht auf der Allowlist: {mask(url)}")
     return parts.hostname
+
+
+def _excerpt(response: requests.Response) -> str:
+    """Short plain-text excerpt of an error answer (tags and whitespace removed, secrets masked), or ""."""
+    text = response.content[:4000].decode("utf-8", errors="replace")
+    text = " ".join(re.sub(r"<[^>]*>", " ", text).split())[:ERROR_EXCERPT]
+    return f": {mask(text)}" if text else ""
 
 
 def _retry_after(response: requests.Response) -> float | None:

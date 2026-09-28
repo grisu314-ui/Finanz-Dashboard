@@ -11,7 +11,8 @@ import xlrd
 from fever.config import group_members, series_catalog
 from fever.http import ALLOWED_HOSTS, Fetched
 from fever.sources import Row, SourceError, fred, shiller
-from fever.sources.update import estimated_release, update_group
+from fever.release import estimated_release
+from fever.sources.update import update_group
 from fever.store.db import make_engine
 
 FIXTURES = Path(__file__).parent / "fixtures"

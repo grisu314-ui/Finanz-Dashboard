@@ -141,6 +141,18 @@ def test_client_errors_are_not_retried(status):
     assert len(adapter.sent) == 1 and fake.sleeps == []
 
 
+def test_error_answers_keep_a_short_masked_excerpt(monkeypatch):
+    monkeypatch.setenv("FRED_API_KEY", KEY)
+    body = b"<html><body><h1>Bad Request</h1><p>Series does not exist. api_key=" + KEY.encode() + b"</p>" + b"x" * 500 + b"</body></html>"
+    client, _, _ = client_for([(400, {}, body)])
+    with pytest.raises(FetchError) as error:
+        client.get(FRED, {"series_id": "NOPE", "api_key": KEY})
+    message = str(error.value)
+    assert "HTTP 400: Bad Request Series does not exist. api_key=***" in message
+    assert KEY not in message and "<" not in message.split("HTTP 400")[1]
+    assert len(message.split("HTTP 400: ")[1]) <= 160
+
+
 def test_minimum_interval_per_host():
     client, _, fake = client_for([(200, {}, b"")] * 3)
     client.get(CBOE)
