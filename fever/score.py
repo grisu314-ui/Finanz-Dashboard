@@ -22,12 +22,16 @@ from fever.scoring.composite import CompositeScore
 from fever.scoring.pipeline import score
 from fever.store.db import DataDirError, data_dir, make_engine
 from fever.store.observations import latest_values
+from fever.store.schema import SchemaError, require_current
 from fever.store.scores import newest_retrieval, replace_scores, score_state
 from fever.store.status import record_attempt, record_success
 
 SOURCE = "scoring"
 CALENDAR_SERIES = "vix"  # score days are the Cboe trading days with a VIX close (E-49)
 CONFIG_FILES = ("scoring.toml", "series.toml")
+PACKAGE = Path(__file__).resolve().parent
+# Program files that decide the scores; a new version of them recomputes them like a changed configuration.
+CODE_FILES = ("config.py", "release.py", "score.py", "scoring/*.py")
 LEVEL_NAMES = ("Grün", "Gelb", "Orange", "Rot")
 
 logger = logging.getLogger(__name__)
@@ -45,10 +49,14 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def config_hash(config_dir: Path = CONFIG_DIR) -> str:
+def config_hash(config_dir: Path = CONFIG_DIR, package: Path = PACKAGE) -> str:
+    """Fingerprint of everything the scores depend on besides the data: configuration and scoring code."""
     digest = hashlib.sha256()
     for name in CONFIG_FILES:
         digest.update(name.encode() + b"\0" + (config_dir / name).read_bytes() + b"\0")
+    for pattern in CODE_FILES:
+        for path in sorted(package.glob(pattern)):
+            digest.update(path.relative_to(package).as_posix().encode() + b"\0" + path.read_bytes() + b"\0")
     return digest.hexdigest()
 
 
@@ -110,8 +118,10 @@ def main() -> int:
     log.setup()
     try:
         engine = make_engine(data_dir())
+        with engine.connect() as conn:
+            require_current(conn)
         summary = run(engine)
-    except (DataDirError, ConfigError) as exc:
+    except (DataDirError, ConfigError, SchemaError) as exc:
         logger.error("Scoring nicht gestartet: %s", exc)
         return 2
     logger.info("%s", describe(summary))

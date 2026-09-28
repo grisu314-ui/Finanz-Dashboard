@@ -32,6 +32,9 @@ services:
     environment:
       FEVER_DATA: /data
       FRED_API_KEY: ${FRED_API_KEY:?FRED_API_KEY fehlt in .env (siehe docs/einrichtung.md)}
+      # Contact for the SEC User-Agent (E-71, E-74). Optional: without it the SEC source reports
+      # an error in the data status and everything else keeps running.
+      FEVER_SEC_CONTACT: ${FEVER_SEC_CONTACT:-}
     # The worker stops between two series; an interrupted write is rolled back by SQLite.
     stop_grace_period: 30s
     healthcheck:

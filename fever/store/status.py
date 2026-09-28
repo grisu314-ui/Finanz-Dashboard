@@ -4,13 +4,15 @@ Only the last attempt, success and error are kept; there is no error history.
 Messages must not contain secrets; the HTTP client masks them before they get here.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.engine import Connection
 
 from fever.store.tables import heartbeat, source_status
+
+HEARTBEAT_MAX_AGE = timedelta(minutes=45)  # E-33: three missed worker cycles; container healthcheck and web banner
 
 MAX_MESSAGE_LENGTH = 2000
 

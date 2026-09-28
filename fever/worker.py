@@ -29,14 +29,15 @@ from fever import log, score
 from fever.backup import BackupError, has_backup, run_backup
 from fever.config import ConfigError, Series, group_members, series_catalog
 from fever.http import HttpClient
-from fever.sources.update import estimated_release, update_group
+from fever.release import estimated_release
+from fever.sources.update import update_group
 from fever.store.db import DataDirError, data_dir, make_engine
 from fever.store.observations import latest_obs_date
-from fever.store.status import read_heartbeat, record_error, record_heartbeat
+from fever.store.schema import SchemaError, require_current
+from fever.store.status import HEARTBEAT_MAX_AGE, read_heartbeat, record_error, record_heartbeat
 
 CYCLE = timedelta(minutes=15)
 RETRY_AFTER = timedelta(hours=1)
-HEARTBEAT_MAX_AGE = timedelta(minutes=45)  # E-33: three missed cycles
 COMPONENT = "worker"
 NEW_YORK = ZoneInfo("America/New_York")
 _LOOKBACK_DAYS = 10  # more than any gap between two weekdays, holidays included
@@ -206,7 +207,9 @@ def main() -> int:
         directory = data_dir()
         engine = make_engine(directory)
         catalog = series_catalog()
-    except (DataDirError, ConfigError) as exc:
+        with engine.connect() as conn:
+            require_current(conn)
+    except (DataDirError, ConfigError, SchemaError) as exc:
         logger.error("Worker nicht gestartet: %s", exc)
         return 2
     logger.info(

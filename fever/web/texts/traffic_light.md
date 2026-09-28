@@ -20,7 +20,7 @@ Unter der Ampel steht, welche Regeln gerade zutreffen. Eine Stufe wird erst verl
 ## Grenzen und Fallstricke
 - Die Ampel ist eine Regime- und Risikoanzeige, keine Crash-Prognose und kein Handelssignal (Bericht, Kurzfazit).
 - Der Composite ist geglättet und reagiert auf schnelle Schocks spät; die VIX/VIX3M-Regel gleicht das nur teilweise aus.
-- In Phase 1 fehlen die Blöcke Breite und Positionierung, und die Regel über den Anstieg des HY-OAS (Risikoaufschlag von Hochzinsanleihen) ist inaktiv (O-1, O-5). Die Ampel stützt sich deshalb auf weniger Bausteine als im Bericht vorgesehen.
+- In Phase 1 fehlt der Block Positionierung, im Block Breite der Anteil über der 50/200-Tage-Linie (E-72), und die Regel über den Anstieg der Kreditspreads nutzt vorerst Moody's Baa statt des HY-OAS (E-75). Die Ampel stützt sich deshalb auf weniger oder andere Bausteine als im Bericht vorgesehen.
 - Fehlt der Stress-Composite, entscheiden die übrigen Regeln (Entscheidung E-51).
 - Einschätzung: Die Schwellen sind Startwerte aus dem Bericht und nicht an Krisen optimiert; das ist Absicht, um Überanpassung zu vermeiden (Abschn. 4.3, Schritt 7).
 

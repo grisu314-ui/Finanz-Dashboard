@@ -22,15 +22,18 @@ from sqlalchemy.engine import Engine
 from fever import log
 from fever.config import ConfigError, Series, group_members, series_catalog
 from fever.http import FetchError, Fetched, HttpClient
-from fever.release import estimated_release  # noqa: F401  (also imported from here by the worker and tests)
-from fever.sources import Row, SourceError, cboe, cfe, cftc, ecb, fed, fred, ofr, shiller
+from fever.release import estimated_release
+from fever.sources import Row, SourceError, cboe, cfe, cftc, ecb, fed, fred, ofr, sec, shiller
 from fever.store.db import DataDirError, data_dir, make_engine
 from fever.store.observations import NewObservation, append_observations, latest_obs_date, latest_values
 from fever.store.raw import archive_raw
+from fever.store.schema import SchemaError, require_current
 from fever.store.status import record_attempt, record_error, record_success
 
 NEW_YORK = ZoneInfo("America/New_York")
-MODULES = {"cboe": cboe, "fred": fred, "ecb": ecb, "ofr": ofr, "fed": fed, "cftc": cftc, "shiller": shiller, "cfe": cfe}
+MODULES = {
+    "cboe": cboe, "fred": fred, "ecb": ecb, "ofr": ofr, "fed": fed, "cftc": cftc, "shiller": shiller, "cfe": cfe, "sec": sec,
+}
 MAX_LISTED_PROBLEMS = 5
 
 logger = logging.getLogger(__name__)
@@ -159,13 +162,21 @@ def main() -> int:
         directory = data_dir()
         engine = make_engine(directory)
         catalog = series_catalog()
-    except (DataDirError, ConfigError) as exc:
+        with engine.connect() as conn:
+            require_current(conn)
+    except (DataDirError, ConfigError, SchemaError) as exc:
         logger.error("Abruf nicht gestartet: %s", exc)
         return 2
     client = HttpClient()
     problems = 0
-    for members in group_members(catalog).values():
-        problems += sum(1 for result in update_group(engine, directory, client, members) if result.error)
+    for group, members in group_members(catalog).items():
+        try:
+            problems += sum(1 for result in update_group(engine, directory, client, members) if result.error)
+        except Exception as exc:  # like the worker: one broken group must not stop the others (ICE archive)
+            logger.exception("Unerwarteter Fehler bei %s", group)
+            with engine.begin() as conn:
+                record_error(conn, members[0].source, _utcnow(), log.mask(f"{group}: interner Fehler: {type(exc).__name__}: {exc}"))
+            problems += len(members)
     engine.dispose()
     logger.info("Sofort-Abruf beendet: %d Reihen, %d mit Problemen", len(catalog), problems)
     return 1 if problems else 0

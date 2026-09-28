@@ -46,7 +46,7 @@ def test_run_stores_scores_and_records_success(engine):
         days = conn.execute(select(func.count()).select_from(composite_score)).scalar()
         indicators = conn.execute(select(func.count(func.distinct(indicator_score.c.indicator_id)))).scalar()
         status = next(row for row in read_status(conn) if row["source"] == "scoring")
-    assert summary.days == days > 0 and indicators == 19
+    assert summary.days == days > 0 and indicators == 27
     assert summary.first == date(2020, 1, 1)  # first VIX 01.01.2015: five years of history on 01.01.2020
     assert summary.last.stress is None  # one block only
     assert status["last_success_at"] == AT and status["last_error_at"] is None
@@ -77,6 +77,17 @@ def test_needs_run_after_new_observations_or_a_changed_configuration(engine, tmp
     assert score.config_hash(config_dir) != digest
     score.run(engine, clock=lambda: AT + timedelta(minutes=3))
     assert not score.needs_run(engine, digest) and score.needs_run(engine, score.config_hash(config_dir))
+
+
+def test_a_new_scoring_program_version_changes_the_fingerprint(tmp_path):
+    package = tmp_path / "fever"
+    shutil.copytree(score.PACKAGE, package, ignore=shutil.ignore_patterns("__pycache__"))
+    assert score.config_hash(package=package) == score.config_hash()
+    (package / "web" / "views.py").write_text("# not part of the scoring\n")
+    assert score.config_hash(package=package) == score.config_hash()
+    path = package / "scoring" / "composite.py"
+    path.write_text(path.read_text() + "\n# changed\n")
+    assert score.config_hash(package=package) != score.config_hash()
 
 
 def test_the_worker_scores_after_the_cycle_and_survives_an_error(engine, migrated_dir, monkeypatch):

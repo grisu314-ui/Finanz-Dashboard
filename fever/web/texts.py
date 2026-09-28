@@ -14,7 +14,7 @@ from pathlib import Path
 from fever.config import (
     FREQUENCY_DAYS, STRESS_BLOCKS, VULNERABILITY, Indicator, indicator_catalog, scoring_config, series_catalog,
 )
-from fever.scoring.composite import VIX_RATIO_INDICATOR
+from fever.scoring.composite import CREDIT_CHANGE_INDICATOR, VIX_RATIO_INDICATOR
 
 TEXT_DIR = Path(__file__).resolve().parent / "texts"
 HEADINGS = (
@@ -54,9 +54,10 @@ DISPLAYS = {
     "yield_curve": ("t10y3m", "t10y2y"),
     "cape": ("shiller_cape",),
 }
-# Areas on the overview with their indicators (E-57): the stress blocks with indicators in phase 1, then
-# the vulnerability; each with the Kennzahl that heads it. Breadth and positioning have none yet.
-AREAS = {"volatility": "block_volatility", "credit": "block_credit", "macro": "block_macro", VULNERABILITY: VULNERABILITY}
+# Areas with their indicators (E-57), in the order of view 7: the stress blocks with indicators in phase 1,
+# then the vulnerability; each with the Kennzahl that heads it. Positioning has none until phase 2.
+AREAS = {"volatility": "block_volatility", "credit": "block_credit", "macro": "block_macro", "breadth": "block_breadth",
+         VULNERABILITY: VULNERABILITY}
 FREQUENCY_NAMES = {"daily": "täglich", "weekly": "wöchentlich", "monthly": "monatlich", "quarterly": "quartalsweise"}
 LEVEL_NAMES = ("Grün", "Gelb", "Orange", "Rot")
 
@@ -144,6 +145,8 @@ _TRANSFORMS = {
     "fx_vol": lambda c: f"annualisierte Volatilität der täglichen Logveränderungen von USD/JPY über {c.fx_vol_window} EZB-Kurstage",
     "yoy": lambda c: "Veränderung gegenüber der Beobachtung ein Jahr zuvor",
     "cot_net_short": lambda c: "(Short − Long) der Non-Commercials geteilt durch das Open Interest",
+    "change": lambda c: f"Veränderung des Werts über {c.change_window} Beobachtungen (Handelstage), in Einheiten der Reihe",
+    "relative_change": lambda c: f"relative Stärke: Logveränderung des Verhältnisses der ersten zur zweiten Reihe über {c.relative_change_window} gemeinsame Handelstage",
 }
 
 
@@ -225,6 +228,9 @@ def contribution(indicator_id: str) -> list[str]:
     if indicator_id == VIX_RATIO_INDICATOR:
         lines.append(f"Eigene Ampelregel: Rot, wenn der Wert an {c.red_vix_ratio_days} Handelstagen in Folge über "
                      f"{_n(c.red_vix_ratio, 2)} liegt.")
+    if indicator_id == CREDIT_CHANGE_INDICATOR:
+        lines.append(f"Eigene Ampelregel: Rot, solange das Perzentil mindestens {_n(c.red_credit_change)} beträgt "
+                     f"(endet {_n(c.hysteresis)} Punkte darunter).")
     lines.append(f"Konfidenz: Gewicht {indicator.v_score} von 5 (Vorlauf laut Bericht, Tabelle 2), solange der Wert gültig ist.")
     if indicator.display_window:
         lines.append(f"Zusätzliches Perzentil über {c.display_window_years} Jahre: nur zur Anzeige, nicht im Score.")
@@ -262,13 +268,14 @@ def thresholds(kennzahl_id: str) -> list[str]:
     c = scoring_config()
     h = _n(c.hysteresis)
     hysteresis = f"Hysterese: Eine Regel endet erst {h} Punkte unter ihrer Schwelle."
-    red = f"Rot: Stress mindestens {_n(c.red_stress)}, oder VIX/VIX3M über {_n(c.red_vix_ratio, 2)} an {c.red_vix_ratio_days} Handelstagen in Folge (endet nach {c.red_vix_ratio_days} Tagen in Folge darunter)."
-    red_inactive = "Rot über den Anstieg des HY-OAS: inaktiv, bis O-5 entschieden ist (zu kurze Historie der ICE-Spreads)."
+    red = (f"Rot: Stress mindestens {_n(c.red_stress)}, oder VIX/VIX3M über {_n(c.red_vix_ratio, 2)} an {c.red_vix_ratio_days} "
+           f"Handelstagen in Folge (endet nach {c.red_vix_ratio_days} Tagen in Folge darunter), oder der Anstieg des Kreditspreads Baa "
+           f"über {c.change_window} Handelstage im Perzentil mindestens {_n(c.red_credit_change)}.")
     orange = f"Orange: Stress mindestens {_n(c.orange_stress)}, oder Stress mindestens {_n(c.orange_stress_with_vulnerability)} zusammen mit Fallhöhe mindestens {_n(c.orange_vulnerability)}."
     yellow = f"Gelb: Fallhöhe mindestens {_n(c.yellow_vulnerability)}, oder mindestens {_n(c.yellow_diffusion_share)} % der gültigen Stress-Indikatoren über Perzentil {_n(c.yellow_diffusion_percentile)}."
     colors = "Farben: Die Ampelfarben stehen nur für die Gesamtampel und immer mit ihrem Namen."
     if kennzahl_id == "traffic_light":
-        return [red, red_inactive, orange, yellow, "Grün: keine Regel trifft zu.", hysteresis, colors]
+        return [red, orange, yellow, "Grün: keine Regel trifft zu.", hysteresis, colors]
     if kennzahl_id == "stress":
         return [red, orange, hysteresis]
     if kennzahl_id == "vulnerability":
@@ -309,6 +316,7 @@ def rule_text(rule: str) -> str:
     return {
         "red_stress": f"Rot: Stress mindestens {_n(c.red_stress)}",
         "red_vix_ratio": f"Rot: VIX/VIX3M über {_n(c.red_vix_ratio, 2)} an {c.red_vix_ratio_days} Handelstagen in Folge",
+        "red_credit_change": f"Rot: Anstieg des Kreditspreads Baa über {c.change_window} Handelstage im Perzentil mindestens {_n(c.red_credit_change)}",
         "orange_stress": f"Orange: Stress mindestens {_n(c.orange_stress)}",
         "orange_stress_vulnerability": f"Orange: Stress mindestens {_n(c.orange_stress_with_vulnerability)} und Fallhöhe mindestens {_n(c.orange_vulnerability)}",
         "yellow_vulnerability": f"Gelb: Fallhöhe mindestens {_n(c.yellow_vulnerability)}",

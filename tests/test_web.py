@@ -139,7 +139,7 @@ def test_every_displayed_kennzahl_has_a_text(data):
 def test_generated_sections_come_from_the_configuration():
     lines = texts.thresholds("traffic_light")
     assert any(line.startswith("Rot: Stress mindestens 90") for line in lines)
-    assert any("inaktiv" in line for line in lines)
+    assert any("Kreditspreads Baa" in line and "mindestens 95" in line for line in lines)  # E-75: the credit rule is active
     facts = dict(texts.steckbrief("vix_vix3m"))
     assert facts["Orientierung"] == "hoch = mehr Stress" and facts["Frequenz"] == "täglich"
 
@@ -362,7 +362,11 @@ def test_every_view_renders_and_every_display_kennzahl_is_shown(data):
         shown |= set(re.findall(r"/kennzahl/([a-z0-9_]+)", page))
     assert set(texts.DISPLAYS) <= shown and set(views.DISPLAY_VIEWS) == set(texts.DISPLAYS)
     assert "nicht gefunden" in rendered(views.view("gibt_es_nicht", "light", NOW))
-    assert "O-1" in rendered(views.view("breite", "light", NOW))
+    breadth = rendered(views.view("breite", "light", NOW))
+    assert "E-72" in breadth  # the 50/200-day line is named as missing
+    assert all(f"/kennzahl/{i}" in breadth for i in views.area_indicators("breadth"))
+    assert len(views.area_indicators("breadth")) == 5
+    assert "/kennzahl/top10_concentration" in rendered(views.view("fallhoehe", "light", NOW))
 
 
 def test_view_pages_answer(client):

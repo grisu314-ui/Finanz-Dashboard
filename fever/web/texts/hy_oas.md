@@ -1,7 +1,7 @@
 # HY-OAS
 
 ## Kurzinfo
-Risikoaufschlag von US-Hochzinsanleihen gegenüber Staatsanleihen (ICE BofA, Prozentpunkte). Hoch = Kreditstress. Nur Anzeige, bis O-5 entschieden ist.
+Risikoaufschlag von US-Hochzinsanleihen gegenüber Staatsanleihen (ICE BofA, Prozentpunkte). Hoch = Kreditstress. Nur Anzeige, bis die lokale Historie fünf Jahre umfasst (E-75).
 
 ## Was die Kennzahl misst
 Der Option-Adjusted Spread (OAS) ist der Renditeaufschlag einer Anleihe gegenüber der Zinskurve von US-Staatsanleihen, bereinigt um eingebettete Kündigungsrechte. Die Reihe von ICE BofA fasst alle auf US-Dollar lautenden Unternehmensanleihen ohne Investment-Grade-Rating zusammen, die am US-Markt öffentlich begeben wurden, gewichtet nach Marktwert (FRED, Reihe BAMLH0A0HYM2).
@@ -15,8 +15,8 @@ Hochzinsanleihen reagieren früh auf schlechtere Finanzierungsbedingungen: Steig
 - Zusammen mit CCC−BB lesen: Weitet sich vor allem der Abstand der schwächsten Bonitäten, trifft der Stress zuerst die Schwächsten.
 
 ## Grenzen und Fallstricke
-- FRED liefert die ICE-Reihen seit April 2026 nur noch für drei Jahre (FRED, ebenda). Das Dashboard archiviert jeden Tag lokal, für ein Perzentil reicht die Historie aber noch nicht; deshalb nur Anzeige, bis O-5 entschieden ist (CLAUDE.md).
-- Die Rot-Regel über den Anstieg des HY-OAS ist aus demselben Grund inaktiv.
+- FRED liefert die ICE-Reihen seit April 2026 nur noch für drei Jahre (FRED, ebenda). Das Dashboard archiviert jeden Tag lokal, für ein Perzentil reicht die Historie aber noch nicht; deshalb nur Anzeige. Bis dahin steht der Kreditspread Baa (Moody's) im Score (Entscheidung E-75).
+- Die Rot-Regel über den Anstieg des Kreditspreads nutzt aus demselben Grund vorerst den Kreditspread Baa (E-75).
 - Lizenz: ICE Data Indices untersagt die Wiedergabe ohne schriftliche Zustimmung (FRED, ebenda). Charts mit dieser Reihe nur für dich selbst verwenden.
 
 ## Quellen

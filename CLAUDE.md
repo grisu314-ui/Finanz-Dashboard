@@ -27,7 +27,7 @@ Zweck ist Regime- und Risikoanzeige, keine Crash-Prognose. Ziel ist genau die hi
 
 1. MVP:
    - Worker, Speicher, Serienkatalog, Backups, Healthchecks.
-   - Quellen nur über offizielle APIs, CSVs und Datei-Downloads ohne Login: Cboe, FRED/ALFRED, CFTC, EZB, OFR, Fed-Board (EBP, Z.1 über FRED), Shiller-CAPE; Margin Debt aus Fed Z.1 statt FINRA (E-42).
+   - Quellen nur über offizielle APIs, CSVs und Datei-Downloads ohne Login: Cboe, FRED/ALFRED (auch Nasdaq-Indizes, E-68), CFTC, EZB, OFR, Fed-Board (EBP, Z.1 über FRED), Shiller-CAPE, SEC EDGAR (N-PORT für die Top-10-Konzentration, E-71); Margin Debt aus Fed Z.1 statt FINRA (E-42).
    - Scoring nach Bericht 4.3, Schritte 1–6, Aggregation nur Stufe 1.
    - Ansichten 1–7 aus Bericht 6.3, soweit Daten vorhanden, dazu „Datenstand".
    - Kurzinfo und Erklärseite je Kennzahl, Chart-Bedienung (Zoom, Zeitraum, Bildexport, Vollbild, Druck), Auto-Aktualisierung; Doku für KI und Anwender.
@@ -90,7 +90,7 @@ migrations/  tests/  tests/fixtures/  docs/
 ```
 
 - Nur der Worker schreibt. `web` setzt auf jeder Verbindung `PRAGMA query_only = ON` und berechnet keine Scores.
-- Der Worker ist eine einfache Schleife, die alle 15 Minuten fällige Abrufe ausführt; kein Scheduler-Framework, kein Cron im Container. Nach neuen Daten oder geänderter `scoring.toml` rechnet er die Scores neu und speichert sie.
+- Der Worker ist eine einfache Schleife, die alle 15 Minuten fällige Abrufe ausführt; kein Scheduler-Framework, kein Cron im Container. Nach neuen Daten, geänderter `scoring.toml`/`series.toml` oder neuer Programmversion des Scorings rechnet er die Scores neu und speichert sie.
 - Ausgangspunkt für `series.toml` sind die Berichtsabschnitte 2 und 6.1.
 
 ## Was ausdrücklich NICHT gebaut wird
@@ -107,7 +107,7 @@ Ein Assistent ergänzt diese Dinge erfahrungsgemäß ungefragt. Hier nicht. Bei 
 - Kein Celery, kein Redis, keine Queue, kein Caching-Layer, kein asyncio.
 - Kein Postgres, keine DuckDB, keine Abstraktion für einen Datenbankwechsel.
 - Keine Telemetrie, keine externen CDNs, Webfonts oder Stylesheets per URL (auch nicht `dbc.themes`). Der Browser lädt nur vom eigenen Server.
-- Kein Scraping gegen Nutzungsbedingungen, keine Umgehung von Lizenzgrenzen, keine Weitergabe lizenzierter Daten (ICE, Moody's, S&P).
+- Kein Scraping gegen Nutzungsbedingungen, keine Umgehung von Lizenzgrenzen, keine Weitergabe lizenzierter Daten (ICE, Moody's, S&P, Nasdaq).
 - Keine Optimierung ohne Messung: keine vorsorglichen Indizes, keine Pagination, keine Denormalisierung.
 - Keine generischen Basisklassen oder Plugin-Mechanismen. Zwischen einfacher und erweiterbarer Lösung wählst du die einfache.
 - Keine zweite Übersicht mit aufklappbaren Bereichen und Einzelreihen (Variante M7a, entfernt 27.09.2026, E-67): Die Übersicht folgt Bericht 6.3, die Einzelreihen stehen in den Ansichten.
@@ -178,7 +178,7 @@ Ein falscher Score fällt nicht auf, bis die Ampel eine falsche Lage zeigt.
 - Datenordner als Bind-Mount auf einem Dataset des TrueNAS-Hosts selbst (kein NFS/SMB, auch nicht von einem anderen Rechner eingebunden: SQLite-WAL funktioniert dort nicht), Host-Pfad aus `.env`: das Kind-Dataset `/mnt/Daten-Z1/apps/feewer/data` im Projektverzeichnis, von Git und Docker-Build ignoriert (`data*/`, E-28). Nie `git clean -x` im Projektverzeichnis. Ins Image wird nie geschrieben.
 - Logs nur auf stdout, in Compose begrenzt (`json-file` mit `max-size` und `max-file`), um das Speichermedium zu schonen.
 - Healthchecks ohne Zusatzpakete (`python -c …`): `web` per HTTP-Endpunkt, `worker` per Alter des Heartbeats.
-- Secrets nur in `.env` (wie `data*/` in `.gitignore`); im Repo liegt `.env.example`: Secrets leer, nicht geheime Werte vorbelegt (E-12). Nie loggen, nie ins Image. `.env` liest du nicht. Einziges Secret derzeit: der FRED-API-Schlüssel.
+- Secrets nur in `.env` (wie `data*/` in `.gitignore`); im Repo liegt `.env.example`: Secrets leer, nicht geheime Werte vorbelegt (E-12). Nie loggen, nie ins Image. `.env` liest du nicht. Einziges Secret derzeit: der FRED-API-Schlüssel. In der `.env` steht außerdem `FEVER_SEC_CONTACT` (Name und E-Mail für den SEC-User-Agent, E-74): kein Secret, aber persönlich, also nie ins Repo, nie ins Log.
 - Ausgehende Verbindungen nur über einen zentralen HTTP-Client mit Host-Allowlist, Timeouts, Backoff und eigenem User-Agent; Ratenlimits der Quellen einhalten.
 - Den Web-Port nur so veröffentlichen, wie in O-3 entschieden.
 
@@ -192,7 +192,8 @@ Ein falscher Score fällt nicht auf, bis die Ampel eine falsche Lage zeigt.
 
 - Keine Floskeln, kein Lob, keine Beschönigung. Direkt und knapp, Fokus auf Korrektheit.
 - Jede Antwort endet mit dem Abschnitt „Offene Fragen": Entscheidungen, die ich treffen muss, deine Annahmen, Stand der offenen Punkte – auch wenn nichts Neues dazukam.
-- Jede Entscheidung stellst du zusätzlich als Auswahlfrage über AskUserQuestion: Empfehlung zuerst und gekennzeichnet, je Option ein Satz zur Folge.
+- Jede Entscheidung stellst du zusätzlich als Auswahlfrage über AskUserQuestion: Empfehlung zuerst und gekennzeichnet, je Option ein Satz zur Folge. **Nur eine Frage je Aufruf** (die App schließt das Menü nach der ersten Antwort; Nutzer, 28.09.2026); mehrere Entscheidungen nacheinander.
+- Chat-Antworten immer kurz, nur das Nötigste (Nutzer, 28.09.2026); Details gehören in `docs/`.
 - Ist eine Vorgabe inkonsistent, fachlich falsch oder gegen das Projektinteresse gerichtet – auch in dieser Datei oder im Bericht –, sag es sachlich.
 - Technische Schulden benennst du, behebst sie aber nicht ungefragt im selben Schritt.
 
@@ -202,9 +203,10 @@ Vor der Umsetzung des betroffenen Teils klären; Entschiedenes hier mit Antwort 
 
 | Nr. | Frage | Bis zur Entscheidung |
 |---|---|---|
-| O-1 | Kursquelle für ETFs und Indexmitglieder (RSP/SPY, Sektor- und Größenverhältnisse, Breite). FRED `SP500` reicht nur 10 Jahre zurück, genügt aber für VRP und Aktien-Anleihen-Korrelation | VRP und Korrelation aus FRED `SP500`; übrige Indikatoren weglassen, keine Quelle selbst wählen |
+| O-1 | Kursquelle für ETFs und Indexmitglieder (RSP/SPY, Sektor- und Größenverhältnisse, Breite). FRED `SP500` reicht nur 10 Jahre zurück, genügt aber für VRP und Aktien-Anleihen-Korrelation | **Entschieden 28.09.2026 (E-68, E-71 bis E-73):** Nasdaq-Indizes über FRED für gleich- gegen kapitalgewichtet, Small/Large, Halbleiter, Regionalbanken, Zykliker/Defensive (`NASDAQNQUSB40`/`45`); Top-10-Konzentration aus SEC N-PORT (SPY) in die Fallhöhe; Anteil über der 50/200-Tage-Linie entfällt (sichtbarer Platzhalter). Umsetzung erst nach Plan und Freigabe (Befunde: `docs/umsetzungsplan.md`, „O-1: Recherche“) |
 | O-2 | Zielsystem, RAM, Speichermedium, Pfad des Datenordners | **Entschieden 26.09.2026 (E-21, E-28, E-29):** TrueNAS 25.10.7 statt Pi (Pi: CM4 mit 1,8 GiB RAM, SD-Karte mit 2,6 GB frei). Projekt `/mnt/Daten-Z1/apps/feewer`, Datenordner Kind-Dataset `data/`, Container als `apps` 568:568, Dockge-Stack `finanz-dashboard` (E-34), Betrieb vom Branch `claude-testing` (E-30); Worker läuft seit 26.09.2026 |
 | O-3 | Zugang: nur Heimnetz oder Tailscale, ggf. mit Basic-Auth-Pforte | **Entschieden 25.09.2026:** nur Heimnetz, kein Passwort; Port an `0.0.0.0`; keine Portweiterleitung im Router |
 | O-4 | Backup-Ziel außerhalb des Servers | **Entschieden 26.09.2026 (E-22):** Backups bleiben im Datenordner auf TrueNAS, kein weiteres Ziel; Aufwand für Backups gering halten |
-| O-5 | ICE-Spreads: drei Jahre Historie bei fünf Jahren Mindesthistorie; betrifft Kreditblock und Rot-Regel. Optionen: BAA10Y (FRED, täglich ab 1986, Moody's-Lizenz) als langer Ersatz, Lizenz direkt bei ICE, befristete Ausnahme mit Kennzeichnung | archivieren und anzeigen, nicht in den Score |
+| O-5 | ICE-Spreads: drei Jahre Historie bei fünf Jahren Mindesthistorie; betrifft Kreditblock und Rot-Regel. Optionen: BAA10Y (FRED, täglich ab 1986, Moody's-Lizenz) als langer Ersatz, Lizenz direkt bei ICE, befristete Ausnahme mit Kennzeichnung | **Entschieden 28.09.2026 (E-75):** `BAA10Y` über FRED als Ersatz im Kreditblock (Niveau und 20-Tage-Anstieg) und für die Rot-Regel, umgesetzt; Moody's-Lizenz wie ICE nur privat. HY-OAS weiter archivieren und anzeigen, nicht in den Score, bis die lokale Historie fünf Jahre hat |
 | O-6 | Alert-Kanal (ntfy, Telegram, E-Mail), Phase 2 | – |
+| O-7 | FRED-Bedingungen verbieten das Speichern von FRED-Daten in einer Datenbank ohne schriftliche Zustimmung (W-11) | Zustimmung angefragt (E-69); Betrieb läuft unverändert weiter; bei Absage neu entscheiden, ICE-Archiv nicht ohne Rückfrage anfassen |

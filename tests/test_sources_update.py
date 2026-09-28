@@ -11,7 +11,8 @@ from sqlalchemy import select
 
 from fever.config import group_members, series_catalog
 from fever.http import FetchError, Fetched, HttpClient
-from fever.sources.update import UpdateResult, estimated_release, update_series
+from fever.release import estimated_release
+from fever.sources.update import UpdateResult, update_series
 from fever.store.db import make_engine
 from fever.store.observations import latest_values
 from fever.store.status import read_status
@@ -312,6 +313,28 @@ def test_one_off_fetch_command(migrated_dir, monkeypatch):
     assert sorted(calls) == sorted(group_members(CATALOG))  # every download group exactly once
     monkeypatch.setenv("FEVER_DATA", str(migrated_dir / "missing"))
     assert update.main() == 2
+
+
+def test_one_off_fetch_goes_on_after_an_unexpected_error(migrated_dir, monkeypatch, caplog):
+    import fever.sources.update as update
+
+    calls = []
+
+    def fake_group(engine, directory, client, members, *, clock=None):
+        calls.append(members[0].group)
+        if members[0].group == "sofr":
+            raise KeyError(f"api_key={KEY}")
+        return [UpdateResult(0, 0, None) for _ in members]
+
+    monkeypatch.setenv("FEVER_DATA", str(migrated_dir))
+    monkeypatch.setattr(update.log, "setup", lambda: None)
+    monkeypatch.setattr(update, "update_group", fake_group)
+    with caplog.at_level(logging.ERROR):
+        assert update.main() == 1
+    assert sorted(calls) == sorted(group_members(CATALOG))  # the groups after sofr ran as well
+    with make_engine(migrated_dir).connect() as conn:
+        message = next(row for row in read_status(conn) if row["source"] == "fred")["last_error_message"]
+    assert message.startswith("sofr: interner Fehler: KeyError") and KEY not in message and "api_key=***" in message
 
 
 def test_raw_response_is_archived_under_the_group_name(engine, migrated_dir):

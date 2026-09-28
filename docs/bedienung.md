@@ -28,7 +28,7 @@ Die genauen Schwellenwerte stehen bewusst nicht hier, sondern in der App auf den
 
 - **Hysterese:** Eine Stufe wird erst verlassen, wenn der Wert klar unter die Schwelle fällt. Das verhindert tägliches Hin- und Herspringen.
 - **Konfidenz:** Anteil der Kennzahlen mit aktuellen Daten, gewichtet nach ihrem historischen Vorlauf. Niedrige Konfidenz heißt: Die Ampel steht auf dünner Datenbasis.
-- In Phase 1 fehlen einzelne Bausteine sichtbar, z. B. der Block „Breite“ (keine Kursquelle, O-1) und die HY-OAS-Regel (O-5). Die App zeigt das an, statt Lücken zu verstecken.
+- In Phase 1 fehlen einzelne Bausteine sichtbar, z. B. der Block „Positionierung/Sentiment“ (Phase 2), im Block „Breite“ der Anteil der Aktien über ihrer 50/200-Tage-Linie (E-72); die Kreditspread-Regel nutzt vorerst Moody's Baa statt HY-OAS (E-75). Die App zeigt das an, statt Lücken zu verstecken.
 
 ## 3. Einzelkennzahlen lesen
 
@@ -56,6 +56,7 @@ Die genauen Schwellenwerte stehen bewusst nicht hier, sondern in der App auf den
 - **Handelsfreie Tage** (Wochenende, US-Feiertage) sind normal und kein Fehler.
 - **Die offene Seite aktualisiert sich alle 5 Minuten** selbst; dein Zoom bleibt dabei erhalten.
 - **Banner:**
+  - „Migration fehlt“: Nach einem Update wurde die Datenbank nicht auf den neuen Stand gebracht; der Datenabruf ruht, bis die Migration nachgeholt ist (`docs/einrichtung.md`, Fehlersuche).
   - „Worker ohne Lebenszeichen“: Der Datenabruf auf dem Server steht, alle Werte werden nicht mehr aktualisiert.
   - „Keine Verbindung zum Server“: Die Seite erreicht den Server nicht mehr; was du siehst, ist der Stand von der angegebenen Uhrzeit.
 - Ansicht **„Datenstand“**: je Quelle letzter erfolgreicher Abruf, letzter Versuch, letzter Fehler.
@@ -82,10 +83,10 @@ Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar 
 
 1. **Übersicht** (Startseite): Ampel mit den zutreffenden Regeln, Stress und Fallhöhe (geglättet, dazu ungeglättet), Konfidenz und Diffusionsindex; die Ampelmatrix (Stress nach rechts, Fallhöhe nach oben; die farbigen Flächen zeigen, welche Ampelstufe die Regeln aus Stress und Fallhöhe ergeben; die Linie ist die Spur der letzten 60 Handelstage) und die letzte Aktualisierung je Quelle. Rot über VIX/VIX3M und Gelb über den Diffusionsindex stehen nicht in den Flächen; die Ampel kann deshalb höher stehen, als der Punkt vermuten lässt. Auf dem Smartphone lesbar.
 2. **Signale:** VIX-Termstruktur (heute), VIX/VIX3M mit violett markierter Backwardation, VIX, VRP, VVIX, SKEW, USD/JPY.
-3. **Breite:** in Phase 1 ohne Datenquelle (O-1); die Seite sagt das.
+3. **Breite:** fünf Verhältnisse von Nasdaq-Indizes als relative Stärke (gleich- gegen kapitalgewichtet, kleine gegen große Werte, Halbleiter und Regionalbanken gegen den Gesamtmarkt, Zykliker gegen Defensive), je mit Wert und Perzentil; ein niedriger Wert heißt, die breite bzw. zyklische Seite fällt zurück. Der Anteil über der 50/200-Tage-Linie fehlt (keine freie Quelle). Nasdaq-Daten nur für dich selbst verwenden.
 4. **Positionierung:** Positionierung am VIX-Futures-Markt (COT) mit Perzentil über 10 und 3 Jahre, Margin Debt; AAII folgt in Phase 2.
-5. **Makro:** Financial-Conditions- und Stressindizes, OFR FSI nach Kategorien und Regionen, Kreditspreads (HY-OAS, CCC − BB nur als Anzeige), Zinskurve mit violett markierter Inversion, Arbeitsmarkt.
-6. **Fallhöhe:** CAPE, Excess CAPE Yield, Margin Debt.
+5. **Makro:** Financial-Conditions- und Stressindizes, OFR FSI nach Kategorien und Regionen, Kreditspread Baa (Niveau und Anstieg, im Score), Kreditspreads HY-OAS und CCC − BB (nur Anzeige), Zinskurve mit violett markierter Inversion, Arbeitsmarkt.
+6. **Fallhöhe:** CAPE, Excess CAPE Yield, Margin Debt, Top-10-Konzentration (Anteil der zehn größten Unternehmen im SPDR S&P 500 ETF, quartalsweise aus den Meldungen an die SEC, rund zwei Monate verzögert).
 7. **Visualisierung:**
    - *Stress-Historie mit Krisen:* die dunklen Balken oben markieren Krisen vom Hoch bis zum Tief des S&P 500; Maus darüber nennt Krise und Daten, die Tabelle darunter die Quellen.
    - *Regime-Zeitleiste:* die Ampelstufe an jedem Handelstag.

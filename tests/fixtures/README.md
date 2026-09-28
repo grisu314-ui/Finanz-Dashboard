@@ -11,4 +11,4 @@ keine Weitergabe lizenzierter Daten; Cboe-Nutzungsbedingungen). Deshalb sind die
 - `cfe/VX_2026-10-21.csv` (Cboe); `cfe/product_list_VX.json` ist die gekürzte echte Kontraktliste (nur Verfallsdaten und Pfade, keine Kurse)
 - `shiller/ie_data.xls` (enthält S&P-Daten); erzeugt mit `shiller/make_ie_data.py`, Aufbau und Kopfzeilen wie das Original vom 02.09.2026
 
-Unverändert echt sind `fred/IORB.json` (Zinssatz der Federal Reserve), `fred/BOGZ1FL663067003Q.json` (Fed Z.1, gemeinfrei), `ecb/` (Weiterverwendung frei mit Quellenangabe „Source: ECB statistics.“), `ofr/`, `fed/` und `cftc/` (US-Bundesbehörden).
+Unverändert echt sind `fred/IORB.json` (Zinssatz der Federal Reserve), `fred/BOGZ1FL663067003Q.json` (Fed Z.1, gemeinfrei), `ecb/` (Weiterverwendung frei mit Quellenangabe „Source: ECB statistics.“), `ofr/`, `fed/`, `cftc/` und `sec/` (US-Bundesbehörden; `sec/` ist die gekürzte Einreichungsliste und die gekürzte N-PORT-Meldung des SPDR S&P 500 ETF Trust vom 28.08.2026, abgerufen 28.09.2026). Die Nasdaq-Reihen über FRED haben keine eigene Fixture: Sie nutzen den unveränderten FRED-Parser.

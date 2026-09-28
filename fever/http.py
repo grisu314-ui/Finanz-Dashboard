@@ -8,6 +8,7 @@ The retry loop is our own for the same reason: urllib3's Retry logs the URL.
 """
 
 import logging
+import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -31,6 +32,8 @@ ALLOWED_HOSTS = {
     "shillerdata.com": 1.0,  # download page of Shiller's ie_data.xls, from M4c
     "img1.wsimg.com": 1.0,  # file host behind shillerdata.com (the link carries changing ids), from M4c
     "www.cboe.com": 1.0,  # list of the VX futures contracts (CFE), from M4d; files come from cdn.cboe.com
+    "data.sec.gov": 0.2,  # SEC EDGAR submissions (E-71); the SEC allows 10 requests per second
+    "www.sec.gov": 0.2,  # SEC EDGAR filing documents (N-PORT XML)
 }
 USER_AGENT = f"Fieberthermometer/{__version__} (private, non-commercial)"
 TIMEOUT = (10, 60)  # seconds: connect, read
@@ -39,6 +42,7 @@ BACKOFF_SECONDS = (2, 4)  # wait before the 2nd and 3rd attempt
 MAX_RETRY_AFTER = 60
 MAX_REDIRECTS = 3
 RETRY_STATUS = frozenset({429, 500, 502, 503, 504})
+ERROR_EXCERPT = 160  # characters of an error answer kept in the message (data status view)
 
 logger = logging.getLogger(__name__)
 
@@ -62,22 +66,25 @@ class HttpClient:
         self._clock = clock
         self._last_request: dict[str, float] = {}
 
-    def get(self, url: str, params: dict | None = None) -> Fetched:
-        """GET with retries on connection errors, timeouts, 429 and 5xx; only HTTP 200 counts."""
+    def get(self, url: str, params: dict | None = None, *, user_agent: str | None = None) -> Fetched:
+        """GET with retries on connection errors, timeouts, 429 and 5xx; only HTTP 200 counts.
+
+        `user_agent` replaces the project's User-Agent for this request (the SEC asks for a contact).
+        """
         try:
             shown = mask(requests.Request("GET", url, params=params).prepare().url)
         except requests.RequestException as exc:
             raise FetchError(f"Ungültige URL: {mask(str(exc))}") from None
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
-                response = self._get_following_redirects(url, params)
+                response = self._get_following_redirects(url, params, user_agent)
             except requests.RequestException as exc:
                 error = f"{type(exc).__name__}: {mask(str(exc))}"
                 wait = BACKOFF_SECONDS[attempt - 1] if attempt < MAX_ATTEMPTS else 0
             else:
                 if response.status_code == 200:
                     return Fetched(response.content, datetime.now(timezone.utc), 200)
-                error = f"HTTP {response.status_code}"
+                error = f"HTTP {response.status_code}{_excerpt(response)}"
                 if response.status_code not in RETRY_STATUS:
                     raise FetchError(f"{shown}: {error}")
                 backoff = BACKOFF_SECONDS[attempt - 1] if attempt < MAX_ATTEMPTS else 0
@@ -90,11 +97,12 @@ class HttpClient:
                 self._sleep(wait)
         raise FetchError(f"{shown}: {error} (nach {MAX_ATTEMPTS} Versuchen)")
 
-    def _get_following_redirects(self, url: str, params: dict | None) -> requests.Response:
+    def _get_following_redirects(self, url: str, params: dict | None, user_agent: str | None) -> requests.Response:
+        headers = {"User-Agent": user_agent} if user_agent else None
         for _ in range(MAX_REDIRECTS + 1):
             host = _check_url(url)
             self._throttle(host)
-            response = self._session.get(url, params=params, timeout=TIMEOUT, allow_redirects=False)
+            response = self._session.get(url, params=params, headers=headers, timeout=TIMEOUT, allow_redirects=False)
             if not response.is_redirect:
                 return response
             url = urljoin(response.url, response.headers["location"])
@@ -117,6 +125,13 @@ def _check_url(url: str) -> str:
     if parts.hostname not in ALLOWED_HOSTS or parts.port not in (None, 443) or parts.username:
         raise FetchError(f"Host nicht auf der Allowlist: {mask(url)}")
     return parts.hostname
+
+
+def _excerpt(response: requests.Response) -> str:
+    """Short plain-text excerpt of an error answer (tags and whitespace removed, secrets masked), or ""."""
+    text = response.content[:4000].decode("utf-8", errors="replace")
+    text = " ".join(re.sub(r"<[^>]*>", " ", text).split())[:ERROR_EXCERPT]
+    return f": {mask(text)}" if text else ""
 
 
 def _retry_after(response: requests.Response) -> float | None:

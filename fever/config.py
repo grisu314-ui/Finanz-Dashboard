@@ -61,7 +61,7 @@ def load(name: str, config_dir: Path = CONFIG_DIR) -> dict:
 STANDARD_TOLERANCE_DAYS = {"daily": 3, "weekly": 3, "monthly": 10, "quarterly": 10}
 # Sources whose own identifiers are simple enough to be series ids (E-16); the others use
 # "<source>_<short name>" with the exact identifier in source_id (E-35).
-SOURCES = ("cboe", "fred", "ecb", "ofr", "fed", "cftc", "shiller", "cfe")
+SOURCES = ("cboe", "fred", "ecb", "ofr", "fed", "cftc", "shiller", "cfe", "sec")
 _OWN_ID_SOURCES = ("cboe", "fred")
 
 _REQUIRED = {
@@ -211,7 +211,7 @@ def _is_int(value) -> bool:
 # Transformation -> number of input series (definitions in fever/scoring/transforms.py).
 TRANSFORMS = {
     "level": 1, "ratio": 2, "difference": 2, "vrp": 2, "stock_bond_corr": 2,
-    "above_low": 1, "fx_change": 2, "fx_vol": 2, "yoy": 1, "cot_net_short": 3,
+    "above_low": 1, "fx_change": 2, "fx_vol": 2, "yoy": 1, "cot_net_short": 3, "relative_change": 2, "change": 1,
 }
 STRESS_BLOCKS = ("volatility", "credit", "macro", "breadth", "positioning")  # report 4.3, step 2
 VULNERABILITY = "vulnerability"
@@ -309,7 +309,7 @@ _SCORING_KEYS = {
     "percentile": {"window_years": int, "min_history_years": int, "display_window_years": int},
     "transforms": {
         "realized_vol_window": int, "correlation_window": int, "low_window": int,
-        "fx_change_window": int, "fx_vol_window": int,
+        "fx_change_window": int, "fx_vol_window": int, "relative_change_window": int, "change_window": int,
     },
     "composite": {"min_blocks": int, "min_vulnerability": int},
     "smoothing": {
@@ -320,7 +320,7 @@ _SCORING_KEYS = {
         "red_stress": float, "red_vix_ratio": float, "red_vix_ratio_days": int, "orange_stress": float,
         "orange_stress_with_vulnerability": float, "orange_vulnerability": float,
         "yellow_vulnerability": float, "yellow_diffusion_share": float, "yellow_diffusion_percentile": float,
-        "hysteresis": float,
+        "hysteresis": float, "red_credit_change": float,
     },
 }
 
@@ -337,6 +337,8 @@ class ScoringConfig:
     low_window: int
     fx_change_window: int
     fx_vol_window: int
+    relative_change_window: int
+    change_window: int
     min_blocks: int
     min_vulnerability: int
     fast_block: str
@@ -353,6 +355,7 @@ class ScoringConfig:
     yellow_diffusion_share: float
     yellow_diffusion_percentile: float
     hysteresis: float
+    red_credit_change: float
 
 
 def scoring_config(config_dir: Path = CONFIG_DIR) -> ScoringConfig:
@@ -387,7 +390,7 @@ def scoring_config(config_dir: Path = CONFIG_DIR) -> ScoringConfig:
     if config.min_blocks > len(STRESS_BLOCKS):
         raise ConfigError(f"scoring.composite.min_blocks: höchstens {len(STRESS_BLOCKS)} Blöcke")
     for key in ("red_stress", "orange_stress", "orange_stress_with_vulnerability", "orange_vulnerability",
-                "yellow_vulnerability", "yellow_diffusion_share", "yellow_diffusion_percentile", "hysteresis"):
+                "yellow_vulnerability", "yellow_diffusion_share", "yellow_diffusion_percentile", "hysteresis", "red_credit_change"):
         if getattr(config, key) > 100:
             raise ConfigError(f"scoring.rules.{key}: höchstens 100 (Perzentilskala)")
     return config

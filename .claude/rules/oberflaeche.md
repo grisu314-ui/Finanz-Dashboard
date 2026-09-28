@@ -40,7 +40,7 @@ Details, Begründungen und Entscheidungsprotokoll (E-1 bis E-7): `docs/umsetzung
 ## Aktualität
 - `dcc.Interval` alle 5 Minuten liest Daten und Status neu.
 - Kopfzeile: letzte Worker-Aktualisierung und letzte Seitenaktualisierung.
-- Banner bei überfälligem Worker-Heartbeat und bei verlorener Verbindung (clientseitig über die Browserzeit der letzten erfolgreichen Antwort).
+- Banner bei fehlender Migration (E-70), bei überfälligem Worker-Heartbeat und bei verlorener Verbindung (clientseitig über die Browserzeit der letzten erfolgreichen Antwort).
 - Jeder Wert zeigt Beobachtungsdatum, Abrufzeit (Europe/Berlin, MEZ/MESZ) und relatives Alter. „Veraltet“ wird ausgegraut, schraffiert und als Text markiert.
 
 ## Gestaltung
