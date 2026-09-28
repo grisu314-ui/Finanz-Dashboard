@@ -6,6 +6,7 @@ import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+import plotly.graph_objects as go
 import pytest
 from plotly.utils import PlotlyJSONEncoder
 
@@ -24,6 +25,11 @@ NOW = datetime(2026, 9, 26, 12, 0, tzinfo=timezone.utc)
 def rendered(components) -> str:
     """Components as the JSON Dash sends to the browser."""
     return json.dumps(components, cls=PlotlyJSONEncoder, ensure_ascii=False)
+
+
+def validated(figure: dict) -> go.Figure:
+    """The chart factory builds plain dicts; plotly.graph_objects checks every property (a typo fails here)."""
+    return go.Figure(figure)
 
 
 @pytest.fixture
@@ -52,6 +58,18 @@ def client(data):
 def test_smoke_pages_layout_and_health(client):
     for path in ("/", "/datenstand", "/erklaerungen", "/kennzahl/stress", "/_dash-layout", "/_dash-dependencies", "/health"):
         assert client.get(path).status_code == 200, path
+
+
+def test_json_answers_are_gzipped_when_the_browser_accepts_it(client):
+    import gzip
+    plain = client.get("/_dash-layout")
+    assert "Content-Encoding" not in plain.headers and len(plain.data) > 2048
+    packed = client.get("/_dash-layout", headers={"Accept-Encoding": "gzip, deflate, br"})
+    assert packed.headers["Content-Encoding"] == "gzip" and "Accept-Encoding" in packed.headers["Vary"]
+    assert gzip.decompress(packed.data) == plain.data and len(packed.data) < len(plain.data) / 2
+    refused = client.get("/_dash-layout", headers={"Accept-Encoding": "gzip;q=0, br"})
+    assert "Content-Encoding" not in refused.headers
+    assert "Content-Encoding" not in client.get("/health", headers={"Accept-Encoding": "gzip"}).headers  # small
 
 
 def test_health_fails_without_database(tmp_path, monkeypatch):
@@ -87,6 +105,7 @@ def test_chart_factory_sets_the_standard():
     chart = Chart("vix", "VIX", "Cboe", [Line("VIX", [date(2020, 1, 1), date(2026, 9, 25)], [15.0, None])], "Punkte",
                   observed=date(2026, 9, 25), retrieved=datetime(2026, 9, 26, 12, 47, tzinfo=timezone.utc))
     figure, config = time_series(chart, "dark", today=date(2026, 9, 26))
+    figure = validated(figure)
     layout = figure.layout
     assert config["displaylogo"] is False and config["scrollZoom"] is False
     assert config["showSendToCloud"] is False  # no upload of chart data to Plotly Cloud
@@ -99,6 +118,7 @@ def test_chart_factory_sets_the_standard():
     # pixel offset, not a paper fraction: stays inside the margin at any chart height (full screen)
     assert layout.annotations[0].y == 0 and layout.annotations[0].yshift == -28
     assert layout.xaxis.hoverformat == "%d.%m.%Y"
+    assert figure.data[0].x == ("2020-01-01", "2026-09-25") and layout.xaxis.range == ("2021-09-25", "2026-09-25")
 
 
 # --- texts (docs/leitfaden-erklaertexte.md) ---------------------------------------------------------
@@ -193,12 +213,13 @@ def test_charts_draw_grey_bars_behind_the_lines_and_say_so():
     periods = ((date(2008, 1, 1), date(2009, 6, 30)), (date(2020, 3, 1), date(2020, 4, 30)), (date(1990, 8, 1), date(1991, 3, 31)))
     chart = Chart("vix", "VIX", "Cboe", [Line("VIX", [date(2005, 1, 3), date(2026, 9, 25)], [12.0, 15.0])], "Punkte",
                   recessions=periods)
-    figure, _ = time_series(chart, "light", today=date(2026, 9, 26))
+    figure = validated(time_series(chart, "light", today=date(2026, 9, 26))[0])
     shapes = figure.layout.shapes
-    assert [(s.x0, s.x1) for s in shapes] == [periods[0], periods[1]]  # 1990 lies before the data
+    iso = [tuple(day.isoformat() for day in period) for period in periods]
+    assert [(s.x0, s.x1) for s in shapes] == iso[:2]  # 1990 lies before the data
     assert all(s.layer == "below" and s.yref == "paper" for s in shapes)
     assert figure.layout.annotations[0].text.endswith("Grau: US-Rezessionen nach NBER (über FRED)")
-    plain, _ = time_series(replace(chart, recessions=()), "light")
+    plain = validated(time_series(replace(chart, recessions=()), "light")[0])
     assert not plain.layout.shapes and "Rezession" not in plain.layout.annotations[0].text
 
 
@@ -316,6 +337,7 @@ def test_matrix_chart_standard_and_labels():
     chart = Matrix("matrix", "Ampelmatrix", "eigene Berechnung", days, [30.0, 35.0], [70.0, 80.0], views.matrix_regions(),
                    observed=days[-1], retrieved=NOW, note="Hinweis")
     figure, config = matrix(chart, "dark", today=date(2026, 9, 26))
+    figure = validated(figure)
     assert config["showSendToCloud"] is False and config["toImageButtonOptions"]["filename"] == "matrix_26-09-2026"
     assert len(figure.layout.shapes) == 5 and figure.layout.xaxis.range == (0, 100)
     labels = [(a.text, a.textangle) for a in figure.layout.annotations if a.text in ("Grün", "Gelb", "Orange", "Rot")]
@@ -329,7 +351,7 @@ def test_overview_shows_cards_matrix_and_sources(data):
     for kennzahl in ("traffic_light", "stress", "vulnerability", "confidence", "diffusion"):
         assert f"/kennzahl/{kennzahl}" in text
     graph = next(c for c in _walk_components(page) if type(c).__name__ == "Graph")
-    assert graph.id == "matrix" and len(graph.figure.layout.shapes) == 5
+    assert graph.id == "matrix" and len(validated(graph.figure).layout.shapes) == 5
     assert "Letzte Aktualisierung je Quelle" in text and "Cboe (Indizes)" in text
 
 
@@ -337,7 +359,7 @@ def test_overview_trace_covers_the_last_60_score_days(data, monkeypatch):
     rows = [{"score_date": date(2026, 1, 1) + timedelta(days=i), "stress": 30.0 + i / 10, "vulnerability": 70.0} for i in range(100)]
     monkeypatch.setattr(web_db, "composite_history", lambda *columns: rows)
     graph = next(c for c in _walk_components(views.overview("light", NOW)) if type(c).__name__ == "Graph")
-    trace, today = graph.figure.data
+    trace, today = validated(graph.figure).data
     assert len(trace.x) == views.TRACE_DAYS == 60 and trace.x[0] == rows[40]["stress"]
     assert today.x == (rows[-1]["stress"],) and today.text == ("Stand 10.04.2026",)
 
@@ -405,6 +427,91 @@ def test_display_pages_link_their_view(data):
     assert "/ansicht/makro" in page and "nur Anzeige" in page
 
 
+# --- load time (28.09.2026): lean queries and plain figures -----------------------------------------------
+
+
+def test_every_chart_of_every_page_is_a_valid_plotly_figure(data):
+    """Figures are plain dicts (speed); here plotly.graph_objects checks every property of every chart."""
+    pages = [views.overview("light", NOW), views.kennzahl("vix", "dark", NOW), views.kennzahl("stress", "light", NOW)]
+    pages += [views.view(name, "light", NOW) for name in views.VIEW_TITLES if name != "visualisierung"]
+    pages += [views.vis_stress("light", NOW), views.vis_regime("light", NOW), views.vis_heatmap("weekly", "light", NOW),
+              views.vis_bands("vix", "light", NOW), views.vis_sparklines("dark", NOW)]
+    graphs = [c for c in _walk_components(pages) if type(c).__name__ == "Graph"]
+    assert len(graphs) > 20
+    for graph in graphs:
+        validated(graph.figure)
+        json.dumps(graph.figure, allow_nan=False)  # plain JSON: ISO dates, no objects left for the encoder
+
+
+def test_long_reads_are_kept_until_the_worker_stores_new_data(data):
+    """E-78: kept per data version; a new observation or a new scoring run makes every page read afresh."""
+    from fever import score
+    engine = make_engine(data)
+    first = web_db.series_history("vix")
+    assert web_db.series_history("vix") is first  # same data version: kept, not read again
+    scores = web_db.composite_history("stress")
+    with engine.begin() as conn:
+        append_observations(conn, "vix", [NewObservation(date(2026, 9, 28), 30.0, NOW, False)], retrieved_at=NOW)
+    again = web_db.series_history("vix")
+    assert again is not first and again[-1] == (date(2026, 9, 28), 30.0)
+    assert web_db.composite_history("stress") is not scores  # every kept read is dropped together
+    kept = web_db.composite_history("stress")
+    score.run(engine, clock=lambda: NOW + timedelta(hours=1))  # new scoring run: new computed_at
+    assert web_db.composite_history("stress") is not kept
+    assert web_db.series_history("vix") is not again
+
+
+def test_kept_reads_render_the_same_page(data):
+    for name in ("makro", "signale"):
+        assert rendered(views.view(name, "light", NOW)) == rendered(views.view(name, "light", NOW))
+    assert rendered(views.vis_sparklines("dark", NOW)) == rendered(views.vis_sparklines("dark", NOW))
+
+
+def test_lean_score_queries(migrated_dir, monkeypatch):
+    from fever.store.tables import indicator_score
+    engine = make_engine(migrated_dir)
+    d1, d2, d3 = date(2026, 9, 23), date(2026, 9, 24), date(2026, 9, 25)
+    rows = [(d1, "vix", "ok", 10.0, 50.0), (d1, "vvix", "stale", 90.0, 70.0), (d2, "vix", "ok", 11.0, 60.0),
+            (d3, "vix", "history", 12.0, None), (d3, "vvix", "ok", 95.0, 80.0)]
+    with engine.begin() as conn:
+        conn.execute(indicator_score.insert(), [
+            {"score_date": d, "indicator_id": i, "status": st, "value": v, "percentile": p, "band_p10": 1.0}
+            for d, i, st, v, p in rows])
+    monkeypatch.setenv("FEVER_DATA", str(migrated_dir))
+    web_db.engine.cache_clear()
+    try:
+        assert web_db.score_days() == [d1, d2, d3]
+        assert web_db.valid_percentiles((d1, d3)) == {("vix", d1): 50.0, ("vvix", d3): 80.0}  # stale and other days left out
+        assert web_db.indicator_values_since(d1) == {
+            "vix": [{"score_date": d2, "status": "ok", "value": 11.0}, {"score_date": d3, "status": "history", "value": 12.0}],
+            "vvix": [{"score_date": d3, "status": "ok", "value": 95.0}]}
+        assert web_db.indicator_history("vix", "value", "band_p10") == [
+            {"score_date": d, "value": v, "band_p10": 1.0} for d, v in ((d1, 10.0), (d2, 11.0), (d3, 12.0))]
+    finally:
+        web_db.engine.cache_clear()
+
+
+def test_lean_observation_queries(migrated_dir, monkeypatch):
+    engine = make_engine(migrated_dir)
+    later = NOW + timedelta(days=1)
+    with engine.begin() as conn:
+        append_observations(conn, "cfe_vx1", [NewObservation(date(2026, 9, 24), 17.0, NOW, True),
+                                              NewObservation(date(2026, 9, 25), 18.0, NOW, True)], retrieved_at=NOW)
+        append_observations(conn, "cfe_vx1", [NewObservation(date(2026, 9, 25), 18.5, later, False)], retrieved_at=later)
+        append_observations(conn, "cfe_vx1_days", [NewObservation(date(2026, 9, 25), 21.0, NOW, True)], retrieved_at=NOW)
+    monkeypatch.setenv("FEVER_DATA", str(migrated_dir))
+    web_db.engine.cache_clear()
+    try:
+        assert web_db.newest_observation("cfe_vx1") == (date(2026, 9, 25), 18.5)  # newest vintage of the newest date
+        assert web_db.newest_observation("cfe_vx2") is None
+        assert web_db.value_on("cfe_vx1_days", date(2026, 9, 25)) == 21.0
+        assert web_db.value_on("cfe_vx1_days", date(2026, 9, 24)) is None
+        assert web_db.newest_retrieval(["cfe_vx1", "cfe_vx1_days"]) == later
+        assert web_db.newest_retrieval(["cfe_vx2"]) is None
+    finally:
+        web_db.engine.cache_clear()
+
+
 # --- view 7 (M7, E-63, E-64, E-66) ------------------------------------------------------------------------
 
 
@@ -423,7 +530,7 @@ def test_stress_history_carries_the_crisis_strip():
     days = [date(2020, 1, 2), date(2020, 6, 1)]
     chart = Chart("stress-crises", "Stress", "eigene Berechnung", [Line("Stress", days, [40.0, 60.0])], "Wert",
                   episodes=((date(2020, 2, 19), date(2020, 3, 23), "März 2020"),))
-    figure, _ = time_series(chart, "light")
+    figure = validated(time_series(chart, "light")[0])
     strips = [s for s in figure.layout.shapes if s.y0 == 0.94]
     assert len(strips) == 1 and "Krisen" in figure.layout.annotations[-1].text
     assert figure.data[-1].text == ("März 2020: 19.02.2020 bis 23.03.2020",)
@@ -438,26 +545,30 @@ def test_view_7_parts_render(data):
 
 def test_heatmap_grains_pick_stored_days_and_leave_invalid_blank(data, monkeypatch):
     days = [date(2024, 1, 1) + timedelta(days=i) for i in range(1000)]
-    rows = [{"score_date": d, "indicator_id": "vix", "status": "ok" if i % 10 else "stale", "percentile": float(i % 100)}
-            for i, d in enumerate(days)]
-    monkeypatch.setattr(web_db, "percentile_matrix", lambda: rows)
+    valid = {("vix", d): float(i % 100) for i, d in enumerate(days) if i % 10}  # every tenth day stale
+    asked = []
+    monkeypatch.setattr(web_db, "score_days", lambda: days)
+    monkeypatch.setattr(web_db, "valid_percentiles",
+                        lambda wanted: asked.append(list(wanted)) or {k: v for k, v in valid.items() if k[1] in set(wanted)})
     weekly = next(c for c in _walk_components(views.vis_heatmap("weekly", "light", NOW)) if type(c).__name__ == "Graph")
-    x = weekly.figure.data[0].x
+    x = [date.fromisoformat(d) for d in validated(weekly.figure).data[0].x]
     assert all(a.isocalendar()[:2] != b.isocalendar()[:2] for a, b in zip(x, x[1:]))  # one column per week
     assert x[-1] == days[-1] and x[0] == date(2024, 1, 7)  # the last day of each week
-    daily = next(c for c in _walk_components(views.vis_heatmap("daily", "light", NOW)) if type(c).__name__ == "Graph")
-    assert len(daily.figure.data[0].x) == 730 and daily.figure.data[0].x[-1] == days[-1]
+    assert asked[-1] == x  # only the shown columns are read
+    daily = validated(next(c for c in _walk_components(views.vis_heatmap("daily", "light", NOW))
+                           if type(c).__name__ == "Graph").figure)
+    assert len(daily.data[0].x) == 730 and daily.data[0].x[-1] == days[-1].isoformat()
     row = views._ordered_indicators().index("vix")
-    z = daily.figure.data[0].z[row]
-    assert z[list(daily.figure.data[0].x).index(date(2026, 9, 17))] is None  # day 990: stale stays blank
+    z = daily.data[0].z[row]
+    assert z[list(daily.data[0].x).index("2026-09-17")] is None  # day 990: stale stays blank
 
 
 def test_bands_chart_draws_the_stored_band(data, monkeypatch):
     history = [{"score_date": date(2026, 9, 21 + i), "status": "ok", "value": 15.0 + i, "band_p10": 12.0, "band_p50": 16.0,
                 "band_p90": 27.0, "obs_date": date(2026, 9, 21 + i), "percentile": 50.0} for i in range(5)]
-    monkeypatch.setattr(web_db, "indicator_history", lambda indicator_id: history)
+    monkeypatch.setattr(web_db, "indicator_history", lambda indicator_id, *columns: history)
     graph = next(c for c in _walk_components(views.vis_bands("vix", "light", NOW)) if type(c).__name__ == "Graph")
-    low, high, mid, value = graph.figure.data
+    low, high, mid, value = validated(graph.figure).data
     assert low.y == (12.0,) * 5 and high.y == (27.0,) * 5 and high.fill == "tonexty" and mid.y == (16.0,) * 5
     assert value.y == tuple(15.0 + i for i in range(5))
 
@@ -466,11 +577,13 @@ def test_regime_heatmap_and_sparkline_follow_the_standard():
     from fever.web.figures import Heatmap, Regime, heatmap, regime, sparkline
     days = [date(2026, 9, 24), date(2026, 9, 25)]
     figure, config = regime(Regime("regime", "Ampel", "x", days, [0, 3], texts.LEVEL_NAMES), "dark")
+    figure = validated(figure)
     assert config["showSendToCloud"] is False and [list(row) for row in figure.data[0].customdata] == [["Grün", "Rot"]]
     figure, config = heatmap(Heatmap("heatmap", "H", "x", ["VIX"], days, [[10.0, None]]), "light")
+    figure = validated(figure)
     assert config["showSendToCloud"] is False and figure.data[0].zmax == 100 and figure.data[0].colorscale[0][1] == "#cde2fb"
     figure, config = sparkline(days, [1.0, 2.0], "light")
-    assert config["staticPlot"] is True
+    assert config["staticPlot"] is True and validated(figure).data[0].x == ("2026-09-24", "2026-09-25")
 
 
 def test_visualisation_frame_keeps_switch_and_selection(client):

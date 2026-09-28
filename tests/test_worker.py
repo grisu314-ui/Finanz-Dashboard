@@ -164,6 +164,22 @@ def test_main_refuses_to_start_without_database(tmp_path, monkeypatch, caplog):
     assert list(tmp_path.iterdir()) == []  # nothing created
 
 
+@pytest.mark.parametrize("contact, warned", [(None, True), ("", True), ("Max Mustermann max@example.org", False)])
+def test_main_warns_at_start_when_the_sec_contact_is_unusable(migrated_dir, monkeypatch, caplog, contact, warned):
+    monkeypatch.setenv("FEVER_DATA", str(migrated_dir))
+    if contact is None:
+        monkeypatch.delenv("FEVER_SEC_CONTACT", raising=False)
+    else:
+        monkeypatch.setenv("FEVER_SEC_CONTACT", contact)
+    monkeypatch.setattr(worker.log, "setup", lambda: None)
+    monkeypatch.setattr(worker, "install_stop_handlers", lambda stop: None)
+    monkeypatch.setattr(worker, "serve", lambda *args, **kwargs: None)
+    with caplog.at_level(logging.WARNING):
+        assert worker.main() == 0
+    assert ("FEVER_SEC_CONTACT" in caplog.text) is warned
+    assert "Mustermann" not in caplog.text
+
+
 @pytest.mark.parametrize(
     "age, code, text",
     [(timedelta(minutes=1), 0, "gesund"), (timedelta(minutes=45), 0, "gesund"), (timedelta(minutes=46), 1, "ungesund")],

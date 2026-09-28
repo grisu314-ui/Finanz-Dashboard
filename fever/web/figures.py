@@ -6,13 +6,15 @@ date and retrieval time as an annotation inside the chart, a fixed uirevision so
 refresh keeps the zoom, connectgaps=False, decimal comma and numeric dates. Titles, annotations
 and hover texts carry only configuration texts and self-formatted values (Plotly interprets an
 HTML subset). Colours: validated reference palette (dataviz skill), light and dark steps.
+
+Figures are plain dicts in the plotly.js JSON format, dates as ISO text: building
+plotly.graph_objects with their validation and deep copies cost most of the time of a page
+(measured 28.09.2026, docs/umsetzungsplan.md). The tests validate every figure with
+plotly.graph_objects, so a misspelt property still fails there.
 """
 
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
-
-import plotly.graph_objects as go
-import plotly.io as pio
 
 from fever.web import format as fmt
 
@@ -53,21 +55,25 @@ DATE_FORMATS = [
 INITIAL_YEARS = 5
 
 
-def _template(mode: str) -> go.layout.Template:
+def _template(mode: str) -> dict:
     p = PALETTE[mode]
     axis = {"gridcolor": p["grid"], "linecolor": p["axis"], "zerolinecolor": p["axis"], "tickcolor": p["axis"],
             "tickfont": {"color": p["muted"]}, "title": {"font": {"color": p["secondary"]}}}
-    return go.layout.Template(layout={
+    return {"layout": {
         "paper_bgcolor": p["surface"], "plot_bgcolor": p["surface"], "colorway": p["series"],
         "font": {"family": FONT, "color": p["ink"], "size": 13},
         "xaxis": axis, "yaxis": axis,
         "hoverlabel": {"bgcolor": p["surface"], "bordercolor": p["axis"], "font": {"color": p["ink"], "family": FONT}},
         "legend": {"font": {"color": p["secondary"]}},
-    })
+    }}
 
 
-for _mode in PALETTE:
-    pio.templates[f"fever_{_mode}"] = _template(_mode)
+# Plotly templates fever_light and fever_dark (E-5), embedded in every figure.
+TEMPLATES = {mode: _template(mode) for mode in PALETTE}
+
+
+def _iso(days) -> list[str]:
+    return [day.isoformat() for day in days]
 
 
 @dataclass(frozen=True)
@@ -112,28 +118,30 @@ class Chart:
     band: Band | None = None
 
 
-def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go.Figure, dict]:
+def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[dict, dict]:
     """Figure and dcc.Graph config of a time series chart in the project standard."""
     mode = theme if theme in PALETTE else "light"
     palette = PALETTE[mode]
-    figure = go.Figure()
+    data = []
     if chart.band is not None:
-        band, colour = chart.band, palette["series"][0]
-        figure.add_trace(go.Scatter(x=band.x, y=band.low, mode="lines", line={"width": 0}, connectgaps=False,
-                                    showlegend=False, hoverinfo="skip"))
-        figure.add_trace(go.Scatter(x=band.x, y=band.high, mode="lines", line={"width": 0}, connectgaps=False,
-                                    fill="tonexty", fillcolor=_tint(colour, palette["surface"], 0.25),
-                                    name="10–90 % des Fensters", hovertemplate="%{y:,.4~g}<extra>90 %</extra>"))
-        figure.add_trace(go.Scatter(x=band.x, y=band.mid, mode="lines", connectgaps=False, name="Median des Fensters",
-                                    line={"width": 1, "dash": "dash", "color": palette["secondary"]},
-                                    hovertemplate="%{y:,.4~g}<extra>Median</extra>"))
+        band, colour, band_x = chart.band, palette["series"][0], _iso(chart.band.x)
+        data += [
+            {"type": "scatter", "x": band_x, "y": list(band.low), "mode": "lines", "line": {"width": 0},
+             "connectgaps": False, "showlegend": False, "hoverinfo": "skip"},
+            {"type": "scatter", "x": band_x, "y": list(band.high), "mode": "lines", "line": {"width": 0},
+             "connectgaps": False, "fill": "tonexty", "fillcolor": _tint(colour, palette["surface"], 0.25),
+             "name": "10–90 % des Fensters", "hovertemplate": "%{y:,.4~g}<extra>90 %</extra>"},
+            {"type": "scatter", "x": band_x, "y": list(band.mid), "mode": "lines", "connectgaps": False,
+             "name": "Median des Fensters", "line": {"width": 1, "dash": "dash", "color": palette["secondary"]},
+             "hovertemplate": "%{y:,.4~g}<extra>Median</extra>"},
+        ]
     for index, line in enumerate(chart.lines):
-        figure.add_trace(go.Scatter(
-            x=line.x, y=line.y, name=line.name, mode="lines", connectgaps=False,
-            line={"width": 2, "shape": line.shape, "color": palette["series"][index % len(palette["series"])]},
-            hovertemplate=(f"%{{y:,.{line.hover_decimals}f}}" if line.hover_decimals is not None else "%{y:,.4~g}")
+        data.append({
+            "type": "scatter", "x": _iso(line.x), "y": list(line.y), "name": line.name, "mode": "lines", "connectgaps": False,
+            "line": {"width": 2, "shape": line.shape, "color": palette["series"][index % len(palette["series"])]},
+            "hovertemplate": (f"%{{y:,.{line.hover_decimals}f}}" if line.hover_decimals is not None else "%{y:,.4~g}")
             + f"<extra>{line.name}</extra>",
-        ))
+        })
     last = max((max(line.x) for line in chart.lines if line.x), default=None)
     xaxis = {
         "type": "date", "rangeselector": {"buttons": RANGE_BUTTONS, "x": 0, "y": 1.02, "yanchor": "bottom",
@@ -148,22 +156,23 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go
         # the first day with a value: score days before an indicator existed would only show empty space
         firsts = [next((x for x, y in zip(line.x, line.y) if y is not None), None) for line in chart.lines]
         first = min((x for x in firsts if x is not None), default=min(min(line.x) for line in chart.lines if line.x))
-        xaxis["range"] = [first if chart.full_history else max(first, _years_before(last, INITIAL_YEARS)), last]
+        shown_from = first if chart.full_history else max(first, _years_before(last, INITIAL_YEARS))
+        xaxis["range"] = [shown_from.isoformat(), last.isoformat()]
         shapes = [
-            {"type": "rect", "xref": "x", "yref": "paper", "x0": start, "x1": end, "y0": 0, "y1": 1,
+            {"type": "rect", "xref": "x", "yref": "paper", "x0": start.isoformat(), "x1": end.isoformat(), "y0": 0, "y1": 1,
              "fillcolor": palette[kind], "line": {"width": 0}, "layer": "below"}
             for kind, periods in (("recession", chart.recessions), ("shaded", chart.shaded))
             for start, end in periods if end >= first and start <= last
         ]
     for start, end, label in chart.episodes:
-        shapes.append({"type": "rect", "xref": "x", "yref": "paper", "x0": start, "x1": end, "y0": 0.94, "y1": 1,
-                       "fillcolor": palette["secondary"], "opacity": 0.55, "line": {"width": 0}})
+        shapes.append({"type": "rect", "xref": "x", "yref": "paper", "x0": start.isoformat(), "x1": end.isoformat(),
+                       "y0": 0.94, "y1": 1, "fillcolor": palette["secondary"], "opacity": 0.55, "line": {"width": 0}})
     if chart.episodes:  # hover over the strip names the episode
-        figure.add_trace(go.Scatter(
-            x=[start + (end - start) / 2 for start, end, _ in chart.episodes], y=[1.0] * len(chart.episodes), yaxis="y2",
-            mode="markers", marker={"size": 14, "opacity": 0}, showlegend=False,
-            text=[f"{label}: {fmt.day(start)} bis {fmt.day(end)}" for start, end, label in chart.episodes],
-            hovertemplate="%{text}<extra>Krise</extra>"))
+        data.append({
+            "type": "scatter", "x": _iso(start + (end - start) / 2 for start, end, _ in chart.episodes),
+            "y": [1.0] * len(chart.episodes), "yaxis": "y2", "mode": "markers", "marker": {"size": 14, "opacity": 0},
+            "showlegend": False, "text": [f"{label}: {fmt.day(start)} bis {fmt.day(end)}" for start, end, label in chart.episodes],
+            "hovertemplate": "%{text}<extra>Krise</extra>"})
     if chart.zero_line:
         shapes.append({"type": "line", "xref": "paper", "yref": "y", "x0": 0, "x1": 1, "y0": 0, "y1": 0,
                        "line": {"width": 1, "color": palette["axis"]}, "layer": "below"})
@@ -171,7 +180,7 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go
         for index, line in enumerate(chart.lines):
             points = [(x, y) for x, y in zip(line.x, line.y) if y is not None]
             if points:
-                labels.append({"x": points[-1][0], "y": points[-1][1], "text": line.name, "showarrow": False,
+                labels.append({"x": points[-1][0].isoformat(), "y": points[-1][1], "text": line.name, "showarrow": False,
                                "xanchor": "right", "yanchor": "bottom", "yshift": 2,
                                "font": {"size": 11, "color": palette["secondary"]}})
     yaxis = {"title": {"text": chart.y_title}, "fixedrange": False}
@@ -179,23 +188,23 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[go
         yaxis["range"] = list(chart.y_range)
     if chart.y_ticks:
         yaxis.update(tickmode="array", tickvals=list(chart.y_ticks), ticktext=list(chart.y_ticks.values()))
-    figure.update_layout(
-        template=f"fever_{mode}", separators=",.", uirevision=chart.kennzahl_id,
-        title={"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
-        margin={"l": 56, "r": 16, "t": 124 if len(chart.lines) > 1 or chart.band is not None else 84,
-                "b": 62 + 14 * (3 + bool(chart.recessions) + bool(chart.shaded_label) + bool(chart.episodes))},
-        hovermode="x unified",
-        showlegend=len(chart.lines) > 1 or chart.band is not None,
+    layout = {
+        "template": TEMPLATES[mode], "separators": ",.", "uirevision": chart.kennzahl_id,
+        "title": {"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
+        "margin": {"l": 56, "r": 16, "t": 124 if len(chart.lines) > 1 or chart.band is not None else 84,
+                   "b": 62 + 14 * (3 + bool(chart.recessions) + bool(chart.shaded_label) + bool(chart.episodes))},
+        "hovermode": "x unified",
+        "showlegend": len(chart.lines) > 1 or chart.band is not None,
         # own row between title and range buttons, so it never covers them on a narrow screen
-        legend={"orientation": "h", "x": 0, "xanchor": "left", "y": 1.15, "yanchor": "bottom"},
-        xaxis=xaxis, yaxis=yaxis, shapes=shapes,
+        "legend": {"orientation": "h", "x": 0, "xanchor": "left", "y": 1.15, "yanchor": "bottom"},
+        "xaxis": xaxis, "yaxis": yaxis, "shapes": shapes,
         **({"yaxis2": {"overlaying": "y", "range": [0, 1.03], "visible": False, "fixedrange": True}} if chart.episodes else {}),
-        annotations=[*labels, stamp_annotation(
+        "annotations": [*labels, stamp_annotation(
             stamp(chart.source, chart.observed, chart.retrieved, recessions=bool(chart.recessions))
             + (f"<br>{chart.shaded_label}" if chart.shaded_label else "")
             + ("<br>Balken oben: Krisen, S&P 500 vom Hoch bis zum Tief" if chart.episodes else ""), mode)],
-    )
-    return figure, graph_config(chart.kennzahl_id, today)
+    }
+    return {"data": data, "layout": layout}, graph_config(chart.kennzahl_id, today)
 
 
 def graph_config(chart_id: str, today: date | None = None) -> dict:
@@ -249,7 +258,7 @@ class Matrix:
     note: str = ""  # extra line under the dating lines
 
 
-def matrix(chart: Matrix, theme: str, today: date | None = None) -> tuple[go.Figure, dict]:
+def matrix(chart: Matrix, theme: str, today: date | None = None) -> tuple[dict, dict]:
     mode = theme if theme in PALETTE else "light"
     palette = PALETTE[mode]
     # opaque tints: later regions cover earlier ones completely instead of mixing their colours
@@ -263,28 +272,28 @@ def matrix(chart: Matrix, theme: str, today: date | None = None) -> tuple[go.Fig
               for r in chart.regions if r.label]
     points = [(d, x, y) for d, x, y in zip(chart.days, chart.stress, chart.vulnerability) if x is not None and y is not None]
     hover = "%{customdata}<br>Stress %{x:,.1f} · Fallhöhe %{y:,.1f}<extra></extra>"
-    figure = go.Figure()
+    data = []
     if points:
-        days, xs, ys = zip(*points)
-        figure.add_trace(go.Scatter(
-            x=xs, y=ys, mode="lines+markers", name="Spur", customdata=[fmt.day(d) for d in days], hovertemplate=hover,
-            line={"width": 2, "color": palette["series"][0]}, marker={"size": 6, "color": palette["series"][0]},
-        ))
-        figure.add_trace(go.Scatter(
-            x=[xs[-1]], y=[ys[-1]], mode="markers+text", name="Heute", customdata=[fmt.day(days[-1])], hovertemplate=hover,
-            text=[f"Stand {fmt.day(days[-1])}"], textposition="top center", textfont={"color": palette["ink"]},
-            marker={"size": 14, "color": palette["series"][0], "line": {"width": 2, "color": palette["surface"]}},
-        ))
+        days, xs, ys = (list(values) for values in zip(*points))
+        data += [
+            {"type": "scatter", "x": xs, "y": ys, "mode": "lines+markers", "name": "Spur",
+             "customdata": [fmt.day(d) for d in days], "hovertemplate": hover,
+             "line": {"width": 2, "color": palette["series"][0]}, "marker": {"size": 6, "color": palette["series"][0]}},
+            {"type": "scatter", "x": [xs[-1]], "y": [ys[-1]], "mode": "markers+text", "name": "Heute",
+             "customdata": [fmt.day(days[-1])], "hovertemplate": hover,
+             "text": [f"Stand {fmt.day(days[-1])}"], "textposition": "top center", "textfont": {"color": palette["ink"]},
+             "marker": {"size": 14, "color": palette["series"][0], "line": {"width": 2, "color": palette["surface"]}}},
+        ]
     axis = {"range": [0, 100], "dtick": 20, "zeroline": False}
     text = stamp(chart.source, chart.observed, chart.retrieved) + (f"<br>{chart.note}" if chart.note else "")
-    figure.update_layout(
-        template=f"fever_{mode}", separators=",.", uirevision=chart.chart_id, showlegend=False,
-        title={"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
-        margin={"l": 56, "r": 16, "t": 56, "b": 150 + 14 * chart.note.count("<br>") if chart.note else 150},
-        xaxis={**axis, "title": {"text": "Stress (geglättet)"}}, yaxis={**axis, "title": {"text": "Fallhöhe (geglättet)"}},
-        shapes=shapes, annotations=[*labels, stamp_annotation(text, mode, yshift=-58)],
-    )
-    return figure, graph_config(chart.chart_id, today)
+    layout = {
+        "template": TEMPLATES[mode], "separators": ",.", "uirevision": chart.chart_id, "showlegend": False,
+        "title": {"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
+        "margin": {"l": 56, "r": 16, "t": 56, "b": 150 + 14 * chart.note.count("<br>") if chart.note else 150},
+        "xaxis": {**axis, "title": {"text": "Stress (geglättet)"}}, "yaxis": {**axis, "title": {"text": "Fallhöhe (geglättet)"}},
+        "shapes": shapes, "annotations": [*labels, stamp_annotation(text, mode, yshift=-58)],
+    }
+    return {"data": data, "layout": layout}, graph_config(chart.chart_id, today)
 
 
 @dataclass(frozen=True)
@@ -310,29 +319,30 @@ class Curve:
     note: str = ""
 
 
-def curve(chart: Curve, theme: str, today: date | None = None) -> tuple[go.Figure, dict]:
+def curve(chart: Curve, theme: str, today: date | None = None) -> tuple[dict, dict]:
     mode = theme if theme in PALETTE else "light"
     palette = PALETTE[mode]
-    figure = go.Figure()
+    data = []
     groups = list(dict.fromkeys(point.group for point in chart.points))
     for index, group in enumerate(groups):
         points = sorted((p for p in chart.points if p.group == group), key=lambda p: p.days)
-        figure.add_trace(go.Scatter(
-            x=[p.days for p in points], y=[p.value for p in points], name=group, mode="lines+markers+text",
-            text=[p.label for p in points], textposition="top center", textfont={"size": 10, "color": palette["secondary"]},
-            line={"width": 2, "color": palette["series"][index]}, marker={"size": 8, "color": palette["series"][index]},
-            hovertemplate="%{text}: %{y:,.2f} (%{x} Tage)<extra></extra>",
-        ))
+        data.append({
+            "type": "scatter", "x": [p.days for p in points], "y": [p.value for p in points], "name": group,
+            "mode": "lines+markers+text", "text": [p.label for p in points], "textposition": "top center",
+            "textfont": {"size": 10, "color": palette["secondary"]},
+            "line": {"width": 2, "color": palette["series"][index]}, "marker": {"size": 8, "color": palette["series"][index]},
+            "hovertemplate": "%{text}: %{y:,.2f} (%{x} Tage)<extra></extra>",
+        })
     text = stamp(chart.source, chart.observed, chart.retrieved) + (f"<br>{chart.note}" if chart.note else "")
-    figure.update_layout(
-        template=f"fever_{mode}", separators=",.", uirevision=chart.chart_id, showlegend=len(groups) > 1,
-        title={"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
-        legend={"orientation": "h", "x": 0, "xanchor": "left", "y": 1.02, "yanchor": "bottom"},
-        margin={"l": 56, "r": 16, "t": 96, "b": 62 + 14 * (3 + chart.note.count("<br>") + bool(chart.note)) + 26},
-        xaxis={"title": {"text": chart.x_title}, "rangemode": "tozero"}, yaxis={"title": {"text": chart.y_title}},
-        annotations=[stamp_annotation(text, mode, yshift=-54)],
-    )
-    return figure, graph_config(chart.chart_id, today)
+    layout = {
+        "template": TEMPLATES[mode], "separators": ",.", "uirevision": chart.chart_id, "showlegend": len(groups) > 1,
+        "title": {"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
+        "legend": {"orientation": "h", "x": 0, "xanchor": "left", "y": 1.02, "yanchor": "bottom"},
+        "margin": {"l": 56, "r": 16, "t": 96, "b": 62 + 14 * (3 + chart.note.count("<br>") + bool(chart.note)) + 26},
+        "xaxis": {"title": {"text": chart.x_title}, "rangemode": "tozero"}, "yaxis": {"title": {"text": chart.y_title}},
+        "annotations": [stamp_annotation(text, mode, yshift=-54)],
+    }
+    return {"data": data, "layout": layout}, graph_config(chart.chart_id, today)
 
 
 @dataclass(frozen=True)
@@ -350,25 +360,26 @@ class Heatmap:
     note: str = ""
 
 
-def heatmap(chart: Heatmap, theme: str, today: date | None = None) -> tuple[go.Figure, dict]:
+def heatmap(chart: Heatmap, theme: str, today: date | None = None) -> tuple[dict, dict]:
     mode = theme if theme in PALETTE else "light"
     steps = len(PERCENTILE_RAMP) - 1
     scale = [[i / steps, colour] for i, colour in enumerate(PERCENTILE_RAMP)]
-    figure = go.Figure(go.Heatmap(
-        x=chart.x, y=chart.rows, z=chart.z, zmin=0, zmax=100, colorscale=scale, hoverongaps=False,
-        colorbar={"title": {"text": "Perzentil"}, "thickness": 10, "len": 0.8},
-        hovertemplate="%{y}<br>%{x|%d.%m.%Y}: Perzentil %{z:.0f}<extra></extra>",
-    ))
+    data = [{
+        "type": "heatmap", "x": _iso(chart.x), "y": list(chart.rows), "z": [list(row) for row in chart.z], "zmin": 0,
+        "zmax": 100, "colorscale": scale, "hoverongaps": False,
+        "colorbar": {"title": {"text": "Perzentil"}, "thickness": 10, "len": 0.8},
+        "hovertemplate": "%{y}<br>%{x|%d.%m.%Y}: Perzentil %{z:.0f}<extra></extra>",
+    }]
     text = stamp(chart.source, chart.observed, chart.retrieved) + (f"<br>{chart.note}" if chart.note else "")
-    figure.update_layout(
-        template=f"fever_{mode}", separators=",.", uirevision=chart.chart_id,
-        title={"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
-        margin={"l": 8, "r": 8, "t": 56, "b": 62 + 14 * (4 + chart.note.count("<br>"))},
-        xaxis={"type": "date", "tickformatstops": DATE_FORMATS, "tickangle": 0},
-        yaxis={"autorange": "reversed", "automargin": True, "tickfont": {"size": 11}},
-        annotations=[stamp_annotation(text, mode)],
-    )
-    return figure, graph_config(chart.chart_id, today)
+    layout = {
+        "template": TEMPLATES[mode], "separators": ",.", "uirevision": chart.chart_id,
+        "title": {"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
+        "margin": {"l": 8, "r": 8, "t": 56, "b": 62 + 14 * (4 + chart.note.count("<br>"))},
+        "xaxis": {"type": "date", "tickformatstops": DATE_FORMATS, "tickangle": 0},
+        "yaxis": {"autorange": "reversed", "automargin": True, "tickfont": {"size": 11}},
+        "annotations": [stamp_annotation(text, mode)],
+    }
+    return {"data": data, "layout": layout}, graph_config(chart.chart_id, today)
 
 
 @dataclass(frozen=True)
@@ -385,36 +396,37 @@ class Regime:
     retrieved: datetime | None = None
 
 
-def regime(chart: Regime, theme: str, today: date | None = None) -> tuple[go.Figure, dict]:
+def regime(chart: Regime, theme: str, today: date | None = None) -> tuple[dict, dict]:
     mode = theme if theme in PALETTE else "light"
     n = len(STATUS)
     scale = [item for level, colour in enumerate(STATUS) for item in ([level / n, colour], [(level + 1) / n, colour])]
-    figure = go.Figure(go.Heatmap(
-        x=chart.x, y=["Ampel"], z=[chart.levels], zmin=-0.5, zmax=n - 0.5, colorscale=scale, showscale=False,
-        customdata=[[chart.names[v] if v is not None else "–" for v in chart.levels]], hoverongaps=False,
-        hovertemplate="%{x|%d.%m.%Y}: %{customdata}<extra></extra>",
-    ))
+    data = [{
+        "type": "heatmap", "x": _iso(chart.x), "y": ["Ampel"], "z": [list(chart.levels)], "zmin": -0.5, "zmax": n - 0.5,
+        "colorscale": scale, "showscale": False, "hoverongaps": False,
+        "customdata": [[chart.names[v] if v is not None else "–" for v in chart.levels]],
+        "hovertemplate": "%{x|%d.%m.%Y}: %{customdata}<extra></extra>",
+    }]
     text = stamp(chart.source, chart.observed, chart.retrieved) + "<br>Farben: " + ", ".join(chart.names)
-    figure.update_layout(
-        template=f"fever_{mode}", separators=",.", uirevision=chart.chart_id,
-        title={"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
-        margin={"l": 56, "r": 16, "t": 84, "b": 62 + 14 * 4},
-        xaxis={"type": "date", "tickformatstops": DATE_FORMATS, "tickangle": 0,
-               "rangeselector": {"buttons": RANGE_BUTTONS, "x": 0, "y": 1.02, "yanchor": "bottom"}},
-        yaxis={"visible": False, "fixedrange": True},
-        annotations=[stamp_annotation(text, mode)],
-    )
-    return figure, graph_config(chart.chart_id, today)
+    layout = {
+        "template": TEMPLATES[mode], "separators": ",.", "uirevision": chart.chart_id,
+        "title": {"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
+        "margin": {"l": 56, "r": 16, "t": 84, "b": 62 + 14 * 4},
+        "xaxis": {"type": "date", "tickformatstops": DATE_FORMATS, "tickangle": 0,
+                  "rangeselector": {"buttons": RANGE_BUTTONS, "x": 0, "y": 1.02, "yanchor": "bottom"}},
+        "yaxis": {"visible": False, "fixedrange": True},
+        "annotations": [stamp_annotation(text, mode)],
+    }
+    return {"data": data, "layout": layout}, graph_config(chart.chart_id, today)
 
 
-def sparkline(x: list[date], y: list[float | None], theme: str) -> tuple[go.Figure, dict]:
+def sparkline(x: list[date], y: list[float | None], theme: str) -> tuple[dict, dict]:
     """Small line without axes; its date and value stand as text next to it (view 7)."""
     mode = theme if theme in PALETTE else "light"
-    figure = go.Figure(go.Scatter(x=x, y=y, mode="lines", connectgaps=False, hoverinfo="skip",
-                                  line={"width": 1.5, "color": PALETTE[mode]["series"][0]}))
-    figure.update_layout(template=f"fever_{mode}", margin={"l": 0, "r": 0, "t": 2, "b": 2}, showlegend=False,
-                         xaxis={"visible": False}, yaxis={"visible": False})
-    return figure, {"staticPlot": True, "displayModeBar": False, "responsive": True}
+    data = [{"type": "scatter", "x": _iso(x), "y": list(y), "mode": "lines", "connectgaps": False, "hoverinfo": "skip",
+             "line": {"width": 1.5, "color": PALETTE[mode]["series"][0]}}]
+    layout = {"template": TEMPLATES[mode], "margin": {"l": 0, "r": 0, "t": 2, "b": 2}, "showlegend": False,
+              "xaxis": {"visible": False}, "yaxis": {"visible": False}}
+    return {"data": data, "layout": layout}, {"staticPlot": True, "displayModeBar": False, "responsive": True}
 
 
 def stamp(source: str, observed: date | None, retrieved: datetime | None, *, recessions: bool = False) -> str:

@@ -159,13 +159,28 @@ def test_first_fetch_reads_every_period_later_ones_from_the_newest_stored_period
     assert json.loads(fetched.content)["since"] == "2026-06-30"
 
 
-@pytest.mark.parametrize("value", ["", "Max Mustermann", "   "])
-def test_fetch_needs_a_contact_with_mail_address(monkeypatch, value):
-    monkeypatch.setenv("FEVER_SEC_CONTACT", value)
+@pytest.mark.parametrize(("value", "message"), [
+    (None, "kommt nicht im Container an: compose.yaml"),  # stack file without the line
+    ("", "ist im Container leer: in der .env"),  # line present, .env without the value
+    ("   ", "ist im Container leer"),
+    ("Max Mustermann", "enthält keine E-Mail-Adresse"),
+])
+def test_fetch_needs_a_contact_with_mail_address(monkeypatch, value, message):
+    if value is None:
+        monkeypatch.delenv("FEVER_SEC_CONTACT")
+    else:
+        monkeypatch.setenv("FEVER_SEC_CONTACT", value)
     client = Client()
-    with pytest.raises(SourceError, match="FEVER_SEC_CONTACT fehlt"):
+    with pytest.raises(SourceError, match=message) as error:
         sec.fetch(client, SERIES)
     assert client.calls == []
+    assert "Mustermann" not in str(error.value)  # personal: never in the data status or the log
+
+
+def test_contact_problem_accepts_name_and_address():
+    assert sec.contact_problem(CONTACT) is None
+    assert sec.contact_problem(f"  {CONTACT}\n") is None
+    assert sec.contact_problem("Max <max@example.org>") is None
 
 
 def only_june(recent):

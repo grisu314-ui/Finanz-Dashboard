@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from fever.store.db import make_engine
-from fever.store.observations import NewObservation, append_observations, latest_values
+from fever.store.observations import NewObservation, append_observations, latest_pairs, latest_values
 from fever.store.tables import observation
 
 UTC = timezone.utc
@@ -65,6 +65,19 @@ def test_new_date_is_appended_and_series_are_separate(engine):
     with engine.connect() as conn:
         assert [s.value for s in latest_values(conn, "vix")] == [20.5, 19.0]
         assert [s.value for s in latest_values(conn, "nfci")] == [3.1]
+
+
+def test_latest_pairs_follow_the_same_rule_without_timestamps(engine):
+    """Web charts read (date, value) only; the newest vintage per date counts as in latest_values."""
+    append(engine, [NewObservation(D2, 21.0, T0, False), NewObservation(D1, 20.5, T0, False)])
+    later = T0 + timedelta(days=1)
+    append(engine, [NewObservation(D1, 20.7, later, False), NewObservation(D3, 19.0, later, False)], retrieved_at=later)
+    append(engine, [NewObservation(D1, 3.1, T0, False)], series="nfci")
+    with engine.connect() as conn:
+        pairs = latest_pairs(conn, "vix")
+        assert pairs == [(D1, 20.7), (D2, 21.0), (D3, 19.0)]
+        assert pairs == [(s.obs_date, s.value) for s in latest_values(conn, "vix")]
+        assert latest_pairs(conn, "sofr") == []
 
 
 @pytest.mark.parametrize("bad", [math.nan, math.inf, -math.inf])

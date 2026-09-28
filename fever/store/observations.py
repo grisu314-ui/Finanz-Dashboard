@@ -72,6 +72,20 @@ def latest_values(conn: Connection, series_id: str) -> list[StoredObservation]:
     return list(latest.values())
 
 
+def latest_pairs(conn: Connection, series_id: str) -> list[tuple[date, float]]:
+    """(obs_date, value) of the newest vintage per observation date, sorted by date.
+
+    The rule of latest_values() without the timestamps, whose conversion makes most of its time
+    (web: charts of long series).
+    """
+    result = conn.execute(
+        select(observation.c.obs_date, observation.c.value)
+        .where(observation.c.series_id == series_id)
+        .order_by(observation.c.obs_date, observation.c.vintage)
+    )
+    return list({obs_date: value for obs_date, value in result}.items())  # the newest vintage comes last and wins
+
+
 def latest_obs_date(conn: Connection, series_id: str) -> date | None:
     """Most recent observation date stored for the series, None if there is none."""
     return conn.execute(select(func.max(observation.c.obs_date)).where(observation.c.series_id == series_id)).scalar()

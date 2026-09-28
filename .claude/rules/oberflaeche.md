@@ -15,7 +15,7 @@ Details, Begründungen und Entscheidungsprotokoll (E-1 bis E-7): `docs/umsetzung
 - Einzelkennzahlen: neutrale Perzentil-Farbskala plus Markierung „erhöht“ ab der Diffusionsschwelle aus `scoring.toml`. Die Ampelfarben Grün, Gelb, Orange und Rot sind der Gesamtampel vorbehalten und stehen immer mit Text, nie als Farbe allein.
 
 ## Charts
-- Jeder Chart entsteht über die Fabrikfunktion in `fever/web/figures.py`.
+- Jeder Chart entsteht über die Fabrikfunktion in `fever/web/figures.py`, als einfaches Dict im plotly.js-Format (Datum als ISO-Text), nie als `go.Figure`: dessen Prüfung und Kopien kosteten rund 70 % der Seitenzeit (28.09.2026). Die Tests prüfen jede Figur mit `go.Figure`.
 - Zoom, Verschieben und Doppelklick-Reset (Plotly-Standard); `scrollZoom` aus.
 - Zeitreihen haben Zeitraum-Buttons „1 M, 6 M, 1 J, 5 J, Max“, keinen Rangeslider.
 - PNG-Export über die Modebar (`scale=2`, Dateiname mit Kennzahl und Datum), `displaylogo=False`, `showSendToCloud=False` (Plotly.js 4 lädt sonst per „Share chart…“ Chart und Daten zu Plotly Cloud hoch).
@@ -43,8 +43,14 @@ Details, Begründungen und Entscheidungsprotokoll (E-1 bis E-7): `docs/umsetzung
 - Banner bei fehlender Migration (E-70), bei überfälligem Worker-Heartbeat und bei verlorener Verbindung (clientseitig über die Browserzeit der letzten erfolgreichen Antwort).
 - Jeder Wert zeigt Beobachtungsdatum, Abrufzeit (Europe/Berlin, MEZ/MESZ) und relatives Alter. „Veraltet“ wird ausgegraut, schraffiert und als Text markiert.
 
+## Ladezeit (28.09.2026, E-77, E-78)
+- Lange Lesezugriffe in `fever/web/db.py` tragen `@per_data_version`: Das Ergebnis gilt bis zur nächsten gespeicherten Beobachtung oder zum nächsten Scoring-Lauf. Aufrufer verändern es nie.
+- Abfragen lesen nur die Spalten, die der Chart braucht; für einen letzten Wert keine ganze Historie.
+- gunicorn mit einem Thread: Callbacks in parallelen Threads bremsen sich über den GIL gegenseitig aus.
+- Vor und nach Änderungen an Seiten messen (Methode: `docs/umsetzungsplan.md`, Abschnitt 10).
+
 ## Gestaltung
-- Hell/dunkel folgt dem System: CSS-Variablen in `assets/base.css`, Plotly-Templates `fever_light` und `fever_dark`, Umschaltung über `assets/theme.js` und einen `dcc.Store`.
+- Hell/dunkel folgt dem System: CSS-Variablen in `assets/base.css`, Plotly-Templates `fever_light` und `fever_dark` (`figures.TEMPLATES`, in jede Figur eingebettet), Umschaltung über `assets/theme.js` und einen `dcc.Store`.
 - Systemschriften, `tabular-nums`, Karten im CSS-Grid; die Übersicht wird zuerst für 390 px Breite entworfen.
 - Nur lokale Ressourcen. Ein Test prüft, dass das ausgelieferte HTML keine externe URL enthält.
 - Rangfolge bei Zielkonflikten: fachliche Korrektheit, Aktualität, Lesbarkeit, Schönheit.

@@ -1,6 +1,6 @@
 import pytest
 
-from fever.config import CONFIG_DIR, ConfigError, indicator_catalog, load, scoring_config
+from fever.config import CONFIG_DIR, ConfigError, indicator_catalog, load, scoring_config, series_catalog
 
 
 def write(tmp_path, name, text):
@@ -109,3 +109,17 @@ def test_indicators_are_checked(tmp_path, old, new, message):
     assert SERIES.count(old) == 1, old
     with pytest.raises(ConfigError, match=message):
         indicator_catalog(write(tmp_path, "series", SERIES.replace(old, new)))
+
+
+def test_catalogues_follow_the_file_content_and_hand_out_their_own_dicts(tmp_path):
+    """Built once per file content (web speed-up): a change of the file shows at the next call."""
+    config_dir = write(tmp_path, "scoring", SCORING)
+    write(tmp_path, "series", SERIES)
+    assert scoring_config(config_dir).red_stress == 90
+    write(tmp_path, "scoring", SCORING.replace("red_stress = 90", "red_stress = 91"))  # same size
+    assert scoring_config(config_dir).red_stress == 91
+    first = indicator_catalog(config_dir)
+    first.clear()  # a caller changing its dict changes nobody else's
+    assert indicator_catalog(config_dir) == indicator_catalog() and series_catalog(config_dir) == series_catalog()
+    write(tmp_path, "series", SERIES.replace("v_score = 4\n", "v_score = 5\n", 1))  # same size
+    assert indicator_catalog(config_dir) != indicator_catalog()

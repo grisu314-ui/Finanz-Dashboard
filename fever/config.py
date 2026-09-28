@@ -3,6 +3,10 @@
 load() checks the top-level structure of any file; series_catalog() checks the raw
 series in series.toml (M2), indicator_catalog() the derived indicators and
 scoring_config() the parameters in scoring.toml (M5, docs/umsetzungsplan.md).
+
+The checked catalogues are built once per file content (the file is read on every call, the
+TOML is parsed again only after a change): the web process asks for them many times per page.
+Callers get their own dict; the entries are frozen dataclasses.
 """
 
 import math
@@ -10,6 +14,7 @@ import re
 import tomllib
 from dataclasses import dataclass
 from datetime import date, time
+from functools import lru_cache
 from pathlib import Path
 
 CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
@@ -30,14 +35,23 @@ class ConfigError(Exception):
 
 def load(name: str, config_dir: Path = CONFIG_DIR) -> dict:
     """Read config/<name>.toml and check its top-level structure."""
+    return _parse(name, config_dir, _read(name, config_dir))
+
+
+def _read(name: str, config_dir: Path) -> bytes:
     if name not in _ALLOWED_TABLES:
         raise ConfigError(f"Unbekannte Konfigurationsdatei: {name}.toml")
     path = config_dir / f"{name}.toml"
     try:
-        with path.open("rb") as fh:
-            data = tomllib.load(fh)
+        return path.read_bytes()
     except FileNotFoundError:
         raise ConfigError(f"Konfigurationsdatei fehlt: {path}") from None
+
+
+def _parse(name: str, config_dir: Path, content: bytes) -> dict:
+    path = config_dir / f"{name}.toml"
+    try:
+        data = tomllib.loads(content.decode())
     except tomllib.TOMLDecodeError as exc:
         raise ConfigError(f"Ungültiges TOML in {path}: {exc}") from exc
 
@@ -100,7 +114,12 @@ class Series:
 
 def series_catalog(config_dir: Path = CONFIG_DIR) -> dict[str, Series]:
     """All raw series from series.toml, checked; any error names the entry."""
-    data = load("series", config_dir)
+    return dict(_series_catalog(config_dir, _read("series", config_dir)))
+
+
+@lru_cache(maxsize=8)
+def _series_catalog(config_dir: Path, content: bytes) -> dict[str, Series]:
+    data = _parse("series", config_dir, content)
     catalog = {series_id: _series(series_id, entry) for series_id, entry in data.get("series", {}).items()}
     for group, members in group_members(catalog).items():
         first = members[0]
@@ -249,8 +268,13 @@ class Indicator:
 
 def indicator_catalog(config_dir: Path = CONFIG_DIR) -> dict[str, Indicator]:
     """All derived indicators from series.toml, checked against the raw series."""
-    catalog = series_catalog(config_dir)
-    entries = load("series", config_dir).get("indicator", {})
+    return dict(_indicator_catalog(config_dir, _read("series", config_dir)))
+
+
+@lru_cache(maxsize=8)
+def _indicator_catalog(config_dir: Path, content: bytes) -> dict[str, Indicator]:
+    catalog = _series_catalog(config_dir, content)
+    entries = _parse("series", config_dir, content).get("indicator", {})
     return {indicator_id: _indicator(indicator_id, entry, catalog) for indicator_id, entry in entries.items()}
 
 
@@ -360,7 +384,12 @@ class ScoringConfig:
 
 def scoring_config(config_dir: Path = CONFIG_DIR) -> ScoringConfig:
     """All parameters from scoring.toml, checked for completeness, type and range."""
-    data = load("scoring", config_dir)
+    return _scoring_config(config_dir, _read("scoring", config_dir))
+
+
+@lru_cache(maxsize=8)
+def _scoring_config(config_dir: Path, content: bytes) -> ScoringConfig:
+    data = _parse("scoring", config_dir, content)
     values = {}
     for table, keys in _SCORING_KEYS.items():
         entries = data.get(table, {})
@@ -409,8 +438,13 @@ class Episode:
 
 def crisis_episodes(config_dir: Path = CONFIG_DIR) -> tuple[Episode, ...]:
     """config/episodes.toml, sorted by start; every field is required and start <= end."""
+    return _crisis_episodes(config_dir, _read("episodes", config_dir))
+
+
+@lru_cache(maxsize=8)
+def _crisis_episodes(config_dir: Path, content: bytes) -> tuple[Episode, ...]:
     episodes = []
-    for episode_id, entry in load("episodes", config_dir).get("episode", {}).items():
+    for episode_id, entry in _parse("episodes", config_dir, content).get("episode", {}).items():
         fields = {"label", "start", "end", "source"}
         if set(entry) != fields:
             raise ConfigError(f"episode.{episode_id}: Felder müssen genau {', '.join(sorted(fields))} sein")

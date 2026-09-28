@@ -1,6 +1,6 @@
 # Einrichtung und Betrieb auf TrueNAS mit Dockge
 
-Stand: 26.09.2026 · Für: dich als Anwender · Status: **Worker läuft auf TrueNAS seit 26.09.2026 („healthy“).** Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind zusätzlich in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Die Oberfläche (Dienst `web`, seit M6) ist in der Entwicklungsumgebung geprüft, auf TrueNAS ⏳ (siehe `docs/umsetzungsplan.md`).
+Stand: 28.09.2026 · Für: dich als Anwender · Status: **Worker läuft auf TrueNAS seit 26.09.2026 („healthy“).** Betrieb seit 28.09.2026 vom Branch `claude-raramo` (E-76); Update darauf: Abschnitt 9. Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind zusätzlich in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Die Oberfläche (Dienst `web`, seit M6) ist in der Entwicklungsumgebung geprüft, auf TrueNAS ⏳ (siehe `docs/umsetzungsplan.md`).
 
 Markierungen:
 - ✅ geprüft: ausgeführt, mit Datum und Ort
@@ -14,7 +14,7 @@ Festgelegt (Entscheidungen E-21, E-28 bis E-33 vom 26.09.2026):
 | Projektverzeichnis (Dataset, Git-Klon, Build) | `/mnt/Daten-Z1/apps/feewer` |
 | Datenordner (Kind-Dataset, von Git ignoriert) | `/mnt/Daten-Z1/apps/feewer/data` |
 | Benutzer der Container | `apps`, UID/GID 568:568 |
-| Branch | `claude-testing` |
+| Branch | `claude-raramo` (seit 28.09.2026, E-76; vorher `claude-testing`, E-30) |
 | Web-Port (ab M6) | 8003 |
 | Dockge-Stack | Name `finanz-dashboard`, Container `finanz-dashboard-worker-1` (die Befehle unten setzen ihn voraus) |
 
@@ -89,7 +89,7 @@ sudo chown admin:admin /mnt/Daten-Z1/apps/feewer
 ls -ld /mnt/Daten-Z1/apps/feewer    # erwartet: … admin admin … /mnt/Daten-Z1/apps/feewer
 ```
 
-### 3.2 Projekt holen (Branch `claude-testing`, E-30)
+### 3.2 Projekt holen (Branch `claude-raramo`, E-76)
 
 Das Repository ist öffentlich; es braucht keine Zugangsdaten. `git clone` verlangt ein leeres Verzeichnis und scheitert, sobald das Dataset `data` existiert („destination path '.' already exists and is not an empty directory“). Deshalb holen diese Befehle das Projekt in das bestehende Verzeichnis. `data/` bleibt dabei unberührt, weil Git es ignoriert. Die Reihenfolge von 3.2 und 3.3 ist damit egal.
 
@@ -97,14 +97,14 @@ Das Repository ist öffentlich; es braucht keine Zugangsdaten. `git clone` verla
 cd /mnt/Daten-Z1/apps/feewer
 git init
 git remote add origin https://github.com/grisu314-ui/Finanz-Dashboard.git
-git fetch origin claude-testing
-git checkout -b claude-testing origin/claude-testing
-#   erwartet: Switched to a new branch 'claude-testing'
-#             branch 'claude-testing' set up to track 'origin/claude-testing'.
-git status    # erwartet: "On branch claude-testing", "Your branch is up to date …", "nothing to commit, working tree clean"
+git fetch origin claude-raramo
+git checkout -b claude-raramo origin/claude-raramo
+#   erwartet: Switched to a new branch 'claude-raramo'
+#             branch 'claude-raramo' set up to track 'origin/claude-raramo'.
+git status    # erwartet: "On branch claude-raramo", "Your branch is up to date …", "nothing to commit, working tree clean"
 ```
 
-✅ 26.09.2026, Entwicklungsumgebung: in einem Verzeichnis mit vorhandenem `data/`; dessen Inhalt blieb unverändert. Meldet `git init` „Permission denied“, fehlt Schritt 3.1.
+✅ 26.09.2026, Entwicklungsumgebung (damals mit Branch `claude-testing`): in einem Verzeichnis mit vorhandenem `data/`; dessen Inhalt blieb unverändert. Meldet `git init` „Permission denied“, fehlt Schritt 3.1.
 
 ### 3.3 Kind-Dataset `data` anlegen (E-28)
 
@@ -179,7 +179,7 @@ Ohne diesen Schritt startet der Worker nicht, sondern meldet im Log „Datenbank
    ```bash
    cat /mnt/Daten-Z1/apps/feewer/.env.example
    ```
-4. Speichern und „Deploy“ bzw. „Start“.
+4. Speichern und „Deploy“ bzw. „Start“. Nach jeder Änderung an `compose.yaml` oder `.env` des Stacks ebenfalls „Deploy“: Ein Neustart übernimmt geänderte Einstellungen nicht, die Container behalten die alten.
 
 | Variable | Bedeutung | Fehlt sie … |
 |---|---|---|
@@ -187,7 +187,7 @@ Ohne diesen Schritt startet der Worker nicht, sondern meldet im Log „Datenbank
 | `FEVER_DATA_DIR` | Datenordner `/mnt/Daten-Z1/apps/feewer/data` | Start bricht mit „FEVER_DATA_DIR fehlt in .env“ ab |
 | `FEVER_UID`, `FEVER_GID` | Benutzer der Container, 568 (`apps`) | Start bricht mit „FEVER_UID fehlt in .env“ bzw. „FEVER_GID fehlt …“ ab |
 | `FEVER_WEB_PORT` | Port des Dashboards, 8003 | Start bricht mit „FEVER_WEB_PORT fehlt in .env“ ab |
-| `FEVER_SEC_CONTACT` | Name und E-Mail-Adresse für den Abruf bei der SEC (Top-10-Konzentration, E-71); kein Secret, aber persönlich | Stack startet; nur die Quelle SEC meldet im Datenstand „FEVER_SEC_CONTACT fehlt oder enthält keine E-Mail-Adresse“ |
+| `FEVER_SEC_CONTACT` | Name und E-Mail-Adresse für den Abruf bei der SEC (Top-10-Konzentration, E-71); kein Secret, aber persönlich | Stack startet; der Worker warnt beim Start im Log, und die Quelle SEC meldet im Datenstand, was fehlt (Abschnitt 11) |
 
 Ein fehlender Datenordner ist ein Fehler und wird nicht stillschweigend angelegt.
 
@@ -241,6 +241,35 @@ Dockge zeigt `web` nach rund einer Minute als „healthy“.
 ## 9. Update auf eine neue Version
 
 ✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ⏳ TrueNAS. Prüfung der Migration beim Start (E-70): ✅ Entwicklungsumgebung 28.09.2026 mit dem gebauten Image auf einer Datenbank mit Stand 0002 (Worker und `fever.score` melden „Migration fehlt“ und starten nicht, `/health` 503, Banner im Browser; `fever.backup` läuft; nach `alembic upgrade head` normaler Start); ⏳ TrueNAS.
+
+**Update auf schnellere Seiten und Branch `claude-raramo` (28.09.2026, E-76 bis E-78, ohne Migration):** ⏳ TrueNAS. Einmal den Branch wechseln; danach gilt wieder der Standardablauf unten mit `git pull`.
+
+```bash
+cd /mnt/Daten-Z1/apps/feewer
+git status                      # erwartet: "nothing to commit, working tree clean"
+git fetch origin claude-raramo
+git checkout -b claude-raramo origin/claude-raramo
+#   erwartet: Switched to a new branch 'claude-raramo'
+#             branch 'claude-raramo' set up to track 'origin/claude-raramo'.
+sudo docker compose build
+cat compose.dockge.yaml          # neuer Inhalt für compose.yaml in Dockge
+```
+
+1. In Dockge den Stack `finanz-dashboard` bearbeiten und `compose.yaml` vollständig durch die Ausgabe von `cat compose.dockge.yaml` ersetzen (neu: Dienst `web` mit einem Thread, E-77; beim Worker die Zeile `FEVER_SEC_CONTACT: ${FEVER_SEC_CONTACT:-}`).
+2. In der `.env` des Stacks (nicht im Projektordner) steht `FEVER_SEC_CONTACT=Vorname Nachname name@beispiel.de`.
+3. Speichern, dann „Deploy“ (nicht „Neustart“).
+4. Prüfen und die SEC-Reihe sofort holen:
+
+```bash
+sudo docker logs finanz-dashboard-web-1 2>&1 | grep "Using worker"      # erwartet: [INFO] Using worker: gthread
+sudo docker exec finanz-dashboard-worker-1 python -c "import os; from fever.sources.sec import contact_problem; print(contact_problem(os.environ.get('FEVER_SEC_CONTACT')) or 'SEC-Kontakt in Ordnung')"
+#   erwartet: SEC-Kontakt in Ordnung   (sonst nennt die Zeile die Ursache, Abschnitt 11)
+sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
+#   erwartet u. a.: INFO __main__: sec_spy_top10: 28 neue Zeilen (Erstabruf)
+#   am Ende: INFO __main__: Sofort-Abruf beendet: 72 Reihen, 0 mit Problemen
+```
+
+Der Worker rechnet danach die Scores einmal neu (neue Programmversion von `fever/config.py`, rund 15 s); die Werte bleiben gleich (geprüft in der Entwicklungsumgebung: alle 9281 Tage identisch). Mit der Top-10-Konzentration ändert sich die Fallhöhe wie unter E-71 beschrieben.
 
 **Update auf Breite und Top-10 (E-68, E-71, ohne Migration):** `compose.dockge.yaml` hat eine neue Zeile (`FEVER_SEC_CONTACT` für den Worker): die Kopie in Dockge aktualisieren (Schritt 7.2) und in der `.env` des Stacks `FEVER_SEC_CONTACT=<Name> <E-Mail>` ergänzen (Schritt 7.3). Nach dem Start den Sofort-Abruf ausführen (Schritt 7, lädt die 11 neuen Reihen, mit BAA10Y aus E-75); der Worker rechnet die Scores danach von selbst neu, weil sich `series.toml` geändert hat. Stress und Ampel ändern sich dabei auch rückwirkend (Block Breite, Top-10 in der Fallhöhe). Steht die Datenbank noch auf 0002, gilt zusätzlich der Ablauf mit Migration unten. ⏳ TrueNAS.
 
@@ -357,7 +386,19 @@ Den Ordner `alt-…` erst löschen, wenn wieder alles korrekt läuft. Zeigt `ale
 | Rotes Banner „Worker ohne Lebenszeichen“ | Der Worker schreibt seit über 45 Minuten keinen Heartbeat: Worker-Log und Healthcheck prüfen |
 | Rotes Banner „Keine Verbindung zum Server“ | Der Browser erreicht den Dienst `web` nicht mehr; die angezeigten Werte stammen von der genannten Uhrzeit |
 | `$RUN …` meldet `ImportError` mit Pfad `/usr/lib/python3/dist-packages` | Die Variable `RUN` ist in dieser Shell leer (etwa nach neuem Anmelden); der Befehl lief ohne Container mit dem Python von TrueNAS und brach beim Import ab, ohne etwas zu ändern. `RUN` neu setzen (Schritt 6), mit `echo "$RUN"` prüfen, Befehl wiederholen |
+| Datenstand oder Worker-Log: „FEVER_SEC_CONTACT kommt nicht im Container an …“ | Die `compose.yaml` in Dockge ist älter als `compose.dockge.yaml`: beim Worker fehlt die Zeile `FEVER_SEC_CONTACT: ${FEVER_SEC_CONTACT:-}`. `compose.yaml` ersetzen (Schritt 7.2), „Deploy“, Prüfbefehl unten |
+| „FEVER_SEC_CONTACT ist im Container leer …“ | Der Wert fehlt in der `.env` des Dockge-Stacks (die `.env` im Projektordner liest der Stack nicht), oder der Stack wurde danach nur neu gestartet: eintragen, „Deploy“ |
+| „FEVER_SEC_CONTACT enthält keine E-Mail-Adresse …“ | Schreibweise `FEVER_SEC_CONTACT=Vorname Nachname name@beispiel.de` |
 | Log-Zeile „Scoring fehlgeschlagen“ | Die Abrufe laufen weiter; der Fehler steht unter `scoring` im Datenstand. Mit `sudo docker exec finanz-dashboard-worker-1 python -m fever.score` wiederholen und die Ausgabe melden |
+
+SEC-Kontakt prüfen, ohne den Wert anzuzeigen (✅ Entwicklungsumgebung 28.09.2026 im gebauten Image: fehlend, leer und gesetzt; ⏳ TrueNAS):
+
+```bash
+sudo docker exec finanz-dashboard-worker-1 python -c "import os; from fever.sources.sec import contact_problem; print(contact_problem(os.environ.get('FEVER_SEC_CONTACT')) or 'SEC-Kontakt in Ordnung')"
+#   erwartet: SEC-Kontakt in Ordnung
+```
+
+Danach die Reihe sofort holen: Sofort-Abruf (Schritt 7). Der nächste planmäßige SEC-Abruf ist sonst erst am nächsten New-Yorker Werktag ab 18:00 New York.
 
 Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
 
@@ -380,3 +421,4 @@ Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
 | Dashboard-Log | `sudo docker logs -f finanz-dashboard-web-1` | ✅ Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
 | Dashboard-Health | `curl -s http://127.0.0.1:8003/health` (erwartet `{"status":"ok"}`) | ✅ Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
 | Scores sofort neu berechnen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.score` | ✅ TrueNAS und Entwicklungsumgebung 26.09.2026 |
+| SEC-Kontakt prüfen | Befehl in Abschnitt 11 (erwartet `SEC-Kontakt in Ordnung`) | ✅ Entwicklungsumgebung 28.09.2026, ⏳ TrueNAS |

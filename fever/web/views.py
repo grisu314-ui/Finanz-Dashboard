@@ -290,7 +290,7 @@ def _indicator_state(kennzahl_id, theme, now):
         state = html.Div(className="card", children=[html.H2("Aktueller Stand"), ui.note("Noch kein Wert berechnet.")])
         return state, [], db.history_start(series_ids)
     config = scoring_config()
-    retrieved = _retrieved(kennzahl_id, db.series_freshness())
+    retrieved = db.newest_retrieval(series_ids)
     state = html.Div(className="card card-wide", children=[
         html.H2("Aktueller Stand"),
         html.Div(_value(row["value"]), className="big number"),
@@ -310,7 +310,7 @@ def _retrieved(indicator_id: str, fresh: dict) -> datetime | None:
 def _indicator_charts(kennzahl_id, theme, row, retrieved) -> list:
     """Value and percentile over time on the Kennzahl page, both with the recession bars (E-56)."""
     indicator = indicator_catalog()[kennzahl_id]
-    history = db.indicator_history(kennzahl_id)
+    history = db.indicator_history(kennzahl_id, "status", "value", "percentile")
     shown = {"ok", "history"}
     days = [r["score_date"] for r in history]
     source = ", ".join(sorted({SOURCE_NAMES.get(s.source, s.source) for s in indicator.series}))
@@ -466,13 +466,17 @@ def _item(kennzahl_id: str, summary: list, charts: list, notes=()) -> html.Secti
     ])
 
 
-def _indicator_item(ctx: _Context, indicator_id: str, *, shaded=(), shaded_label="", percentile=False) -> html.Section:
+ITEM_COLUMNS = ("status", "value", "percentile", "percentile_display")  # what an indicator item draws
+
+
+def _indicator_item(ctx: _Context, indicator_id: str, *, shaded=(), shaded_label="", percentile=False,
+                    history: list[dict] | None = None) -> html.Section:
     row = ctx.rows.get(indicator_id)
     summary = _indicator_summary(indicator_id, row, ctx.fresh, ctx.now)
     if row is None:
         return _item(indicator_id, summary, [])
     indicator = indicator_catalog()[indicator_id]
-    history = db.indicator_history(indicator_id)
+    history = db.indicator_history(indicator_id, *ITEM_COLUMNS) if history is None else history
     days = [r["score_date"] for r in history]
     source = ", ".join(sorted({SOURCE_NAMES.get(s.source, s.source) for s in indicator.series}))
     title = texts.text(indicator_id).title
@@ -524,11 +528,12 @@ def _display_item(ctx: _Context, display_id: str, lines: list[Line], y_title: st
 
 
 def _view_signals(ctx: _Context) -> list:
-    ratio = db.indicator_history("vix_vix3m")
+    ratio = db.indicator_history("vix_vix3m", *ITEM_COLUMNS)
     backwardation = runs([r["score_date"] for r in ratio], [r["value"] is not None and r["value"] > 1 for r in ratio])
     return [
         _term_structure_item(ctx),
-        _indicator_item(ctx, "vix_vix3m", shaded=backwardation, shaded_label="Violett: Backwardation (VIX über VIX3M)"),
+        _indicator_item(ctx, "vix_vix3m", shaded=backwardation, shaded_label="Violett: Backwardation (VIX über VIX3M)",
+                        history=ratio),
         _indicator_item(ctx, "vix"),
         _indicator_item(ctx, "vrp"),
         _indicator_item(ctx, "vvix"),
@@ -543,17 +548,18 @@ def _term_structure_item(ctx: _Context) -> html.Section:
     """Today's curve: the VIX indices at their nominal horizon, VX futures at their days to expiry."""
     points, observed = [], []
     for series_id, (label, horizon) in INDEX_HORIZONS.items():
-        history = db.series_history(series_id)
-        if history:
-            points.append(CurvePoint(label, horizon, history[-1][1], "VIX-Indizes"))
-            observed.append(history[-1][0])
+        newest = db.newest_observation(series_id)
+        if newest:
+            points.append(CurvePoint(label, horizon, newest[1], "VIX-Indizes"))
+            observed.append(newest[0])
     futures_day = None
     for rank in range(1, 9):
-        price, days = db.series_history(f"cfe_vx{rank}"), dict(db.series_history(f"cfe_vx{rank}_days"))
-        if price and price[-1][0] in days:
-            futures_day = futures_day or price[-1][0]
-            if price[-1][0] == futures_day:
-                points.append(CurvePoint(f"VX{rank}", days[price[-1][0]], price[-1][1], "VX-Futures (Settlement)"))
+        price = db.newest_observation(f"cfe_vx{rank}")
+        days = db.value_on(f"cfe_vx{rank}_days", price[0]) if price else None
+        if days is not None:
+            futures_day = futures_day or price[0]
+            if price[0] == futures_day:
+                points.append(CurvePoint(f"VX{rank}", days, price[1], "VX-Futures (Settlement)"))
     retrieved = max((ctx.fresh[s]["retrieved_at"] for s in texts.DISPLAYS["vix_term"] if s in ctx.fresh), default=None)
     note = (f"Indizes Stand {fmt.day(max(observed)) if observed else '–'}, Futures Stand {fmt.day(futures_day)};"
             "<br>Indizes auf ihrer nominalen Frist")
@@ -596,12 +602,12 @@ def _view_macro(ctx: _Context) -> list:
             "ofr_fsi-categories", "OFR FSI: Beiträge der Kategorien", ofr_source,
             [_series_line(s, n) for s, n in OFR_CATEGORIES.items()], "Beitrag", recessions=ctx.recessions, zero_line=True,
             full_history=True,
-            end_labels=True, observed=_newest(OFR_CATEGORIES), retrieved=_retrieved_of(ctx, OFR_CATEGORIES)), ctx.theme),
+            end_labels=True, observed=_newest(ctx, OFR_CATEGORIES), retrieved=_retrieved_of(ctx, OFR_CATEGORIES)), ctx.theme),
         ui.chart_card("view-ofr_fsi-regions", Chart(
             "ofr_fsi-regions", "OFR FSI: Beiträge der Regionen", ofr_source,
             [_series_line(s, n) for s, n in OFR_REGIONS.items()], "Beitrag", recessions=ctx.recessions, zero_line=True,
             full_history=True,
-            end_labels=True, observed=_newest(OFR_REGIONS), retrieved=_retrieved_of(ctx, OFR_REGIONS)), ctx.theme),
+            end_labels=True, observed=_newest(ctx, OFR_REGIONS), retrieved=_retrieved_of(ctx, OFR_REGIONS)), ctx.theme),
     ]
     ice = "Lizenz ICE Data Indices: nur für dich selbst, nicht veröffentlichen oder weitergeben."
     return [
@@ -629,9 +635,8 @@ def _view_macro(ctx: _Context) -> list:
     ]
 
 
-def _newest(series: dict) -> date | None:
-    histories = [db.series_history(s) for s in series]
-    return max((history[-1][0] for history in histories if history), default=None)
+def _newest(ctx: _Context, series) -> date | None:
+    return max((ctx.fresh[s]["obs_date"] for s in series if s in ctx.fresh), default=None)
 
 
 def _retrieved_of(ctx: _Context, series) -> datetime | None:
@@ -727,8 +732,7 @@ def vis_heatmap(grain: str, theme: str, now: datetime) -> list:
     latest = db.latest_composite()
     if latest is None:
         return [ui.note("Noch keine Scores berechnet.")]
-    rows = db.percentile_matrix()
-    days = sorted({r["score_date"] for r in rows})
+    days = db.score_days()
     if grain == "daily":
         start = days[-1] - timedelta(days=730)
         columns = [d for d in days if d > start]
@@ -737,9 +741,7 @@ def vis_heatmap(grain: str, theme: str, now: datetime) -> list:
         for d in days:
             last_of_week[d.isocalendar()[:2]] = d
         columns = sorted(last_of_week.values())
-    wanted = set(columns)
-    values = {(r["indicator_id"], r["score_date"]): r["percentile"] for r in rows
-              if r["score_date"] in wanted and r["status"] == "ok"}
+    values = db.valid_percentiles(tuple(columns))
     indicators = _ordered_indicators()
     chart = Heatmap("heatmap", "Perzentile der Indikatoren", "eigene Berechnung (Scoring)",
                     [texts.text(i).title for i in indicators], columns,
@@ -757,7 +759,7 @@ def vis_bands(indicator_id: str | None, theme: str, now: datetime) -> list:
     row = db.indicator_scores_on(latest["score_date"]).get(indicator_id) if latest else None
     if row is None:
         return [ui.note("Noch kein berechneter Wert.")]
-    history = db.indicator_history(indicator_id)
+    history = db.indicator_history(indicator_id, "status", "value", "band_p10", "band_p50", "band_p90")
     days = [r["score_date"] for r in history]
     indicator = indicator_catalog()[indicator_id]
     source = ", ".join(sorted({SOURCE_NAMES.get(s.source, s.source) for s in indicator.series}))
@@ -765,7 +767,7 @@ def vis_bands(indicator_id: str | None, theme: str, now: datetime) -> list:
     chart = Chart(f"bands-{indicator_id}", f"{texts.text(indicator_id).title}: Wert und Perzentilband", source,
                   [Line("Wert", days, [r["value"] if r["status"] in ("ok", "history") else None for r in history],
                         hover_decimals=None, shape="hv")],
-                  "Wert", observed=row["obs_date"], retrieved=_retrieved(indicator_id, db.series_freshness()),
+                  "Wert", observed=row["obs_date"], retrieved=db.newest_retrieval([s.id for s in indicator.series]),
                   recessions=db.recessions(), band=band, full_history=True)
     return [ui.chart_card("vis-bands-chart", chart, theme)]
 
@@ -778,10 +780,10 @@ def vis_sparklines(theme: str, now: datetime) -> list:
     rows = db.indicator_scores_on(latest["score_date"])
     fresh = db.series_freshness()
     config = scoring_config()
-    start = latest["score_date"] - timedelta(days=SPARK_DAYS)
+    histories = db.indicator_values_since(latest["score_date"] - timedelta(days=SPARK_DAYS))
     cards = []
     for indicator_id in _ordered_indicators():
-        history = [r for r in db.indicator_history(indicator_id) if r["score_date"] > start]
+        history = histories.get(indicator_id, [])
         row = rows.get(indicator_id)
         figure, graph = sparkline([r["score_date"] for r in history],
                                   [r["value"] if r["status"] in ("ok", "history") else None for r in history], theme)

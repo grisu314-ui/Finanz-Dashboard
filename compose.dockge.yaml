@@ -47,9 +47,11 @@ services:
 
   web:
     <<: *service
-    # One process (E-54) with a few threads; the web only reads (PRAGMA query_only). The data
+    # One process (E-54) with one thread (E-77): parallel callbacks in threads slowed each other down
+    # (GIL), one after the other they finish sooner. The web only reads (PRAGMA query_only). The data
     # directory stays writable: SQLite readers in WAL mode need the -shm file.
-    command: ["gunicorn", "--workers", "1", "--threads", "4", "--timeout", "60", "--bind", "0.0.0.0:8050", "fever.web.app:server"]
+    command: ["gunicorn", "--workers", "1", "--worker-class", "gthread", "--threads", "1", "--timeout", "60",
+              "--bind", "0.0.0.0:8050", "fever.web.app:server"]
     environment:
       FEVER_DATA: /data
     ports:
