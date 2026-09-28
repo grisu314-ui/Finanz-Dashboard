@@ -305,6 +305,22 @@ lag_days = 5
 tolerance_days = 3
 bounds = [10000, 50000000]
 
+# --- FRED: Moody's Baa corporate yield minus 10-year Treasury (O-5, E-75): long credit spread in the
+# --- score and the red rule until the ICE spreads have five years. FRED updates it around 17:05
+# --- New York on the day after the observation (checked 28.09.2026). FRED status: citation required.
+
+[series.baa10y]
+source = "fred"
+source_id = "BAA10Y"
+name = "Moody's Seasoned Baa Corporate Bond Yield minus 10-Year Treasury"
+unit = "Prozentpunkte"
+frequency = "daily"
+release_time = "17:15"
+lag_days = 1
+tolerance_days = 3
+bounds = [-5, 25]
+license = "Moody's (Copyright, über FRED): nur private Nutzung, keine Weitergabe, Quellenangabe"
+
 # --- FRED: equity index (only ten years on FRED, S&P licence). Used for VRP and the
 # --- stock-bond correlation until O-1 is decided.
 
@@ -934,7 +950,7 @@ license = "SEC EDGAR: öffentliche Meldung einer US-Behörde, ohne Genehmigung v
 #   name         display text
 #   series       input series ids, in the order the transformation expects
 #   transform    level | ratio | difference | vrp | stock_bond_corr | above_low | fx_change | fx_vol
-#                | yoy | cot_net_short (definitions in fever/scoring/transforms.py; windows in
+#                | yoy | cot_net_short | relative_change | change (definitions in fever/scoring/transforms.py; windows in
 #                scoring.toml [transforms])
 #   orientation  "high" or "low": which end of the indicator means more stress or vulnerability
 #   block        volatility | credit | macro | breadth | positioning (stress) or vulnerability
@@ -1007,6 +1023,22 @@ transform = "level"
 orientation = "high"
 block = "credit"
 v_score = 2
+
+[indicator.credit_spread_level]
+name = "Kreditspread Baa (Niveau)"
+series = ["baa10y"]
+transform = "level"
+orientation = "high"
+block = "credit"
+v_score = 3
+
+[indicator.credit_spread_change]
+name = "Kreditspread Baa: Anstieg"
+series = ["baa10y"]
+transform = "change"
+orientation = "high"
+block = "credit"
+v_score = 3
 
 [indicator.nfci]
 name = "NFCI"

@@ -220,6 +220,21 @@ def test_vix_ratio_rule_needs_three_days_above_and_three_below():
     assert fired == [False, False, False, False, False, True, True, True, True, True, True, False]
 
 
+def test_credit_rule_fires_on_the_threshold_and_ends_five_points_below():
+    steps = [(None, None, None, None, c) for c in (94.999, 95.0, 90.0, 89.999, None)]
+    result = run_rules(steps)
+    assert ["red_credit_change" in active for active in result] == [False, True, True, False, False]
+    assert run_rules([(None, None, None, None, None)])[0] == ()  # no valid percentile: rule off
+
+
+def test_credit_rule_reads_the_percentile_of_the_credit_spread_change():
+    day = date(2026, 9, 25)
+    histories = [fixed("vix", [day], 10), fixed("nfci", [day], 10), fixed("ebp", [day], 10),
+                 fixed("credit_spread_change", [day], 96)]
+    _, rows = compute([day], histories, CONFIG)
+    assert rows[0].level == composite.RED and rows[0].active_rules == ("red_credit_change",)
+
+
 def test_level_is_the_highest_active_rule():
     day = date(2026, 9, 25)
     # three blocks at 95 -> stress 95 -> red; diffusion 100 -> yellow as well
@@ -241,7 +256,7 @@ def synthetic_raw(end):
         ("sofr", date(2008, 1, 1), 1, 2.0), ("iorb", date(2008, 1, 1), 1, 2.0),
         ("shiller_ecy", date(2008, 1, 1), 0, 0.03), ("bogz1fl663067003q", date(2008, 1, 1), -1, 500.0),
         ("nasdaqnqus500lce", date(2008, 1, 1), 1, 1000.0), ("nasdaqnqus500lc", date(2008, 1, 1), 1, 1000.0),
-        ("sec_spy_top10", date(2008, 1, 1), -1, 25.0),
+        ("sec_spy_top10", date(2008, 1, 1), -1, 25.0), ("baa10y", date(2008, 1, 1), 1, 2.5),
     ]:
         if step == 0:  # monthly on the first
             index = pd.date_range(start, end, freq="MS").date
@@ -257,7 +272,7 @@ def synthetic_raw(end):
 
 
 LOOKAHEAD_INDICATORS = ["vix", "vix_vix3m", "vvix", "vrp", "stock_bond_corr", "nfci", "ebp", "sofr_iorb", "ecy", "margin_yoy",
-                        "breadth_equal_weight", "top10_concentration"]
+                        "breadth_equal_weight", "top10_concentration", "credit_spread_level", "credit_spread_change"]
 
 
 def test_result_for_t_is_identical_with_and_without_later_observations():
@@ -355,6 +370,15 @@ def test_breadth_and_concentration_indicators_are_configured_as_decided():
     top10 = INDICATORS["top10_concentration"]
     assert (top10.block, top10.orientation, top10.v_score, top10.frequency) == ("vulnerability", "high", 1, "quarterly")
     assert CONFIG.relative_change_window == 63
+
+
+def test_change_over_the_window_by_hand():
+    config = replace(CONFIG, change_window=2)
+    spread = series([2.0, 2.5, 3.1, 2.9])
+    assert list(indicator_values(INDICATORS["credit_spread_change"], [spread], config)) == pytest.approx([1.1, 0.4])
+    level = INDICATORS["credit_spread_level"]
+    assert (level.block, level.orientation, level.v_score, INDICATORS["credit_spread_change"].v_score) == ("credit", "high", 3, 3)
+    assert CONFIG.change_window == 20 and CONFIG.red_credit_change == 95  # E-75, report 4.3
 
 
 def test_display_window_percentile_for_cot():

@@ -109,7 +109,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 28.09.2026 | E-72 | Anteil über der 50/200-Tage-Linie (O-1) | Weglassen; bleibt sichtbarer Platzhalter | Keine freie, speicherbare Quelle (Befunde unter „O-1: Recherche“); kein Branchen-Behelf |
 | 28.09.2026 | E-73 | Zykliker/Defensive (E-68) | `NASDAQNQUSB40`/`NASDAQNQUSB45` (Nicht-Basiskonsum gegen Basiskonsum) wie XLY/XLP im Bericht | Historie ab 22.09.2020: Mindesthistorie erfüllt, Fenster anfangs rund 6 statt 10 Jahre |
 | 28.09.2026 | E-74 | Festlegungen für Breite und Top-10 (E-68, E-71) | Relative Stärke = Log-Veränderung des Verhältnisses über 63 Handelstage (`scoring.toml`), Orientierung „niedrig = mehr Stress“ (Bericht 4.3); alle fünf Verhältnisse zählen im Block Breite, V = 3 für gleich- gegen kapitalgewichtet (Bericht, Tabelle 2), V = 2 für die übrigen vier; Top-10 je Emittent (Aktiengattungen mit demselben LEI zusammen), V = 1; Kontakt für den SEC-User-Agent als nicht geheime Variable in der `.env` des Stacks, ohne sie kein SEC-Abruf und eine Meldung im Datenstand | Umsetzung erst nach Freigabe des Plans |
-| 28.09.2026 | E-75 | Kreditspread bis HY-OAS 5 Jahre Historie hat (O-5) | FRED `BAA10Y` (Moody's Baa minus 10J-Treasury, täglich ab 02.01.1986, FRED-Status „Copyrighted: Citation required“) als Ersatz im Kreditblock und für die Rot-Regel; HY-OAS bleibt Anzeige. Zwei Indikatoren: Niveau und Veränderung über 20 Handelstage (Bericht 4.3, Schritt 1); die Rot-Regel nutzt das Perzentil der Veränderung (Schwelle aus Bericht 4.3, Schritt 5) | Umsetzung erst nach Plan und Freigabe |
+| 28.09.2026 | E-75 | Kreditspread bis HY-OAS 5 Jahre Historie hat (O-5) | FRED `BAA10Y` (Moody's Baa minus 10J-Treasury, täglich ab 02.01.1986, FRED-Status „Copyrighted: Citation required“) als Ersatz im Kreditblock und für die Rot-Regel; HY-OAS bleibt Anzeige. Zwei Indikatoren: Niveau und Veränderung über 20 Handelstage (Bericht 4.3, Schritt 1); die Rot-Regel nutzt das Perzentil der Veränderung (Schwelle aus Bericht 4.3, Schritt 5). Lizenz: Moody's untersagt laut FRED-Hinweis Kopieren und Speichern ohne Zustimmung; der Nutzer lässt BAA10Y wie die ICE-Reihen nur privat nutzen | Umgesetzt 28.09.2026 (Ergebnis unter W-4). V = 3 für beide Indikatoren wie HY-OAS im Bericht (Tabelle 2) |
 
 ---
 
@@ -885,7 +885,7 @@ Nichts davon wird geraten. Die Vorschläge sind begründete Startpunkte, keine E
 | W-1 | Der Nutzerwunsch nennt drei Farben (Grün, Gelb, Rot), die Ampel des Berichts hat vier Stufen (mit Orange) | Vier Stufen bleiben; die Erklärseite „Ampel“ erklärt alle vier |
 | W-2 | VX-COT-Fenster 3 Jahre (6.3) vs. 10 Jahre (4.3) | L-9 |
 | W-3 | Bericht 4.3, Schritt 4 nennt Fallhöhe-Komponenten, die in Phase 1 größtenteils fehlen | L-11 |
-| W-4 | Die Rot-Regel „HY-OAS-Anstieg über 20 Tage ≥ 95. Perzentil“ braucht HY-OAS im Score; O-5 schließt das bis zur Entscheidung aus | Regel ist inaktiv und in der Oberfläche als inaktiv markiert, bis O-5 entschieden ist |
+| W-4 | Die Rot-Regel „HY-OAS-Anstieg über 20 Tage ≥ 95. Perzentil“ braucht HY-OAS im Score; O-5 schließt das bis zur Entscheidung aus | Bis 28.09.2026 inaktiv. Seit E-75 aktiv mit BAA10Y statt HY-OAS: Perzentil der 20-Tage-Veränderung ≥ `red_credit_change`. Messung (Entwicklungsdatenbank, 25.09.2026): Kreditblock 69,8 → 5,1 (Baa-Spread 1,39 Prozentpunkte, Perzentil 0,2), Stress 42,8 → 36,6, Ampel bleibt Gelb; rückwirkend 716 von 9281 Tagen mit anderer Ampel, Kredit-Regel an 568 Tagen aktiv, u. a. Tief 1998 Gelb → Rot, Beginn 2000 Orange → Rot, Tief 2011 Grün → Gelb |
 | W-5 | `CLAUDE.md`: Fehler „werden geloggt, nicht gespeichert, und erscheinen im Datenstand“. Die Web-Oberfläche kann Worker-Logs nicht lesen | Entschieden (E-9): Fehlerhafte Werte werden nie gespeichert. Der letzte Fehler je Quelle (Zeit und Meldung) steht in `source_status`, ohne Historie |
 | W-6 | Bericht 6.3, Ansicht 2 nennt MOVE (ICE-Lizenz, nicht in Phase 1) und VIX6M (nicht in Tabelle 6.1) | MOVE entfällt in Phase 1; VIX6M als Rohreihe in M2 Teil B (E-20), VX-Futures in M4 (E-18) |
 | W-7 | Der Migrationsablauf in `CLAUDE.md` (stop → Backup → upgrade → up) gilt „auch bei der Ersteinrichtung“; dann gibt es aber nichts zu stoppen oder zu sichern | Die Einrichtungsanleitung lässt Stop und Backup bei der Ersteinrichtung aus; `fever.backup` meldet eine fehlende Datenbank klar |
@@ -977,14 +977,15 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 - **Stand (28.09.2026):**
   - M0 bis M2 erledigt, M3 umgesetzt: Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-74; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026.
+  - Entscheidungen bis E-75; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026.
   - M7 vollständig umgesetzt: Rezessionsbalken (E-56, 61 Reihen), Übersicht nach Bericht 6.3 als Startseite und Ansichten 2–7 (E-67), Perzentilbänder mit Migration 0003. Auf TrueNAS läuft das M7-Image seit 27.09.2026 **ohne Migration 0003**: Scoring scheitert seitdem mit „table indicator_score has no column named band_p10“ (der Migrationsversuch lief mit leerem `$RUN`).
   - Neu (E-70): Worker, `fever.score` und `fever.sources.update` starten nicht auf einer Datenbank ohne die neueste Migration; Dashboard-Banner „Migration fehlt“, `/health` 503. 399 Tests grün.
+  - O-5 entschieden und umgesetzt (E-75): BAA10Y als Kreditspread (Niveau und 20-Tage-Anstieg) und Rot-Regel aktiv; 72 Reihen, 27 Indikatoren, 424 Tests grün.
   - O-1 entschieden und umgesetzt (E-68, E-71 bis E-74): Block Breite mit fünf Nasdaq-Verhältnissen, Top-10-Konzentration aus SEC N-PORT in der Fallhöhe, kein Anteil über der 50/200-Tage-Linie; 71 Reihen, 25 Indikatoren, 421 Tests grün. Wirkung und Befund 2022 unter „O-1: Recherche“, Umsetzung. Noch nicht auf TrueNAS. Befund W-11 zu den FRED-Bedingungen, Zustimmung wird angefragt (E-69, O-7).
 - **Nächster Schritt:**
   1. TrueNAS: `git pull`, `sudo docker compose build`, dann `docs/einrichtung.md`, Abschnitt 9 ab „Stack stoppen“ (Backup, `alembic upgrade head` auf 0003, Stack starten, `python -m fever.score`), danach Sofort-Abruf (61 Reihen).
   2. Nutzer schickt die Anfrage an die St. Louis Fed (O-7); Entwurf im Chat vom 28.09.2026.
-  3. Nach dem Update: `FEVER_SEC_CONTACT` in die `.env` des Stacks, Compose-Kopie in Dockge aktualisieren, Sofort-Abruf (71 Reihen) und Ampel prüfen (`docs/einrichtung.md`, Abschnitt 9).
+  3. Nach dem Update: `FEVER_SEC_CONTACT` in die `.env` des Stacks, Compose-Kopie in Dockge aktualisieren, Sofort-Abruf (72 Reihen) und Ampel prüfen (`docs/einrichtung.md`, Abschnitt 9).
   4. Nutzer prüft die Texte: sechs aus E-52, `recessions.md`, die 22 aus E-58 und die 9 aus M7 (M8), dazu die Krisendaten in `config/episodes.toml`.
   5. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9; M3 selbst ☑ seit 28.09.2026).
   6. Danach M8 (Prüfung der Texte) und M9 (Abnahme Phase 1).
@@ -993,7 +994,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`. Am 28.09.2026 zusätzlich erreichbar: `fred.stlouisfed.org` (CSV ohne Schlüssel), `www.ssga.com`, `www.sec.gov`, `data.sec.gov`, `indexes.nasdaq.com`; `archive.org` antwortete mit 429. Für SEC-Probeabrufe in der Cloud nur einen Platzhalterkontakt (`…@example.org`) setzen, nie die Adresse des Nutzers.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** O-5, O-6, O-7 (`CLAUDE.md`).
+- **Offene Entscheidungen des Nutzers:** O-6, O-7 (`CLAUDE.md`); technische Schulden (unten) auf Nachfrage einzeln.
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---

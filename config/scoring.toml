@@ -16,6 +16,7 @@ low_window = 52            # above_low: weekly initial claims against their 52-w
 fx_change_window = 5       # fx_change: 5 ECB fixing days
 fx_vol_window = 21         # fx_vol
 relative_change_window = 63  # relative_change: strength of one index against another (E-74)
+change_window = 20         # change: 20-day change of the credit spread BAA10Y (report 4.3 step 1, E-75)
 
 [composite]
 min_blocks = 3             # stress composite = mean of the available blocks, at least this many (E-47, L-4)
@@ -38,5 +39,4 @@ yellow_vulnerability = 80  # report: "at stress < 75"; above that the orange rul
 yellow_diffusion_share = 40             # percent of the valid stress indicators ...
 yellow_diffusion_percentile = 80        # ... above this percentile
 hysteresis = 5             # a rule ends only this many points below its threshold (E-48, L-7)
-# The red rule "HY-OAS rise over 20 days >= 95th percentile" is inactive until O-5 is decided
-# (three years of history); the interface shows it as inactive (M6/M7).
+red_credit_change = 95     # red: percentile of the 20-day change of BAA10Y, standing in for the HY-OAS rise (E-75)

@@ -99,6 +99,12 @@ def _cot_net_short(inputs, config):
     return (short - long) / open_interest.where(open_interest > 0)
 
 
+def _change(inputs, config):
+    """Change of the value over `change_window` observations (e.g. a credit spread in percentage points)."""
+    series = inputs[0]
+    return series - series.shift(config.change_window)
+
+
 def _relative_change(inputs, config):
     """Relative strength: log change of the ratio first / second over `relative_change_window`
     observations, counted on the days with both values (E-74)."""
@@ -131,4 +137,5 @@ _TRANSFORMS = {
     "yoy": _yoy,
     "cot_net_short": _cot_net_short,
     "relative_change": _relative_change,
+    "change": _change,
 }

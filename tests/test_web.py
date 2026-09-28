@@ -139,7 +139,7 @@ def test_every_displayed_kennzahl_has_a_text(data):
 def test_generated_sections_come_from_the_configuration():
     lines = texts.thresholds("traffic_light")
     assert any(line.startswith("Rot: Stress mindestens 90") for line in lines)
-    assert any("inaktiv" in line for line in lines)
+    assert any("Kreditspreads Baa" in line and "mindestens 95" in line for line in lines)  # E-75: the credit rule is active
     facts = dict(texts.steckbrief("vix_vix3m"))
     assert facts["Orientierung"] == "hoch = mehr Stress" and facts["Frequenz"] == "täglich"
 

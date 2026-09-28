@@ -36,7 +36,7 @@ HISTORY_NOTE = ("Verläufe: Je Beobachtung zählt der neueste veröffentlichte S
 PLACEHOLDERS = [
     "Nicht enthalten: Block Positionierung/Sentiment (erst Phase 2) und im Block Breite der Anteil der Aktien über "
     "ihrer 50- bzw. 200-Tage-Linie (keine freie Quelle, E-72).",
-    "Rot-Regel über den Anstieg des HY-OAS: inaktiv, bis O-5 entschieden ist.",
+    "Kreditspread im Score und in der Rot-Regel: Moody's Baa statt HY-OAS, bis die ICE-Reihen fünf Jahre Historie haben (E-75).",
 ]
 
 
@@ -612,6 +612,8 @@ def _view_macro(ctx: _Context) -> list:
         _display_item(ctx, "ofr_fsi", [_series_line("ofr_fsi", "OFR FSI")], "Index", source=ofr_source, zero_line=True,
                       extra_charts=ofr_charts),
         _indicator_item(ctx, "ciss"),
+        _indicator_item(ctx, "credit_spread_level"),
+        _indicator_item(ctx, "credit_spread_change", percentile=True),
         _display_item(ctx, "hy_oas", [_series_line("bamlh0a0hym2", "HY-OAS")], "Prozentpunkte",
                       source="ICE Data Indices (über FRED)", notes=[ice]),
         _display_item(ctx, "ccc_bb", [Line("CCC − BB", [d for d, _ in ccc_bb], [v for _, v in ccc_bb], hover_decimals=None)],

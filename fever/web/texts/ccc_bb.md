@@ -14,7 +14,7 @@ Der Bericht nennt die CCC-minus-BB-Differenz ausdrücklich neben dem HY-OAS (doc
 - Zusammen mit dem HY-OAS lesen: Steigt nur CCC − BB, ist der Stress noch auf die Schwächsten begrenzt.
 
 ## Grenzen und Fallstricke
-- Wie beim HY-OAS: nur drei Jahre Historie auf FRED, deshalb nur Anzeige (offener Punkt O-5 in CLAUDE.md).
+- Wie beim HY-OAS: nur drei Jahre Historie auf FRED, deshalb nur Anzeige (Entscheidung E-75).
 - Die CCC-Klasse ist klein und schwankt stark; einzelne große Emittenten können sie verschieben (Einschätzung).
 - Lizenz: ICE Data Indices untersagt die Wiedergabe ohne schriftliche Zustimmung; nur für dich selbst verwenden.
 

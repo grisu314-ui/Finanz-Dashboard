@@ -25,6 +25,7 @@ EXPECTED_IDS = {
     # breadth (E-68, E-73) and top-10 concentration (E-71)
     "nasdaqnqus500lc", "nasdaqnqus500lce", "nasdaqnquss", "nasdaqnqusl", "nasdaqnqusb", "nasdaqsox", "nasdaqabaq",
     "nasdaqnqusb40", "nasdaqnqusb45", "sec_spy_top10",
+    "baa10y",  # credit spread until HY-OAS has five years (E-75)
 }
 
 VALID = """

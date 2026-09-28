@@ -26,8 +26,9 @@ from fever.release import NEW_YORK, is_stale
 OK, MISSING, STALE, HISTORY = "ok", "missing", "stale", "history"
 GREEN, YELLOW, ORANGE, RED = 0, 1, 2, 3
 VIX_RATIO_INDICATOR = "vix_vix3m"  # the red rule "VIX/VIX3M > 1 on 3 days in a row" reads this one
+CREDIT_CHANGE_INDICATOR = "credit_spread_change"  # the red rule on the credit spread rise reads its percentile (E-75)
 _RULE_LEVEL = {
-    "red_stress": RED, "red_vix_ratio": RED,
+    "red_stress": RED, "red_vix_ratio": RED, "red_credit_change": RED,
     "orange_stress": ORANGE, "orange_stress_vulnerability": ORANGE,
     "yellow_vulnerability": YELLOW, "yellow_diffusion": YELLOW,
 }
@@ -142,7 +143,8 @@ def compute(
         ratio = next(
             (score.value for score in ok if score.indicator_id == VIX_RATIO_INDICATOR and score.obs_date == day), None
         )
-        active = rules.update(stress, vulnerability, diffusion, ratio)
+        credit = next((score.percentile for score in ok if score.indicator_id == CREDIT_CHANGE_INDICATOR), None)
+        active = rules.update(stress, vulnerability, diffusion, ratio, credit)
         level = max((_RULE_LEVEL[rule] for rule in active), default=GREEN)
         composite_rows.append(CompositeScore(
             day, blocks, fast, stress_raw, stress, vulnerability_raw, vulnerability,
@@ -159,12 +161,14 @@ class _Rules:
         self.active: dict[str, bool] = dict.fromkeys(_RULE_LEVEL, False)
         self.days_above = self.days_below = 0
 
-    def update(self, stress, vulnerability, diffusion, ratio) -> tuple[str, ...]:
+    def update(self, stress, vulnerability, diffusion, ratio, credit=None) -> tuple[str, ...]:
+        """`credit`: oriented percentile of the credit spread change (report 4.3 step 5, E-75)."""
         c = self.config
         previous = self.active
         now = {
             "red_stress": self._threshold(previous["red_stress"], stress, c.red_stress),
             "red_vix_ratio": self._vix_ratio(previous["red_vix_ratio"], ratio),
+            "red_credit_change": self._threshold(previous["red_credit_change"], credit, c.red_credit_change),
             "orange_stress": self._threshold(previous["orange_stress"], stress, c.orange_stress),
             "orange_stress_vulnerability": (
                 self._threshold(previous["orange_stress_vulnerability"], stress, c.orange_stress_with_vulnerability)

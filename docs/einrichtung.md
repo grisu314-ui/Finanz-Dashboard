@@ -195,7 +195,7 @@ Prüfen:
 
 ```bash
 sudo docker logs --tail 20 finanz-dashboard-worker-1
-#   erwartet u. a.: INFO __main__: Worker gestartet: 71 Reihen in 43 Abrufgruppen, Takt 15 Minuten
+#   erwartet u. a.: INFO __main__: Worker gestartet: 72 Reihen in 44 Abrufgruppen, Takt 15 Minuten
 #                   INFO __main__: Tägliches Backup erstellt und geprüft: fever-…-daily.sqlite3
 sudo docker exec finanz-dashboard-worker-1 python -c "import sys; from fever.worker import healthcheck; sys.exit(healthcheck())"
 #   erwartet: gesund: letzter Heartbeat vor 0 Minuten
@@ -210,13 +210,13 @@ Dockge zeigt den Worker nach spätestens rund 5 Minuten als „healthy“; vorhe
 ```bash
 sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
 #   erwartet je Reihe eine Zeile, z. B.: INFO __main__: ecb_ciss: 12199 neue Zeilen (Erstabruf)
-#   am Ende: INFO __main__: Sofort-Abruf beendet: 71 Reihen, 0 mit Problemen   (Exit-Code 0)
+#   am Ende: INFO __main__: Sofort-Abruf beendet: 72 Reihen, 0 mit Problemen   (Exit-Code 0)
 #   der erste Abruf der SEC (sec_spy_top10) lädt 28 Meldungen, rund 13 MB, etwa 10 Sekunden
 #   der erste Abruf der VX-Futures (Gruppe cfe_vx) lädt rund 175 Dateien und dauert etwa 3 Minuten
 #   ein zweiter Lauf meldet je Reihe "0 neue Zeilen"
 ```
 
-✅ 26.09.2026, TrueNAS nach den Updates auf M4b (41 Reihen) und M4c (44 Reihen), jeweils 0 mit Problemen. Mit M4d (60 Reihen): ✅ TrueNAS 26.09.2026 („60 Reihen, 0 mit Problemen“); ✅ Entwicklungsumgebung (Worker-Startzeile ebenfalls; Shiller dort nur mit Proxy-Abbrüchen der Cloud-Umgebung). Mit der Rezessionsreihe `usrec` (61 Reihen, 33 Abrufgruppen): ✅ Entwicklungsumgebung 26.09.2026 (Zählung aus Katalog und Abrufgruppen, Abruf von `USREC`); ⏳ TrueNAS. Mit den Nasdaq-Reihen und der SEC-Reihe (71 Reihen, 43 Abrufgruppen, E-68, E-71): ✅ Entwicklungsumgebung 28.09.2026 („71 Reihen, 2 mit Problemen“: nur die zwei Shiller-Reihen, Proxy-Abbruch der Cloud-Umgebung; 9 Nasdaq-Reihen mit 1569 bis 5424 Zeilen, `sec_spy_top10` mit 28 Zeilen); ⏳ TrueNAS. Meldet es „mit Problemen“ (Exit-Code 1), nennen die `ERROR`-Zeilen darüber Reihe und Grund.
+✅ 26.09.2026, TrueNAS nach den Updates auf M4b (41 Reihen) und M4c (44 Reihen), jeweils 0 mit Problemen. Mit M4d (60 Reihen): ✅ TrueNAS 26.09.2026 („60 Reihen, 0 mit Problemen“); ✅ Entwicklungsumgebung (Worker-Startzeile ebenfalls; Shiller dort nur mit Proxy-Abbrüchen der Cloud-Umgebung). Mit der Rezessionsreihe `usrec` (61 Reihen, 33 Abrufgruppen): ✅ Entwicklungsumgebung 26.09.2026 (Zählung aus Katalog und Abrufgruppen, Abruf von `USREC`); ⏳ TrueNAS. Mit den Nasdaq-Reihen und der SEC-Reihe (71 Reihen, 43 Abrufgruppen, E-68, E-71): ✅ Entwicklungsumgebung 28.09.2026 („71 Reihen, 2 mit Problemen“: nur die zwei Shiller-Reihen, Proxy-Abbruch der Cloud-Umgebung; 9 Nasdaq-Reihen mit 1569 bis 5424 Zeilen, `sec_spy_top10` mit 28 Zeilen). Mit `baa10y` (72 Reihen, 44 Abrufgruppen, E-75): ✅ Entwicklungsumgebung 28.09.2026 (10183 Zeilen ab 02.01.1986); ⏳ TrueNAS. Meldet es „mit Problemen“ (Exit-Code 1), nennen die `ERROR`-Zeilen darüber Reihe und Grund.
 
 ## 8. Dashboard aufrufen
 
@@ -242,7 +242,7 @@ Dockge zeigt `web` nach rund einer Minute als „healthy“.
 
 ✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ⏳ TrueNAS. Prüfung der Migration beim Start (E-70): ✅ Entwicklungsumgebung 28.09.2026 mit dem gebauten Image auf einer Datenbank mit Stand 0002 (Worker und `fever.score` melden „Migration fehlt“ und starten nicht, `/health` 503, Banner im Browser; `fever.backup` läuft; nach `alembic upgrade head` normaler Start); ⏳ TrueNAS.
 
-**Update auf Breite und Top-10 (E-68, E-71, ohne Migration):** `compose.dockge.yaml` hat eine neue Zeile (`FEVER_SEC_CONTACT` für den Worker): die Kopie in Dockge aktualisieren (Schritt 7.2) und in der `.env` des Stacks `FEVER_SEC_CONTACT=<Name> <E-Mail>` ergänzen (Schritt 7.3). Nach dem Start den Sofort-Abruf ausführen (Schritt 7, lädt die 10 neuen Reihen); der Worker rechnet die Scores danach von selbst neu, weil sich `series.toml` geändert hat. Stress und Ampel ändern sich dabei auch rückwirkend (Block Breite, Top-10 in der Fallhöhe). Steht die Datenbank noch auf 0002, gilt zusätzlich der Ablauf mit Migration unten. ⏳ TrueNAS.
+**Update auf Breite und Top-10 (E-68, E-71, ohne Migration):** `compose.dockge.yaml` hat eine neue Zeile (`FEVER_SEC_CONTACT` für den Worker): die Kopie in Dockge aktualisieren (Schritt 7.2) und in der `.env` des Stacks `FEVER_SEC_CONTACT=<Name> <E-Mail>` ergänzen (Schritt 7.3). Nach dem Start den Sofort-Abruf ausführen (Schritt 7, lädt die 11 neuen Reihen, mit BAA10Y aus E-75); der Worker rechnet die Scores danach von selbst neu, weil sich `series.toml` geändert hat. Stress und Ampel ändern sich dabei auch rückwirkend (Block Breite, Top-10 in der Fallhöhe). Steht die Datenbank noch auf 0002, gilt zusätzlich der Ablauf mit Migration unten. ⏳ TrueNAS.
 
 **Update auf M7 (Migration 0003):** Das neue Dashboard liest die Spalten der Perzentilbänder. Der Stack darf deshalb erst nach `alembic upgrade head` wieder starten. Seit E-70 prüfen Worker und Dashboard die Migration beim Start: Fehlt sie, startet der Worker nicht, und das Dashboard zeigt das rote Banner „Migration fehlt“ (Fehlersuche, Abschnitt 11). Nach dem Start einmal `python -m fever.score` (unten), damit die Bänder sofort gefüllt sind.
 
