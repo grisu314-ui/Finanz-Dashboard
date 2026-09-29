@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 29.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92); M10 Validierung in der Entwicklungsumgebung umgesetzt (E-93); Fallhöhe-Streifen in der Regime-Zeitleiste (E-96); M11 Walk-forward-Test geschätzter Gewichte in der Entwicklungsumgebung umgesetzt (E-94); kein Gelb allein aus der Fallhöhe (E-95)** · Nächster Schritt: Update auf TrueNAS mit Migration 0004 (Abschnitt 9), danach M9 (Abnahme)
+Stand: 29.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92); M10 Validierung in der Entwicklungsumgebung umgesetzt (E-93); Fallhöhe-Streifen in der Regime-Zeitleiste (E-96); M11 Walk-forward-Test geschätzter Gewichte in der Entwicklungsumgebung umgesetzt (E-94), gleiche Gewichte bleiben (E-97); kein Gelb allein aus der Fallhöhe (E-95); Fallhöhe durchgängig lila (E-98); TrueNAS läuft vom Branch `claude-raramo` mit Migration 0004 (Nutzer)** · Nächster Schritt: Update auf TrueNAS ohne Migration (Abschnitt 9), danach M9 (Abnahme)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -23,12 +23,12 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ☑ 26.09.2026 (M4a bis M4d, E-37) | M3 | M4a bis M4d erteilt 26.09.2026 |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026) | M4, L-1 bis L-12 | erteilt 26.09.2026 |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026; Nachtrag Rezessionsbalken E-56 dort ⏳) | M1 (Lesen), M3 (Heartbeat) | erteilt 26.09.2026 |
-| M7 | Ansichten 1–7 | ☑ 27.09.2026: Übersicht (vormals Übersicht B) und Ansichten 2–6 (E-62, E-65, E-67), Perzentilbänder (E-64, Migration 0003) und Ansicht 7 (E-63, E-66); die Variante M7a ist wieder entfernt (E-67); auf TrueNAS ⏳; Ansicht Breite und Top-10-Konzentration mit Daten seit 28.09.2026 (E-68, E-71 bis E-74) | M5, M6, L-13 | M7a erteilt 26.09.2026, M7 erteilt 27.09.2026 |
+| M7 | Ansichten 1–7 | ☑ 27.09.2026: Übersicht (vormals Übersicht B) und Ansichten 2–6 (E-62, E-65, E-67), Perzentilbänder (E-64, Migration 0003) und Ansicht 7 (E-63, E-66); die Variante M7a ist wieder entfernt (E-67); auf TrueNAS eingespielt (Datenbank auf 0004, Nutzer 29.09.2026); Ansicht Breite und Top-10-Konzentration mit Daten seit 28.09.2026 (E-68, E-71 bis E-74) | M5, M6, L-13 | M7a erteilt 26.09.2026, M7 erteilt 27.09.2026 |
 | M8 | Erklärtexte je Kennzahl | ☑ 28.09.2026: alle Texte und die Krisendaten in `config/episodes.toml` vom Nutzer freigegeben | parallel zu M6/M7 | erteilt 28.09.2026 |
-| R-29.09 | Entscheidungsrunde 29.09.2026: Sahm-Regel mit Trendbedingung und SOS-Regel, Rollen-Marken, Mindesthistorie 3 Jahre, Cboe-SPX, Re-Steepening-Hinweis, Kreditspread-Enge und Aktienquote in der Fallhöhe, Geldmarktfonds, y-Achse, HY-OAS-Niveau (E-80 bis E-92) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); auf TrueNAS ⏳ | M8 | erteilt 29.09.2026 |
-| M10 | Validierung (Bericht 4.3, Schritt 7): Walk-forward, Treffer und Fehlalarme je Ampelstufe, Vorlauf, Vergleich mit reinem VIX-Filter; vorgezogen aus Phase 2 (E-89) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M10, „Ergebnisse“); auf TrueNAS ⏳ (Migration 0004) | R-29.09 | erteilt 29.09.2026 (Plan ohne Rückfrage) |
-| M11 | Walk-forward-Test geschätzter Stress-Gewichte (Logit auf den Stress-Blöcken, jährlich nur mit Daten davor geschätzt; nur Auswertung, E-94) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M11, „Ergebnisse“); auf TrueNAS ⏳ | M10 | erteilt 29.09.2026 |
-| M9 | Abnahme Phase 1 | ☐ | M0–M8, M10 | – |
+| R-29.09 | Entscheidungsrunde 29.09.2026: Sahm-Regel mit Trendbedingung und SOS-Regel, Rollen-Marken, Mindesthistorie 3 Jahre, Cboe-SPX, Re-Steepening-Hinweis, Kreditspread-Enge und Aktienquote in der Fallhöhe, Geldmarktfonds, y-Achse, HY-OAS-Niveau (E-80 bis E-92) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); auf TrueNAS eingespielt (Nutzer 29.09.2026) | M8 | erteilt 29.09.2026 |
+| M10 | Validierung (Bericht 4.3, Schritt 7): Walk-forward, Treffer und Fehlalarme je Ampelstufe, Vorlauf, Vergleich mit reinem VIX-Filter; vorgezogen aus Phase 2 (E-89) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M10, „Ergebnisse“); auf TrueNAS eingespielt (Migration 0004, Nutzer 29.09.2026) | R-29.09 | erteilt 29.09.2026 (Plan ohne Rückfrage) |
+| M11 | Walk-forward-Test geschätzter Stress-Gewichte (Logit auf den Stress-Blöcken, jährlich nur mit Daten davor geschätzt; nur Auswertung, E-94) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M11, „Ergebnisse“); gleiche Gewichte bleiben (E-97); auf TrueNAS unbestätigt, spätestens mit dem nächsten Update (ohne Migration) | M10 | erteilt 29.09.2026 |
+| M9 | Abnahme Phase 1 | ☐ Rückmeldung des Nutzers 29.09.2026: „deutlich besser“; ob das die Abnahme ist, ist gefragt (Abschnitt 9) | M0–M8, M10 | – |
 
 **Warum diese Reihenfolge:** FRED liefert die ICE-BofA-Spreads seit April 2026 nur noch für drei Jahre (Bericht, TL;DR). Jeder Tag ohne laufenden Worker verschiebt den Anfang des lokalen Archivs um einen Tag nach hinten. Deshalb geht ein minimaler Worker mit FRED und Cboe (M0–M3) in Betrieb, bevor Scoring und Oberfläche entstehen.
 
@@ -134,6 +134,8 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 29.09.2026 | E-94 | Gewichte der Stress-Signale optimieren (Nutzer, nach den Ergebnissen von M10) | Walk-forward-Test planen (Empfehlung; Alternativen: nicht jetzt, auf ganzer Historie optimieren) | Plan M11 in Abschnitt 4: Logit auf den Stress-Blöcken (das Logit aus Phase 3, Stufe 3) als reine Auswertung vorgezogen; nichts wirkt auf Scores oder Ampel; Übernahme geschätzter Gewichte nur auf Anweisung und nur nach der vorab festgelegten Regel |
 | 29.09.2026 | E-95 | Ampelregel „Gelb bei hoher Fallhöhe“ streichen? (Nutzer: „führt nur zu Fehlalarmen“) | Zuerst: Entscheidung nach dem Walk-forward-Test (M11). Nach M11 (Regel 2: kein belastbarer Beitrag der Fallhöhe zum Zeitpunkt): **streichen** (Nutzer; Empfehlung war Beibehalten), Umsetzung freigegeben mit dem Hinweis, dass die Ampel heute dann Grün statt Gelb zeigt | Regel `yellow_vulnerability` und ihr Parameter entfernt, Ampelmatrix ohne Gelb-Fläche, Texte; Abweichung vom Bericht (4.3, Schritt 5) in `CLAUDE.md`. Vorher/Nachher und Wirkung auf die Validierung: Abschnitt 4, „E-95“ |
 | 29.09.2026 | E-96 | Fallhöhe in der Regime-Zeitleiste | Eigener Streifen unter der Ampel in der Perzentil-Farbskala der Heatmap (Empfehlung; Regenbogen abgelehnt: Ampelfarben sind der Gesamtampel vorbehalten, Regenbogenskalen zeigen Stufen, die es nicht gibt) | `figures.regime` mit zweitem Streifen auf eigener y-Achse, Box 300 px; Ansicht Visualisierung |
+| 29.09.2026 | E-97 | Gewichte der Stress-Blöcke nach M11 | Gleiche Gewichte bleiben (Nutzer: „Wenn das stimmt dann nehmen wir diese“; Empfehlung nach Regel 1: geschätzte Gewichte vor Rückgängen belastbar schlechter, vor VIX-Spitzen nicht unterscheidbar) | Keine Änderung: Der Stress ist schon das gleichgewichtete Mittel der Blöcke; M11 bleibt als Auswertung in der Ansicht Validierung |
+| 29.09.2026 | E-98 | Farbe der Fallhöhe (Nutzer: alles zur Fallhöhe in Lila statt Blau, gern auch eine andere Farbe, „so dass es sauber und gut ausschaut“) | Lila (OKLCH-Farbton 315) für alles zur Fallhöhe, Blau für Stress und alles Übrige. Eigene Wahl im Rahmen des Wunsches: Blauviolett liegt im Dunkelmodus zu nah am Stress-Blau, Grün, Gelb, Orange und Rot gehören der Ampel | Abschnitt 4, „E-98“; `.claude/rules/oberflaeche.md` |
 
 ---
 
@@ -997,6 +999,22 @@ Entscheidung des Nutzers nach M11 (Regel 2 ohne belastbaren Beitrag der Fallhöh
 - VIX-Spitzen: Gelb jetzt belastbar schlechter als der VIX-Filter (Precision 46 gegen 68 %, −21 Prozentpunkte); Orange und Rot unverändert.
 - Der VIX-Filter „wie Gelb“ ändert sich mit: Seine Schwellen richten sich nach dem Alarmanteil der Ampel in den Vorjahren, der ohne die gestrichenen Tage (vor allem 1994–98) sinkt; er gibt jetzt an 22 % der Tage Alarm. Stress, VIX-Perzentil und die geschätzten Gewichte (M11) sind unverändert.
 
+### E-98: Fallhöhe in Lila (29.09.2026)
+
+Wunsch des Nutzers: „Alles was mit Fallhöhe zusammenhängt wird in Lilatönen gezeichnet, also die Diagramme, Überschriften, die Regime-Zeitleistenfarbtöne, die Diagrammlinien etc … anstelle im blau“; eine ganz andere Farbe wäre auch recht.
+
+**Farbwahl** (Paletten-Validator des Dataviz-Skills, OKLab-Abstand ΔE; Ziel für Farbfehlsichtige ≥ 8, zwischen 6 und 8 nur mit zweitem Merkmal; normales Sehen ≥ 15; Kontrast zur Fläche ≥ 3:1):
+- Verworfen: das Violett der Referenzpalette (Platz 7) und Blauviolett. Im Dunkelmodus liegt es unter den Grenzen gegen das Stress-Blau, für Farbfehlsichtige und für normales Sehen. Andere Farbfamilien scheiden aus: Grün, Gelb, Orange und Rot gehören der Ampel.
+- Gewählt: Lila, OKLCH-Farbton 315, als Reihe mit den Helligkeitsstufen der blauen Perzentil-Skala (13 Stufen, `#ead8f3` bis `#4b235b`); ein Perzentil wirkt in beiden Farben gleich hell.
+- Linien: hell `#7b3f93` gegen das Stress-Blau `#2a78d6`: normal ΔE 18,1, Farbfehlsichtigkeit 11,3; dunkel `#9c56ba` gegen `#3987e5`: normal 16,7, Farbfehlsichtigkeit 6,9. Deshalb ist die Fallhöhe dort, wo beide als Kurven nebeneinander stehen (ROC in der Validierung), zusätzlich gestrichelt.
+- Schrift: Namen und Titel hell `#7b3f93` (6,9:1), dunkel `#caa0dd` (8,0:1); Marke „Fallhöhe“ hell `#5b2b6e` auf `#eee2f4`, dunkel `#dfc6eb` auf `#3e2847`; Druck wie hell.
+
+**Umsetzung:** `texts.accent` bestimmt die Farbfamilie aus dem eigenen Block der Kennzahl (Baa-Niveau blau, Baa-Enge lila) und nimmt die Anzeigereihen der Ansicht Fallhöhe (CAPE, Geldmarktfonds) dazu; dafür steht `DISPLAY_VIEWS` jetzt in `texts` statt in `views`. `figures`: `VULNERABILITY_RAMP`, `line_colours`, `curve_style`; Heatmap in zwei Teilen (Stress oben blau, Fallhöhe darunter lila auf eigener y-Achse mit eigener Farbskala, wegen desselben plotly.js-Fehlers wie in der Regime-Zeitleiste); Regime-Streifen lila. `components`: Kopf mit Klasse `k-vulnerability`, Perzentil-Marke in der lila Skala. `views` und `validation_view` geben die Farbe an alle Charts der Fallhöhe weiter; auf der Seite „Erklärungen“ sind die Gruppe Fallhöhe und die Links ihrer Kennzahlen lila. CSS: `--vulnerability` und die Farben der Marke (hell, dunkel, Druck). „Schwellen und Farben“ nennt bei der Fallhöhe die lila Skala, der Erklärtext „Perzentil“ einen Halbsatz dazu.
+
+**Nicht geändert:** Ampelmatrix (Statusfarben), markierte Phasen (bläulich-violette Flächen mit erklärender Zeile unter dem Chart; sie kommen in keinem Chart der Fallhöhe vor), die graue Marke „nur Anzeige“ bei CAPE und Geldmarktfonds.
+
+**Prüfung:** 491 Tests grün, darunter `test_the_vulnerability_is_purple_everywhere`. Browser (Entwicklungsumgebung, 390 px hell und dunkel, 1280 px hell und dunkel): in der Ansicht Fallhöhe alle acht Charts lila (`rgb(123, 63, 147)` hell, `rgb(156, 86, 186)` dunkel), Namen und Titel lila, in der Übersicht nur die Karte Fallhöhe, Heatmap mit zwei Teilen, Regime-Streifen und gestrichelte ROC-Kurve lila, Sparklines der sechs Fallhöhe-Indikatoren lila, auf der Seite „Erklärungen“ Überschrift und neun Links lila, die übrigen blau; keine Konsolenfehler.
+
 ### O-1: Recherche Ausweichquellen (28.09.2026, 10:36–11:30 UTC)
 
 Anlass: Der Block „Breite“ und die Top-10-Konzentration haben keine Datenquelle. Geprüft: Indexanbieter, ETF-Emittenten, Kurs-APIs. Datenstand der FRED-Reihen: letzte Beobachtung 25.09.2026.
@@ -1216,7 +1234,8 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 - **Farbschema (E-5):** CSS-Variablen in `assets/base.css`, hell und dunkel über `prefers-color-scheme`. Zwei Plotly-Templates (`fever_light`, `fever_dark`; `figures.TEMPLATES`, in jede Figur eingebettet). `assets/theme.js` erkennt das Schema und meldet Wechsel über `matchMedia(...).addEventListener("change", …)` an einen `dcc.Store`; die Figure-Callbacks lesen ihn.
 - **Semantische Farben:**
   - Ampel: vier Stufen, farbenblind-tauglich gewählt, immer mit Text („Grün“, „Gelb“, „Orange“, „Rot“)
-  - Perzentilskala für Einzelkennzahlen: eine einfarbige, sequenzielle Skala, bewusst getrennt von den Ampelfarben (E-1)
+  - Perzentilskala für Einzelkennzahlen: eine einfarbige, sequenzielle Skala, bewusst getrennt von den Ampelfarben (E-1); Blau, für die Fallhöhe Lila
+  - Fallhöhe: alles, was zu ihr gehört, in Lila (E-98; Abschnitt 4, „E-98“, und `.claude/rules/oberflaeche.md`)
   - „erhöht“: Textmarke plus Rahmen
 - **Typografie:** Systemschriften (`system-ui, …`), `font-variant-numeric: tabular-nums` für Zahlenkolonnen. Keine Webfonts.
 - **Layout:** Karten in einem CSS-Grid; die Übersicht ist zuerst für 390 px Breite entworfen (eine Spalte) und wird ab Tablet mehrspaltig. Navigation als Leiste, auf dem Smartphone horizontal scrollbar.
@@ -1250,23 +1269,21 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 ## 9. Übergabe an die nächste Sitzung
 
 - **Stand (29.09.2026):**
-  - M0 bis M8 erledigt; Entscheidungsrunde 29.09.2026 umgesetzt und in der Entwicklungsumgebung geprüft (E-80 bis E-92; Abschnitt 4, „Entscheidungsrunde 29.09.2026“, mit Vorher/Nachher der Ampel).
-  - M10 (Validierung, E-89, E-93) umgesetzt und in der Entwicklungsumgebung geprüft: Berechnung, Migration 0004, Worker, Ansicht 8, Erklärseite; Ergebnisse in Abschnitt 4, M10. Migrationsprobe 0003 → 0004 mit dem gebauten Image bestanden. 484 Tests grün.
-  - Nachfragen des Nutzers zur Validierung beantwortet (Abschnitt 4, „Nachfragen zur Validierung“); daraus E-94 (Plan M11), E-95 (Gelb aus der Fallhöhe: Entscheidung nach M11) und E-96 (Fallhöhe-Streifen in der Regime-Zeitleiste, umgesetzt und im Browser geprüft). 484 Tests grün.
-  - Auf TrueNAS noch nichts davon eingespielt. Ob TrueNAS schon vom Branch `claude-raramo` läuft (E-76), ist nicht bestätigt.
+  - M0 bis M8, Entscheidungsrunde 29.09.2026 (E-80 bis E-92), M10 (Validierung, E-93) und M11 (geschätzte Gewichte, E-94) umgesetzt und in der Entwicklungsumgebung geprüft; E-95 (kein Gelb allein aus der Fallhöhe), E-96 (Fallhöhe-Streifen in der Regime-Zeitleiste), E-97 (gleiche Gewichte bleiben, keine Codeänderung) und E-98 (alles zur Fallhöhe in Lila) umgesetzt. 491 Tests grün.
+  - TrueNAS (Nutzer, 29.09.2026): läuft vom Branch `claude-raramo` (E-76), Migration 0004 eingespielt, Seiten spürbar schneller, vor allem beim wiederholten Aufruf. Ob M11 und E-95 schon eingespielt sind, ist unbestätigt; E-98 noch nicht.
   - `data-dev/` steht auf 0004, mit Scores und Validierungsbericht vom 29.09.2026.
-  - Entscheidungen bis E-96; die Festlegungen der Validierung (E-93) hat der Nutzer nach Vorlage der Ergebnisse bestätigt. M11 umgesetzt (gleiche Gewichte bleiben besser), danach E-95 umgesetzt: kein Gelb allein aus der Fallhöhe, die Ampel ändert sich auch rückwirkend (heute Grün statt Gelb). 490 Tests grün.
+  - M9: Rückmeldung des Nutzers „M9 Annahme..deutlich besser“; ob das die Abnahme ist, ist per Auswahlfrage gestellt.
 - **Nächster Schritt:**
-  1. TrueNAS: falls noch nicht geschehen, Update „schnellere Seiten und Branch `claude-raramo`“, dann „Entscheidungsrunde 29.09.2026 und Validierung (M10)“ (`docs/einrichtung.md`, Abschnitt 9): Probe der Migration an einer Backup-Kopie, Stack stoppen, Backup, `alembic upgrade head` (0004), „Deploy“, Sofort-Abruf, `fever.score`, `fever.validate`.
-  2. Folgerungen aus M10 und M11 (etwa für Aggregation Stufe 2 in Phase 2, E-89) entscheidet der Nutzer; E-95 ist entschieden und umgesetzt (Gelb-Regel der Fallhöhe gestrichen, Abschnitt 4, „E-95“).
+  1. TrueNAS: Update ohne Migration (`docs/einrichtung.md`, Abschnitt 9, „Update auf M11, E-95 und E-98“): Pull, Build, „Deploy“; der Worker rechnet Scores und Validierung von selbst neu, sofort mit `fever.score` und `fever.validate`.
+  2. M9 (Abnahme Phase 1) nach der Antwort des Nutzers eintragen.
   3. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9); für `iursa` und die Z.1-Reihen neu.
-  4. M9 (Abnahme Phase 1).
+  4. Folgerungen aus M10 und M11 für Phase 2 (Aggregation Stufe 2 nur, wenn sie in der Validierung besser abschneidet, E-89) entscheidet der Nutzer.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-raramo` (E-76): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`. Am 28.09.2026 zusätzlich erreichbar: `fred.stlouisfed.org` (CSV ohne Schlüssel), `www.ssga.com`, `www.sec.gov`, `data.sec.gov`, `indexes.nasdaq.com`; `archive.org` antwortete mit 429. Für SEC-Probeabrufe in der Cloud nur einen Platzhalterkontakt (`…@example.org`) setzen, nie die Adresse des Nutzers. Am 28.09.2026 abends lief der Sofort-Abruf aller 72 Reihen in der Cloud ohne Probleme.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** O-6 (Phase 2); die Optionen unter „Nicht umgesetzt“ (Ladezeiten), falls die Seiten auf TrueNAS noch zu langsam sind.
+- **Offene Entscheidungen des Nutzers:** M9 (Abnahme); O-6 (Phase 2). Die Optionen unter „Nicht umgesetzt“ (Ladezeiten) entfallen vorerst: Die Seiten sind auf TrueNAS nach Rückmeldung des Nutzers schnell genug.
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe, Compose-Prüfung und Ladezeit-Messung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---

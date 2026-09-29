@@ -12,7 +12,7 @@ Indikatoren haben verschiedene Einheiten: Indexpunkte, Prozent, Verhältnisse. D
 ## So liest du sie
 - Ein Perzentil nahe 100 heißt: Der Wert war im Fenster fast nie höher.
 - Um 50 liegt der Wert im üblichen Bereich.
-- Einzelkennzahlen haben eine blaue Farbskala und ab einer festen Grenze die Markierung „erhöht“; Ampelfarben gibt es nur für die Gesamtampel (Entscheidung E-1).
+- Einzelkennzahlen haben eine blaue Farbskala, die der Fallhöhe eine lila, und ab einer festen Grenze die Markierung „erhöht“; Ampelfarben gibt es nur für die Gesamtampel (Entscheidung E-1).
 - Das Fenster und die Mindesthistorie stehen unten und auf jeder Erklärseite im Steckbrief.
 
 ## Grenzen und Fallstricke

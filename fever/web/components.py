@@ -12,7 +12,7 @@ from fever.store.db import DataDirError
 
 from fever.web import format as fmt
 from fever.web import texts
-from fever.web.figures import PERCENTILE_RAMP, Chart, time_series
+from fever.web.figures import Chart, ramp, time_series
 
 LEVEL_CLASSES = ("level-green", "level-yellow", "level-orange", "level-red")
 
@@ -33,7 +33,8 @@ def kennzahl_head(kennzahl_id: str, *, tag=html.H2) -> html.Div:
     Raises TextError without a text file: a Kennzahl without text is never displayed.
     """
     text = texts.text(kennzahl_id)
-    return html.Div(className="k-head", children=[
+    accent = texts.accent(kennzahl_id)
+    return html.Div(className="k-head" + (f" k-{accent}" if accent else ""), children=[
         tag(dcc.Link(text.title, href=f"/kennzahl/{kennzahl_id}", className="k-name")),
         html.Span("ⓘ", className="tip", tabIndex=0, role="note", **{"data-tip": text.short, "aria-label": text.short}),
         *role_marks(kennzahl_id),
@@ -60,12 +61,14 @@ def level_badge(level: int | None) -> html.Span:
     return html.Span(texts.LEVEL_NAMES[level], className=f"level {LEVEL_CLASSES[level]}")
 
 
-def percentile_chip(percentile: float | None, elevated_above: float) -> html.Span:
-    """Neutral blue scale; "erhöht" as text plus border above the diffusion threshold (E-1)."""
+def percentile_chip(percentile: float | None, elevated_above: float, accent: str = "") -> html.Span:
+    """Neutral scale, blue or purple for the vulnerability (E-98); "erhöht" as text plus border above the
+    diffusion threshold (E-1)."""
     if percentile is None:
         return html.Span("kein Perzentil", className="pct pct-none")
-    step = PERCENTILE_RAMP[min(len(PERCENTILE_RAMP) - 1, int(percentile / 100 * len(PERCENTILE_RAMP)))]
-    dark = PERCENTILE_RAMP.index(step) >= 7
+    colours = ramp(accent)
+    index = min(len(colours) - 1, int(percentile / 100 * len(colours)))
+    step, dark = colours[index], index >= 7
     elevated = percentile > elevated_above
     label = f"Perzentil {fmt.number(percentile, 0)}" + (" · erhöht" if elevated else "")
     return html.Span(label, className="pct" + (" pct-elevated" if elevated else ""),

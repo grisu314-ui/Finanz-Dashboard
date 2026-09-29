@@ -232,9 +232,10 @@ def explanations() -> list:
     for group in order:
         if group not in groups:
             continue
-        items = [html.Li([dcc.Link(texts.text(k).title, href=f"/kennzahl/{k}"), html.Span(f" – {texts.text(k).short}")])
-                 for k in groups[group]]
-        sections.append(html.Div(className="card card-wide", children=[html.H2(texts.GROUPS[group]), html.Ul(items)]))
+        items = [html.Li([dcc.Link(texts.text(k).title, href=f"/kennzahl/{k}"), html.Span(f" – {texts.text(k).short}")],
+                         className="k-vulnerability" if texts.accent(k) else None) for k in groups[group]]  # E-98
+        heading = html.H2(texts.GROUPS[group], className="k-vulnerability" if group == VULNERABILITY else None)
+        sections.append(html.Div(className="card card-wide", children=[heading, html.Ul(items)]))
     missing = [k for k in texts.all_ids() if not texts.has_text(k) and k not in texts.CONCEPTS]
     if missing:
         sections.append(ui.note(f"Noch ohne Erklärtext und deshalb nicht angezeigt: {len(missing)} Kennzahlen (Texte folgen in M8)."))
@@ -250,7 +251,8 @@ def kennzahl(kennzahl_id: str | None, theme: str, now: datetime) -> list:
         return [html.H1("Kennzahl nicht gefunden"), ui.note("Zu dieser Adresse gibt es keine Erklärseite."),
                 dcc.Link("Alle Erklärungen", href="/erklaerungen")]
     text = texts.text(kennzahl_id)
-    parts = [html.H1(text.title), html.P(text.short, className="lead")]
+    accent = texts.accent(kennzahl_id)
+    parts = [html.H1(text.title, className=f"k-{accent}" if accent else None), html.P(text.short, className="lead")]
     if texts.roles(kennzahl_id):
         parts.insert(1, html.Div(ui.role_marks(kennzahl_id), className="roles"))
     history_from = None
@@ -267,7 +269,7 @@ def kennzahl(kennzahl_id: str | None, theme: str, now: datetime) -> list:
         history_from = db.first_observation([db.RECESSION_SERIES])
     if kennzahl_id in texts.DISPLAYS:
         history_from = db.first_observation(list(texts.DISPLAYS[kennzahl_id]))
-        view_name = DISPLAY_VIEWS[kennzahl_id]
+        view_name = texts.DISPLAY_VIEWS[kennzahl_id]
         parts.insert(3, html.P(["Verlauf: Ansicht ", dcc.Link(VIEW_TITLES[view_name], href=f"/ansicht/{view_name}")],
                                className="detail"))
         if kennzahl_id == "yield_curve":
@@ -292,7 +294,7 @@ def _indicator_state(kennzahl_id, theme, now):
     state = html.Div(className="card card-wide", children=[
         html.H2("Aktueller Stand"),
         html.Div(_value(row["value"]), className="big number"),
-        ui.percentile_chip(row["percentile"], config.yellow_diffusion_percentile),
+        ui.percentile_chip(row["percentile"], config.yellow_diffusion_percentile, texts.accent(kennzahl_id)),
         *([html.P(f"Perzentil über {config.display_window_years} Jahre: {fmt.number(row['percentile_display'], 0)}")]
           if row["percentile_display"] is not None else []),
         html.P(f"Status: {STATUS_NAMES[row['status']]}", className="detail"),
@@ -320,12 +322,12 @@ def _indicator_charts(kennzahl_id, theme, row, retrieved) -> list:
             kennzahl_id, f"{title}: Wert", source,
             [Line("Wert", days, [r["value"] if r["status"] in shown else None for r in history], hover_decimals=2, shape="hv")],
             "Wert", observed=row["obs_date"], retrieved=retrieved, recessions=recessions, shaded=shaded,
-            shaded_label=shaded_label, zero_line=kennzahl_id == TREND_INDICATOR), theme),
+            shaded_label=shaded_label, zero_line=kennzahl_id == TREND_INDICATOR, accent=texts.accent(kennzahl_id)), theme),
         ui.chart_card(f"chart-{kennzahl_id}-percentile", Chart(
             f"{kennzahl_id}-percentile", f"{title}: Perzentil", source,
             [Line("Perzentil", days, [r["percentile"] if r["status"] == "ok" else None for r in history], hover_decimals=0, shape="hv")],
             "Perzentil (0–100)", observed=row["obs_date"], retrieved=retrieved, y_range=(0, 100),
-            recessions=recessions), theme),
+            recessions=recessions, accent=texts.accent(kennzahl_id)), theme),
     ]
 
 
@@ -415,7 +417,7 @@ def _indicator_summary(indicator_id: str, row: dict | None, fresh: dict, now: da
     config = scoring_config()
     return [
         html.Span(_value(row["value"]), className="number"),
-        ui.percentile_chip(row["percentile"], config.yellow_diffusion_percentile),
+        ui.percentile_chip(row["percentile"], config.yellow_diffusion_percentile, texts.accent(indicator_id)),
         html.Span(STATUS_NAMES[row["status"]], className="detail"),
         ui.freshness(row["obs_date"], _retrieved(indicator_id, fresh), stale=row["status"] == "stale", now=now),
     ]
@@ -443,7 +445,8 @@ def _score_state(kennzahl_id, theme, now):
                   [Line(label, [r["score_date"] for r in history], [r[column] for r in history],
                         hover_decimals=0 if ticks else 1, shape="hv" if ticks else "linear")],
                   label, observed=latest["score_date"], retrieved=latest["computed_at"],
-                  y_range=(-0.5, 3.5) if ticks else (0, 100), y_ticks=ticks, recessions=db.recessions())
+                  y_range=(-0.5, 3.5) if ticks else (0, 100), y_ticks=ticks, recessions=db.recessions(),
+                  accent=texts.accent(kennzahl_id))
     return [state, ui.chart_card(f"chart-{kennzahl_id}", chart, theme)]
 
 
@@ -454,8 +457,6 @@ VIEW_TITLES = {
     "makro": "Makro und Liquidität", "fallhoehe": "Fallhöhe", "visualisierung": "Visualisierung",
     "validierung": "Validierung",
 }
-DISPLAY_VIEWS = {"vix_term": "signale", "skew": "signale", "ccc_bb": "makro", "anfci": "makro",
-                 "ofr_fsi": "makro", "yield_curve": "makro", "cape": "fallhoehe", "money_market": "fallhoehe"}
 INDEX_HORIZONS = {"vix9d": ("VIX9D", 9), "vix": ("VIX", 30), "vix3m": ("VIX3M", 91), "vix6m": ("VIX6M", 182)}  # nominal
 OFR_CATEGORIES = {"ofr_fsi_credit": "Kredit", "ofr_fsi_equity_valuation": "Aktienbewertung", "ofr_fsi_funding": "Refinanzierung",
                   "ofr_fsi_safe_assets": "Sichere Anlagen", "ofr_fsi_volatility": "Volatilität"}
@@ -489,7 +490,8 @@ def view(name: str | None, theme: str, now: datetime) -> list:
     if name == "validierung":
         return validation_view.frame()
     context = _Context(theme, now)
-    return [html.H1(VIEW_TITLES[name]), *builders[name](context), ui.note(HISTORY_NOTE)]
+    title = html.H1(VIEW_TITLES[name], className="k-vulnerability" if name == "fallhoehe" else None)  # E-98
+    return [title, *builders[name](context), ui.note(HISTORY_NOTE)]
 
 
 class _Context:
@@ -526,10 +528,11 @@ def _indicator_item(ctx: _Context, indicator_id: str, *, shaded=(), shaded_label
     title = texts.text(indicator_id).title
     retrieved = _retrieved(indicator_id, ctx.fresh)
     value = [r["value"] if r["status"] in ("ok", "history") else None for r in history]
+    accent = texts.accent(indicator_id)  # purple for the vulnerability (E-98)
     charts = [ui.chart_card(f"view-{indicator_id}-value", Chart(
         indicator_id, f"{title}: Wert", source, [Line("Wert", days, value, hover_decimals=None, shape="hv")], "Wert",
         observed=row["obs_date"], retrieved=retrieved, recessions=ctx.recessions, shaded=shaded,
-        shaded_label=shaded_label, zero_line=zero_line, full_history=True), ctx.theme)]
+        shaded_label=shaded_label, zero_line=zero_line, full_history=True, accent=accent), ctx.theme)]
     if percentile:
         lines = [Line(f"{ctx.config.window_years} Jahre (Score)", days,
                       [r["percentile"] if r["status"] == "ok" else None for r in history], hover_decimals=0, shape="hv")]
@@ -539,7 +542,7 @@ def _indicator_item(ctx: _Context, indicator_id: str, *, shaded=(), shaded_label
         charts.append(ui.chart_card(f"view-{indicator_id}-percentile", Chart(
             f"{indicator_id}-percentile", f"{title}: Perzentil", source, lines, "Perzentil (0–100)",
             observed=row["obs_date"], retrieved=retrieved, y_range=(0, 100), recessions=ctx.recessions,
-            full_history=True), ctx.theme))
+            full_history=True, accent=accent), ctx.theme))
     return _item(indicator_id, summary, charts, notes)
 
 
@@ -567,7 +570,7 @@ def _display_item(ctx: _Context, display_id: str, lines: list[Line], y_title: st
     retrieved = max((ctx.fresh[s]["retrieved_at"] for s in series_ids if s in ctx.fresh), default=None)
     chart = Chart(display_id, texts.text(display_id).title, source, lines, y_title, observed=observed, retrieved=retrieved,
                   recessions=ctx.recessions, shaded=shaded, shaded_label=shaded_label, zero_line=zero_line,
-                  end_labels=len(lines) > 2, full_history=True)
+                  end_labels=len(lines) > 2, full_history=True, accent=texts.accent(display_id))
     return _item(display_id, summary, [ui.chart_card(f"view-{display_id}", chart, ctx.theme), *extra_charts], notes)
 
 
@@ -814,7 +817,7 @@ def vis_heatmap(grain: str, theme: str, now: datetime) -> list:
                     [[values.get((i, d)) for d in columns] for i in indicators],
                     observed=latest["score_date"], retrieved=latest["computed_at"],
                     note=f"{HEATMAP_GRAINS.get(grain, HEATMAP_GRAINS['weekly'])}; leer = nicht gültig (veraltet, zu kurze Historie)",
-                    roles=[tuple(texts.roles(i)) for i in indicators])
+                    roles=[tuple(texts.roles(i)) for i in indicators], accents=[texts.accent(i) for i in indicators])
     return [ui.figure_card("vis-heatmap-chart", *heatmap(chart, theme), box="chart-box chart-box-tall")]
 
 
@@ -835,7 +838,7 @@ def vis_bands(indicator_id: str | None, theme: str, now: datetime) -> list:
                   [Line("Wert", days, [r["value"] if r["status"] in ("ok", "history") else None for r in history],
                         hover_decimals=None, shape="hv")],
                   "Wert", observed=row["obs_date"], retrieved=db.newest_retrieval([s.id for s in indicator.series]),
-                  recessions=db.recessions(), band=band, full_history=True)
+                  recessions=db.recessions(), band=band, full_history=True, accent=texts.accent(indicator_id))
     return [ui.chart_card("vis-bands-chart", chart, theme)]
 
 
@@ -852,12 +855,13 @@ def vis_sparklines(theme: str, now: datetime) -> list:
     for indicator_id in _ordered_indicators():
         history = histories.get(indicator_id, [])
         row = rows.get(indicator_id)
+        accent = texts.accent(indicator_id)
         figure, graph = sparkline([r["score_date"] for r in history],
-                                  [r["value"] if r["status"] in ("ok", "history") else None for r in history], theme)
+                                  [r["value"] if r["status"] in ("ok", "history") else None for r in history], theme, accent)
         cards.append(html.Div(className="spark", children=[
             ui.kennzahl_head(indicator_id, tag=html.H3),
             html.Div([html.Span(_value(row["value"] if row else None), className="number"),
-                      ui.percentile_chip(row["percentile"] if row else None, config.yellow_diffusion_percentile)],
+                      ui.percentile_chip(row["percentile"] if row else None, config.yellow_diffusion_percentile, accent)],
                      className="indicator-summary"),
             html.Div(className="spark-box", children=dcc.Graph(figure=figure, config=graph, className="chart",
                                                                style={"height": "100%"})),

@@ -1,6 +1,6 @@
 # Einrichtung und Betrieb auf TrueNAS mit Dockge
 
-Stand: 28.09.2026 · Für: dich als Anwender · Status: **Worker läuft auf TrueNAS seit 26.09.2026 („healthy“).** Betrieb seit 28.09.2026 vom Branch `claude-raramo` (E-76); Update darauf: Abschnitt 9. Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind zusätzlich in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Die Oberfläche (Dienst `web`, seit M6) ist in der Entwicklungsumgebung geprüft, auf TrueNAS ⏳ (siehe `docs/umsetzungsplan.md`).
+Stand: 29.09.2026 · Für: dich als Anwender · Status: **Worker läuft auf TrueNAS seit 26.09.2026 („healthy“).** Betrieb vom Branch `claude-raramo` (E-76), Datenbank auf Migration 0004 (Rückmeldung des Nutzers, 29.09.2026); nächstes Update ohne Migration: Abschnitt 9. Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind zusätzlich in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Die Oberfläche (Dienst `web`, seit M6) ist in der Entwicklungsumgebung geprüft und läuft auf TrueNAS (Rückmeldung des Nutzers; Einzelprüfungen in den Abschnitten).
 
 Markierungen:
 - ✅ geprüft: ausgeführt, mit Datum und Ort
@@ -240,9 +240,30 @@ Dockge zeigt `web` nach rund einer Minute als „healthy“.
 
 ## 9. Update auf eine neue Version
 
-✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ⏳ TrueNAS. Prüfung der Migration beim Start (E-70): ✅ Entwicklungsumgebung 28.09.2026 mit dem gebauten Image auf einer Datenbank mit Stand 0002 (Worker und `fever.score` melden „Migration fehlt“ und starten nicht, `/health` 503, Banner im Browser; `fever.backup` läuft; nach `alembic upgrade head` normaler Start); ⏳ TrueNAS.
+✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ✅ TrueNAS (Datenbank auf 0004, Nutzer 29.09.2026). Prüfung der Migration beim Start (E-70): ✅ Entwicklungsumgebung 28.09.2026 mit dem gebauten Image auf einer Datenbank mit Stand 0002 (Worker und `fever.score` melden „Migration fehlt“ und starten nicht, `/health` 503, Banner im Browser; `fever.backup` läuft; nach `alembic upgrade head` normaler Start); ⏳ TrueNAS.
 
-**Update auf die Entscheidungsrunde 29.09.2026 und die Validierung (E-80 bis E-96, mit Migration 0004, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 29.09.2026 (Abruf der zehn neuen Reihen, Scoring, Validierung mit geschätzten Gewichten (M11), Fallhöhe-Streifen, Browser; Migrationsprobe mit dem gebauten Image als 568:568 auf einer Kopie mit Stand 0003); ⏳ TrueNAS. Voraussetzung: TrueNAS läuft schon vom Branch `claude-raramo` (sonst zuerst der nächste Block). Neu sind zehn Reihen (S&P 500 von Cboe, versicherte Arbeitslosenquote, acht Z.1-Reihen), fünf Indikatoren, geänderte Ampelregeln (die Ampel ändert sich auch rückwirkend, `docs/umsetzungsplan.md`, Abschnitt 4, „Entscheidungsrunde 29.09.2026“) und die Ansicht „Validierung“ mit der neuen Tabelle `validation_report` (M10). Das neue Programm startet erst nach der Migration.
+**Update auf M11, E-95 und die Farben der Fallhöhe (E-94 bis E-98, ohne Migration, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 29.09.2026 (Tests, Scoring, Validierung, Browser); ⏳ TrueNAS.
+
+```bash
+cd /mnt/Daten-Z1/apps/feewer
+git pull
+git diff --stat HEAD@{1} -- compose.dockge.yaml .env.example    # erwartet: keine Ausgabe
+git diff --stat HEAD@{1} -- migrations/                          # erwartet: keine Ausgabe
+sudo docker compose build
+```
+
+In Dockge beim Stack `finanz-dashboard` „Deploy“ (nicht „Neustart“). Waren M11 und E-95 noch nicht eingespielt, rechnet der Worker Scores und Validierung danach von selbst neu (geänderte `scoring.toml`); sofort statt im nächsten Takt:
+
+```bash
+sudo docker exec finanz-dashboard-worker-1 python -m fever.score
+#   erwartet: INFO __main__: Scores berechnet: 9… Tage ab 02.01.1990, zuletzt <letzter Handelstag>: … (rund 20 bis 30 s)
+sudo docker exec finanz-dashboard-worker-1 python -m fever.validate
+#   erwartet: INFO __main__: Validierung berechnet: Rückgang: AUC Stress …, VIX … (…), geschätzte Gewichte … gegen gleiche … (…); … (rund 5 s)
+```
+
+Danach im Dashboard: alles zur Fallhöhe in Lila (Namen, Titel, Linien, der untere Teil der Heatmap, der Streifen in der Regime-Zeitleiste, die gestrichelte Kurve in der Validierung), Stress und alles Übrige in Blau; in der Ansicht „Validierung“ der Abschnitt „Geschätzte Gewichte“; kein Gelb mehr allein wegen hoher Fallhöhe (E-95).
+
+**Update auf die Entscheidungsrunde 29.09.2026 und die Validierung (E-80 bis E-96, mit Migration 0004, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 29.09.2026 (Abruf der zehn neuen Reihen, Scoring, Validierung mit geschätzten Gewichten (M11), Fallhöhe-Streifen, Browser; Migrationsprobe mit dem gebauten Image als 568:568 auf einer Kopie mit Stand 0003); ✅ TrueNAS 29.09.2026 (Nutzer: Migration 0004 erledigt). Voraussetzung: TrueNAS läuft schon vom Branch `claude-raramo` (sonst zuerst der nächste Block). Neu sind zehn Reihen (S&P 500 von Cboe, versicherte Arbeitslosenquote, acht Z.1-Reihen), fünf Indikatoren, geänderte Ampelregeln (die Ampel ändert sich auch rückwirkend, `docs/umsetzungsplan.md`, Abschnitt 4, „Entscheidungsrunde 29.09.2026“) und die Ansicht „Validierung“ mit der neuen Tabelle `validation_report` (M10). Das neue Programm startet erst nach der Migration.
 
 ```bash
 cd /mnt/Daten-Z1/apps/feewer
@@ -271,9 +292,9 @@ sudo docker exec finanz-dashboard-worker-1 python -m fever.validate
 #   „keine auswertbaren Tage“ bei Rückgang und Bärenmarkt: Der S&P 500 (spx) fehlt noch, Sofort-Abruf prüfen
 ```
 
-Danach im Dashboard: Marken neben den Namen (blau Stress mit Bereich, violett Fallhöhe, grau nur Anzeige, umrandet Ampelregel), in der Ansicht Makro Sahm-Regel, S&P-500-Trend und SOS-Indikator mit violetten Flächen für aktive Regeln und das Datum des letzten Re-Steepening, in der Ansicht Fallhöhe Aktienquote, Geldmarktfonds und Kreditspread-Enge, in der Navigation die Ansicht „Validierung“. Die y-Achse passt sich nach Zoom und Zeitraum-Knopf an (`docs/bedienung.md`). Seit E-95 gibt es kein Gelb mehr allein wegen hoher Fallhöhe: Die Ampel ändert sich auch rückwirkend und steht bei hoher Fallhöhe und niedrigem Stress auf Grün (Entwicklungsdatenbank 25.09.2026: Grün statt Gelb).
+Danach im Dashboard: Marken neben den Namen (blau Stress mit Bereich, lila Fallhöhe, grau nur Anzeige, umrandet Ampelregel), in der Ansicht Makro Sahm-Regel, S&P-500-Trend und SOS-Indikator mit violetten Flächen für aktive Regeln und das Datum des letzten Re-Steepening, in der Ansicht Fallhöhe Aktienquote, Geldmarktfonds und Kreditspread-Enge, in der Navigation die Ansicht „Validierung“. Die y-Achse passt sich nach Zoom und Zeitraum-Knopf an (`docs/bedienung.md`). Seit E-95 gibt es kein Gelb mehr allein wegen hoher Fallhöhe: Die Ampel ändert sich auch rückwirkend und steht bei hoher Fallhöhe und niedrigem Stress auf Grün (Entwicklungsdatenbank 25.09.2026: Grün statt Gelb).
 
-**Update auf schnellere Seiten und Branch `claude-raramo` (28.09.2026, E-76 bis E-78, ohne Migration):** ⏳ TrueNAS. Einmal den Branch wechseln; danach gilt wieder der Standardablauf unten mit `git pull`.
+**Update auf schnellere Seiten und Branch `claude-raramo` (28.09.2026, E-76 bis E-78, ohne Migration):** ✅ TrueNAS 29.09.2026 (Nutzer: läuft vom Branch `claude-raramo`, Seiten spürbar schneller, vor allem beim wiederholten Aufruf). Einmal den Branch wechseln; danach gilt wieder der Standardablauf unten mit `git pull`.
 
 ```bash
 cd /mnt/Daten-Z1/apps/feewer
@@ -302,7 +323,7 @@ sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
 
 Der Worker rechnet danach die Scores einmal neu (neue Programmversion von `fever/config.py`, rund 15 s); die Werte bleiben gleich (geprüft in der Entwicklungsumgebung: alle 9281 Tage identisch). Mit der Top-10-Konzentration ändert sich die Fallhöhe wie unter E-71 beschrieben.
 
-**Update auf Breite und Top-10 (E-68, E-71, ohne Migration):** `compose.dockge.yaml` hat eine neue Zeile (`FEVER_SEC_CONTACT` für den Worker): die Kopie in Dockge aktualisieren (Schritt 7.2) und in der `.env` des Stacks `FEVER_SEC_CONTACT=<Name> <E-Mail>` ergänzen (Schritt 7.3). Nach dem Start den Sofort-Abruf ausführen (Schritt 7, lädt die 11 neuen Reihen, mit BAA10Y aus E-75); der Worker rechnet die Scores danach von selbst neu, weil sich `series.toml` geändert hat. Stress und Ampel ändern sich dabei auch rückwirkend (Block Breite, Top-10 in der Fallhöhe). Steht die Datenbank noch auf 0002, gilt zusätzlich der Ablauf mit Migration unten. ⏳ TrueNAS.
+**Update auf Breite und Top-10 (E-68, E-71, ohne Migration):** `compose.dockge.yaml` hat eine neue Zeile (`FEVER_SEC_CONTACT` für den Worker): die Kopie in Dockge aktualisieren (Schritt 7.2) und in der `.env` des Stacks `FEVER_SEC_CONTACT=<Name> <E-Mail>` ergänzen (Schritt 7.3). Nach dem Start den Sofort-Abruf ausführen (Schritt 7, lädt die 11 neuen Reihen, mit BAA10Y aus E-75); der Worker rechnet die Scores danach von selbst neu, weil sich `series.toml` geändert hat. Stress und Ampel ändern sich dabei auch rückwirkend (Block Breite, Top-10 in der Fallhöhe). Steht die Datenbank noch auf 0002, gilt zusätzlich der Ablauf mit Migration unten. ⏳ TrueNAS als eigener Schritt; im Stand mit Migration 0004 enthalten (Nutzer 29.09.2026), der SEC-Kontakt dort ungeprüft (Abschnitt 11).
 
 **Update auf M7 (Migration 0003):** Das neue Dashboard liest die Spalten der Perzentilbänder. Der Stack darf deshalb erst nach `alembic upgrade head` wieder starten. Seit E-70 prüfen Worker und Dashboard die Migration beim Start: Fehlt sie, startet der Worker nicht, und das Dashboard zeigt das rote Banner „Migration fehlt“ (Fehlersuche, Abschnitt 11). Nach dem Start einmal `python -m fever.score` (unten), damit die Bänder sofort gefüllt sind.
 
@@ -459,7 +480,7 @@ Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
 | Sofort-Abruf aller Reihen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update` | ✅ TrueNAS und Entwicklungsumgebung 26.09.2026 |
 | Mountpunkt und Benutzer prüfen | `sudo docker inspect finanz-dashboard-worker-1 --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{end}} user={{.Config.User}}'` (erwartet: `/mnt/Daten-Z1/apps/feewer/data -> /data user=568:568`) | ✅ TrueNAS 26.09.2026 |
 | Sofort-Backup | `sudo docker exec finanz-dashboard-worker-1 python -m fever.backup` (Stack gestoppt: `$RUN python -m fever.backup`) | ✅ Entwicklungsumgebung 25.09.2026 |
-| Migration (Ablauf) | Probe an einer Backup-Kopie (Schritt 9) → Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten | ✅ TrueNAS 26.09.2026 (0001 → 0002; Scoring danach erfolgreich) und Entwicklungsumgebung (mit Probe, zuletzt 0003 → 0004 am 29.09.2026) |
+| Migration (Ablauf) | Probe an einer Backup-Kopie (Schritt 9) → Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten | ✅ TrueNAS 26.09.2026 (0001 → 0002; Scoring danach erfolgreich), bis 0004 am 29.09.2026 (Nutzer), und Entwicklungsumgebung (mit Probe, zuletzt 0003 → 0004 am 29.09.2026) |
 | Dashboard-Log | `sudo docker logs -f finanz-dashboard-web-1` | ✅ Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
 | Dashboard-Health | `curl -s http://127.0.0.1:8003/health` (erwartet `{"status":"ok"}`) | ✅ Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
 | Scores sofort neu berechnen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.score` | ✅ TrueNAS und Entwicklungsumgebung 26.09.2026 |

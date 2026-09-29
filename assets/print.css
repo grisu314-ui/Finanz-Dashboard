@@ -3,7 +3,7 @@
 @media print {
   :root { color-scheme: light; --page: #ffffff; --surface: #ffffff; --ink: #0b0b0b; --ink-2: #52514e;
     --muted: #52514e; --grid: #e1e0d9; --axis: #c3c2b7; --border: #c3c2b7; --link: #0b0b0b;
-    --role-stress-bg: #dbe8fa; --role-stress-ink: #104281; --role-vulnerability-bg: #e3e0f3; --role-vulnerability-ink: #3d2f8f; }
+    --role-stress-bg: #dbe8fa; --role-stress-ink: #104281; --role-vulnerability-bg: #eee2f4; --role-vulnerability-ink: #5b2b6e; --vulnerability: #5b2b6e; }
   .nav, .fullscreen-toggle, .modebar-container, .banner-connection, .rangeselector { display: none !important; }
   .card, .chart-card { break-inside: avoid; }
   .chart-card.is-fullscreen { position: static; display: block; }

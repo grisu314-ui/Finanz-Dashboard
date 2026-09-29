@@ -45,6 +45,10 @@ DIFFERENCES = {"fitted-equal": ("fitted", "equal", "Geschätzte gegen gleiche Ge
                "fitted-stress": ("fitted", "stress", "Geschätzte Gewichte gegen Stress"),
                "fitted-vix": ("fitted", "vix", "Geschätzte Gewichte gegen VIX-Perzentil")}
 FEATURE_NAMES = {**AREA_SHORT, "vulnerability": "Fallhöhe"}
+# Curve colours follow the entity in both ROC charts (E-98): stress blue, vulnerability purple dashed, then
+# palette slots (validated as sets, light and dark, 29.09.2026): level aqua, VIX orange, fitted yellow, equal green.
+CURVE_COLOURS = {"stress": "stress", "vulnerability": "vulnerability", "level": 2, "vix": 1, "fitted": 3,
+                 "fitted_vulnerability": "vulnerability", "equal": 5}
 LIMITS = [
     "Wenige Ereignisse: Die Intervalle sind breit, einzelne Krisen entscheiden viel.",
     "Überlappende Zeiträume: Benachbarte Tage haben fast dasselbe Ergebnis; deshalb Block-Bootstrap statt einfacher Intervalle.",
@@ -178,7 +182,7 @@ def _roc_card(result, names, observed, computed_at, theme) -> html.Section:
     aucs = " · ".join(f"{SIGNAL_NAMES[signal]} {_auc(result['auc'][signal], interval=False)}" for signal in SIGNAL_NAMES)
     curves = [(SIGNAL_NAMES[signal], *result["roc"][signal]) for signal in SIGNAL_NAMES]
     chart = Roc("validation-roc", f"ROC-Kurve: {name}", SOURCE, curves, observed=observed, retrieved=computed_at,
-                note=f"{label}<br>AUC: {aucs}")
+                note=f"{label}<br>AUC: {aucs}", colours=tuple(CURVE_COLOURS[signal] for signal in SIGNAL_NAMES))
     rows = [html.Tr([html.Td(SIGNAL_NAMES[signal]), html.Td(_auc(result["auc"][signal]))]) for signal in SIGNAL_NAMES]
     return html.Section(className="card card-wide", children=[
         html.H2("Trennschärfe"),
@@ -370,7 +374,8 @@ def _fitted_section(report, event, names, observed, computed_at, theme) -> html.
     curves = [(FITTED_NAMES[signal], *fitted["roc"][signal]) for signal in FITTED_NAMES]
     chart = Roc("validation-roc-fitted", f"ROC (geschätzt): {name}", SOURCE, curves, observed=observed,
                 retrieved=computed_at, note=f"{label}<br>AUC: " + " · ".join(
-                    f"{FITTED_NAMES[signal]} {_auc(aucs[signal], interval=False)}" for signal in FITTED_NAMES))
+                    f"{FITTED_NAMES[signal]} {_auc(aucs[signal], interval=False)}" for signal in FITTED_NAMES),
+                colours=tuple(CURVE_COLOURS[signal] for signal in FITTED_NAMES))
     children += [
         html.Ul([html.Li(line) for line in lines]),
         *([html.P(html.Strong("Entscheidungsregeln aus dem Plan (vorab festgelegt)")), html.Ul([html.Li(r) for r in rules])]

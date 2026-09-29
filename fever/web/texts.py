@@ -58,11 +58,14 @@ DISPLAYS = {
     "cape": ("shiller_cape",),
     "money_market": ("mmmffaq027s", "ncbeilq027s", "fbcellq027s"),  # E-86
 }
+# View that shows each display series (link on its Kennzahl page; the vulnerability view sets its colour, E-98).
+DISPLAY_VIEWS = {"vix_term": "signale", "skew": "signale", "ccc_bb": "makro", "anfci": "makro",
+                 "ofr_fsi": "makro", "yield_curve": "makro", "cape": "fallhoehe", "money_market": "fallhoehe"}
 # Areas with their indicators (E-57), in the order of view 7: the stress blocks with indicators in phase 1,
 # then the vulnerability; each with the Kennzahl that heads it. Positioning has none until phase 2.
 AREAS = {"volatility": "block_volatility", "credit": "block_credit", "macro": "block_macro", "breadth": "block_breadth",
          VULNERABILITY: VULNERABILITY}
-# Role marks next to a Kennzahl's name (E-81): blue "Stress · <area>", violet "Fallhöhe", grey
+# Role marks next to a Kennzahl's name (E-81): blue "Stress · <area>", purple "Fallhöhe" (E-98), grey
 # "nur Anzeige", neutral "Ampelregel" for the indicators a traffic light rule reads.
 AREA_SHORT = {"volatility": "Volatilität", "credit": "Kredit", "macro": "Makro", "breadth": "Breite",
               "positioning": "Positionierung"}
@@ -138,6 +141,16 @@ def group_of(kennzahl_id: str) -> str:
     if kennzahl_id in DISPLAYS:
         return "display"
     return indicator_catalog()[kennzahl_id].block
+
+
+def accent(kennzahl_id: str) -> str:
+    """Colour family of a Kennzahl (E-98): "vulnerability" (purple) for the vulnerability, its components and the
+    display series of its view, "" (blue) for everything else. From the Kennzahl's own block, not from the marks of
+    indicators on the same value: the Baa spread level stays blue, its reversal in the vulnerability is purple."""
+    if kennzahl_id == VULNERABILITY or DISPLAY_VIEWS.get(kennzahl_id) == "fallhoehe":
+        return VULNERABILITY
+    indicator = indicator_catalog().get(kennzahl_id)
+    return VULNERABILITY if indicator is not None and indicator.block == VULNERABILITY else ""
 
 
 def roles(kennzahl_id: str) -> list[tuple[str, str]]:
@@ -384,7 +397,8 @@ def thresholds(kennzahl_id: str) -> list[str]:
     indicator = indicator_catalog()[kennzahl_id]
     if indicator.block == RULE_ONLY:
         return [rule_line(kennzahl_id), "Das Perzentil ist nur Anzeige (Farbskala Blau, dunkler = höher); keine weitere Schwelle."]
-    lines = [f"Markierung „erhöht“: Perzentil über {_n(c.yellow_diffusion_percentile)} (Farbskala Blau, dunkler = höher; keine eigene Ampel je Kennzahl)."]
+    scale = "Lila" if indicator.block == VULNERABILITY else "Blau"  # E-98
+    lines = [f"Markierung „erhöht“: Perzentil über {_n(c.yellow_diffusion_percentile)} (Farbskala {scale}, dunkler = höher; keine eigene Ampel je Kennzahl)."]
     if indicator.block == VULNERABILITY:
         lines.append("Geht als Komponente in die Fallhöhe ein.")
     else:

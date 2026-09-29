@@ -383,7 +383,7 @@ def test_every_view_renders_and_every_display_kennzahl_is_shown(data):
         page = rendered(views.view(name, "light", NOW))
         assert "Datenbank nicht lesbar" not in page, name
         shown |= set(re.findall(r"/kennzahl/([a-z0-9_]+)", page))
-    assert set(texts.DISPLAYS) <= shown and set(views.DISPLAY_VIEWS) == set(texts.DISPLAYS)
+    assert set(texts.DISPLAYS) <= shown and set(texts.DISPLAY_VIEWS) == set(texts.DISPLAYS)
     assert "nicht gefunden" in rendered(views.view("gibt_es_nicht", "light", NOW))
     breadth = rendered(views.view("breite", "light", NOW))
     assert "E-72" in breadth  # the 50/200-day line is named as missing
@@ -432,7 +432,7 @@ def test_display_pages_link_their_view(data):
 
 
 def test_role_marks_name_every_role_of_a_value():
-    """E-81: blue stress with its area, violet vulnerability, grey display, outlined rule; both roles of one value."""
+    """E-81: blue stress with its area, purple vulnerability, grey display, outlined rule; both roles of one value."""
     both = [("Stress · Kredit", "stress"), ("Fallhöhe", "vulnerability")]
     assert texts.roles("credit_spread_level") == both and texts.roles("credit_spread_tight") == both  # E-85
     assert texts.roles("credit_spread_change") == [("Stress · Kredit", "stress"), ("Ampelregel", "rule")]
@@ -523,6 +523,50 @@ def test_time_series_fit_the_y_axis_to_the_visible_part():
     assert f"const PADDING = {figures.Y_PADDING};" in script and "meta.autoY" in script
 
 
+def test_the_vulnerability_is_purple_everywhere():
+    """E-98: lines, band, sparkline, percentile chip, heatmap part, names and titles of the vulnerability in purple,
+    from the Kennzahl's own block (the Baa level stays blue, its reversal in the vulnerability is purple)."""
+    from fever.web import components as ui
+    from fever.web.figures import (
+        PALETTE, VULNERABILITY_RAMP, Band, Chart, Heatmap, Line, curve_style, heatmap, line_colours, sparkline, time_series,
+    )
+    assert [texts.accent(k) for k in ("vulnerability", "credit_spread_tight", "credit_spread_level", "vix", "stress")] == [
+        "vulnerability", "vulnerability", "", "", ""]
+    assert [texts.accent(k) for k in ("cape", "money_market", "skew")] == ["vulnerability", "vulnerability", ""]
+    assert "Farbskala Lila" in texts.thresholds("ecy")[0] and "Farbskala Blau" in texts.thresholds("vix")[0]
+    cards = [c for c in views.explanations() if isinstance(getattr(c, "children", None), list)]
+    assert [c.children[0].children for c in cards if getattr(c.children[0], "className", None)] == ["Fallhöhe"]
+    links = {li.children[0].href: getattr(li, "className", None) for c in cards for li in c.children[1].children}
+    assert [links[f"/kennzahl/{k}"] for k in ("vulnerability", "ecy", "cape", "stress", "vix")] == [
+        "k-vulnerability", "k-vulnerability", "k-vulnerability", None, None]
+    light = line_colours("light", "vulnerability")
+    assert light[0] == "#7b3f93" and PALETTE["light"]["series"][0] not in light and "#4a3aa7" not in light
+    assert line_colours("dark") == PALETTE["dark"]["series"] and line_colours("dark", "vulnerability")[0] == "#9c56ba"
+    days = [date(2026, 9, 24), date(2026, 9, 25)]
+    chart = Chart("x", "T", "s", [Line("Wert", days, [1.0, 2.0])], "Wert", band=Band(days, [0.0, 0.0], [1.0, 1.0], [2.0, 2.0]),
+                  accent="vulnerability")
+    figure = validated(time_series(chart, "light")[0])
+    assert figure.data[-1].line.color == "#7b3f93" and figure.data[2].line.color == PALETTE["light"]["secondary"]
+    assert figure.data[1].fillcolor != figure.data[1].line.color  # the band is a purple tint
+    assert validated(sparkline(days, [1.0, 2.0], "dark", "vulnerability")[0]).data[0].line.color == "#9c56ba"
+    chip = ui.percentile_chip(95.0, 80.0, "vulnerability")
+    assert chip.style["backgroundColor"] == VULNERABILITY_RAMP[-1] and ui.percentile_chip(95.0, 80.0).style["backgroundColor"] == "#0d366b"
+    # the heatmap: the vulnerability rows as a purple lower part on their own y-axis, the dates under it
+    chart = Heatmap("heatmap", "H", "x", ["VIX", "VRP", "CAPE"], days, [[10.0, 20.0], [30.0, None], [90.0, 95.0]],
+                    accents=["", "", "vulnerability"])
+    figure = validated(heatmap(chart, "light")[0])
+    top, bottom = figure.data
+    assert top.y == ("VIX", "VRP") and bottom.y == ("CAPE",) and bottom.yaxis == "y2"
+    assert top.colorscale[0][1] == "#cde2fb" and bottom.colorscale[-1][1] == VULNERABILITY_RAMP[-1]
+    assert figure.layout.xaxis.anchor == "y2" and figure.layout.yaxis2.domain[1] < figure.layout.yaxis.domain[0]
+    assert "lila Fallhöhe" in figure.layout.annotations[-1].text
+    assert len(validated(heatmap(Heatmap("h", "H", "x", ["VIX"], days, [[1.0, 2.0]]), "light")[0]).data) == 1
+    # curves of the validation: purple dashed, blue solid
+    assert curve_style("dark", "vulnerability") == ("#9c56ba", "dash") and curve_style("light", "stress") == ("#2a78d6", "solid")
+    assert "k-vulnerability" in ui.kennzahl_head("credit_spread_tight").className
+    assert "k-vulnerability" not in ui.kennzahl_head("credit_spread_level").className
+
+
 def test_heatmap_rows_carry_their_roles():
     from fever.web.figures import Heatmap, heatmap
     days = [date(2026, 9, 24), date(2026, 9, 25)]
@@ -531,7 +575,7 @@ def test_heatmap_rows_carry_their_roles():
     figure = validated(heatmap(chart, "light")[0])
     assert figure.data[0].y == ("Kreditspread Baa (Niveau) · Stress · Kredit · Fallhöhe",)  # shown in the hover
     tick = figure.layout.yaxis.ticktext[0]
-    assert tick.count("■") == 2 and tick.endswith(" Kreditspread Baa (Niveau)") and "#4a3aa7" in tick
+    assert tick.count("■") == 2 and tick.endswith(" Kreditspread Baa (Niveau)") and "#7b3f93" in tick  # purple (E-98)
     stamp = figure.layout.annotations[-1].text
     assert "■</span> Stress · " in stamp and "■</span> Fallhöhe (Bereich im Hover)" in stamp and "Ampelregel" not in stamp
 
@@ -689,12 +733,12 @@ def test_regime_heatmap_and_sparkline_follow_the_standard():
     figure = validated(figure)
     assert config["showSendToCloud"] is False and [list(row) for row in figure.data[0].customdata] == [["Grün", "Rot"]]
     assert len(figure.data) == 1 and figure.layout.yaxis.visible is False
-    # E-96: the vulnerability as a second strip below, in the neutral percentile colours, gaps stay empty
+    # E-96: the vulnerability as a second strip below, in its purple percentile colours (E-98), gaps stay empty
     figure, _ = regime(Regime("regime", "Ampel", "x", days, [0, 3], texts.LEVEL_NAMES, vulnerability=[85.0, None]), "light")
     figure = validated(figure)
     strip = figure.data[1]
     assert strip.y == ("Fallhöhe",) and [list(row) for row in strip.z] == [[85.0, None]] and (strip.zmin, strip.zmax) == (0, 100)
-    assert strip.colorscale[0][1] == "#cde2fb" and "Fallhöhe" in strip.hovertemplate
+    assert strip.colorscale[0][1] == "#ead8f3" and strip.colorscale[-1][1] == "#4b235b" and "Fallhöhe" in strip.hovertemplate
     assert strip.yaxis == "y2" and figure.layout.yaxis2.domain == (0, 0.48) and figure.layout.yaxis.domain == (0.52, 1)
     figure, config = heatmap(Heatmap("heatmap", "H", "x", ["VIX"], days, [[10.0, None]]), "light")
     figure = validated(figure)

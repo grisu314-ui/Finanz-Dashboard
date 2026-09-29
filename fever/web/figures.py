@@ -28,6 +28,9 @@ PALETTE = {
         "series": ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"],
         "recession": "rgba(137, 135, 129, 0.18)",
         "shaded": "rgba(74, 58, 167, 0.14)",  # violet slot: phases like backwardation or inversion
+        # the vulnerability (E-98): purple step 550 of VULNERABILITY_RAMP; against the stress blue
+        # CVD ΔE 11.3, normal 18.1 (validator 29.09.2026)
+        "vulnerability": "#7b3f93",
     },
     "dark": {
         "surface": "#1a1a19", "ink": "#ffffff", "secondary": "#c3c2b7", "muted": "#898781",
@@ -35,12 +38,19 @@ PALETTE = {
         "series": ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"],
         "recession": "rgba(195, 194, 183, 0.14)",
         "shaded": "rgba(144, 133, 233, 0.20)",
+        # step 450: normal ΔE 16.7 to the stress blue, CVD only 6.9, so a chart with both draws it dashed
+        "vulnerability": "#9c56ba",
     },
 }
 FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif'
 # Sequential blue ramp of the reference palette, light -> dark (E-1: percentile colours).
 PERCENTILE_RAMP = ["#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7", "#3987e5",
                    "#2a78d6", "#256abf", "#1c5cab", "#184f95", "#104281", "#0d366b"]
+# The same for the vulnerability (E-98): the OKLCH lightness of each blue step at hue 315 (purple), chroma
+# as in the blue ramp where sRGB allows; a percentile looks equally light in both.
+VULNERABILITY_RAMP = ["#ead8f3", "#dfc6eb", "#d5b3e5", "#caa0dd", "#c08cd7", "#b57acf", "#ab64c8",
+                      "#9c56ba", "#8b4ba5", "#7b3f93", "#6a3680", "#5b2b6e", "#4b235b"]
+VULNERABILITY = "vulnerability"  # accent of everything that belongs to the vulnerability
 RANGE_BUTTONS = [
     {"count": 1, "label": "1 M", "step": "month", "stepmode": "backward"},
     {"count": 6, "label": "6 M", "step": "month", "stepmode": "backward"},
@@ -76,6 +86,25 @@ TEMPLATES = {mode: _template(mode) for mode in PALETTE}
 
 def _iso(days) -> list[str]:
     return [day.isoformat() for day in days]
+
+
+def ramp(accent: str = "") -> list[str]:
+    """Sequential percentile colours: purple for the vulnerability, blue otherwise (E-98)."""
+    return VULNERABILITY_RAMP if accent == VULNERABILITY else PERCENTILE_RAMP
+
+
+def _scale(colours: list[str]) -> list[list]:
+    steps = len(colours) - 1
+    return [[i / steps, colour] for i, colour in enumerate(colours)]
+
+
+def line_colours(mode: str, accent: str = "") -> list[str]:
+    """Line colours in order: the palette; for the vulnerability its purple first, then the palette without
+    the stress blue and the categorical violet (E-98)."""
+    series = PALETTE[mode]["series"]
+    if accent != VULNERABILITY:
+        return series
+    return [PALETTE[mode][VULNERABILITY]] + [colour for i, colour in enumerate(series) if i not in (0, 6)]
 
 
 @dataclass(frozen=True)
@@ -118,15 +147,17 @@ class Chart:
     end_labels: bool = False  # name at the end of each line (relief rule for more than two series)
     episodes: tuple[tuple[date, date, str], ...] = ()  # crisis marks as a strip on top (E-63)
     band: Band | None = None
+    accent: str = ""  # "vulnerability": purple lines and band (E-98); else the palette with blue first
 
 
 def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[dict, dict]:
     """Figure and dcc.Graph config of a time series chart in the project standard."""
     mode = theme if theme in PALETTE else "light"
     palette = PALETTE[mode]
+    colours = line_colours(mode, chart.accent)
     data = []
     if chart.band is not None:
-        band, colour, band_x = chart.band, palette["series"][0], _iso(chart.band.x)
+        band, colour, band_x = chart.band, colours[0], _iso(chart.band.x)
         data += [
             {"type": "scatter", "x": band_x, "y": list(band.low), "mode": "lines", "line": {"width": 0},
              "connectgaps": False, "showlegend": False, "hoverinfo": "skip"},
@@ -140,7 +171,7 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[di
     for index, line in enumerate(chart.lines):
         data.append({
             "type": "scatter", "x": _iso(line.x), "y": list(line.y), "name": line.name, "mode": "lines", "connectgaps": False,
-            "line": {"width": 2, "shape": line.shape, "color": palette["series"][index % len(palette["series"])]},
+            "line": {"width": 2, "shape": line.shape, "color": colours[index % len(colours)]},
             "hovertemplate": (f"%{{y:,.{line.hover_decimals}f}}" if line.hover_decimals is not None else "%{y:,.4~g}")
             + f"<extra>{line.name}</extra>",
         })
@@ -399,44 +430,67 @@ class Heatmap:
     retrieved: datetime | None = None
     note: str = ""
     roles: list[tuple[tuple[str, str], ...]] = field(default_factory=list)  # role marks per row (text, kind), E-81
+    accents: list[str] = field(default_factory=list)  # per row; "vulnerability" rows form a purple lower part (E-98)
 
 
+HEATMAP_GAP = 0.03  # share of the plot height between the stress part and the vulnerability part
 ROLE_NAMES = {"stress": "Stress", "vulnerability": "Fallhöhe", "rule": "Ampelregel", "display": "nur Anzeige"}
 
 
 def role_colours(mode: str) -> dict[str, str]:
-    """Colours of the role marks in charts, as in assets/base.css (E-81): blue stress, violet vulnerability."""
+    """Colours of the role marks in charts, as in assets/base.css (E-81): blue stress, purple vulnerability (E-98)."""
     p = PALETTE[mode]
-    return {"stress": p["series"][0], "vulnerability": p["series"][6], "rule": p["secondary"], "display": p["muted"]}
+    return {"stress": p["series"][0], "vulnerability": p[VULNERABILITY], "rule": p["secondary"], "display": p["muted"]}
 
 
 def heatmap(chart: Heatmap, theme: str, today: date | None = None) -> tuple[dict, dict]:
     mode = theme if theme in PALETTE else "light"
-    steps = len(PERCENTILE_RAMP) - 1
-    scale = [[i / steps, colour] for i, colour in enumerate(PERCENTILE_RAMP)]
     roles = chart.roles or [()] * len(chart.rows)
+    accents = chart.accents or [""] * len(chart.rows)
     # The row name carries the role as text for the hover; the tick label shows it as coloured squares.
     names = [" · ".join([row, *(text for text, _ in marks)]) for row, marks in zip(chart.rows, roles)]
     colours = role_colours(mode)
     ticks = ["".join(f'<span style="color:{colours[kind]}">■</span>' for _, kind in marks) + f" {row}"
              for row, marks in zip(chart.rows, roles)]
-    data = [{
-        "type": "heatmap", "x": _iso(chart.x), "y": names, "z": [list(row) for row in chart.z], "zmin": 0,
-        "zmax": 100, "colorscale": scale, "hoverongaps": False,
-        "colorbar": {"title": {"text": "Perzentil"}, "thickness": 10, "len": 0.8},
-        "hovertemplate": "%{y}<br>%{x|%d.%m.%Y}: Perzentil %{z:.0f}<extra></extra>",
-    }]
+    # The vulnerability rows in their own lower part with the purple ramp (E-98), on their own y-axis:
+    # two heatmaps on one category axis make plotly.js 4.1 throw in the browser (29.09.2026).
+    parts = [(accent, [i for i, a in enumerate(accents) if (a == VULNERABILITY) == (accent == VULNERABILITY)])
+             for accent in ("", VULNERABILITY)]
+    parts = [part for part in parts if part[1]] or [("", [])]
+    usable = 1.0 - HEATMAP_GAP * (len(parts) - 1)
+    total = max(1, sum(len(rows) for _, rows in parts))
+    data, axes, top = [], {}, 1.0
+    for n, (accent, rows) in enumerate(parts):
+        domain = [max(0.0, top - usable * len(rows) / total), top] if len(parts) > 1 else [0.0, 1.0]
+        colorbar = {"title": {"text": "Perzentil"}, "thickness": 10, "len": 0.8}
+        if len(parts) > 1:
+            colorbar.update(len=domain[1] - domain[0], y=(domain[0] + domain[1]) / 2, yanchor="middle")
+        data.append({
+            "type": "heatmap", "x": _iso(chart.x), "y": [names[i] for i in rows], "z": [list(chart.z[i]) for i in rows],
+            "zmin": 0, "zmax": 100, "colorscale": _scale(ramp(accent)), "hoverongaps": False, "colorbar": colorbar,
+            "hovertemplate": "%{y}<br>%{x|%d.%m.%Y}: Perzentil %{z:.0f}<extra></extra>",
+            **({"yaxis": f"y{n + 1}"} if n else {}),
+        })
+        axes["yaxis" if n == 0 else f"yaxis{n + 1}"] = {
+            "autorange": "reversed", "automargin": True, "tickfont": {"size": 11}, "tickmode": "array",
+            "tickvals": [names[i] for i in rows], "ticktext": [ticks[i] for i in rows], "domain": domain,
+            **({"anchor": "x"} if n else {}),
+        }
+        top = domain[0] - HEATMAP_GAP
     kinds = {kind for marks in roles for _, kind in marks}
     legend = " · ".join(f'<span style="color:{colours[kind]}">■</span> {name}' for kind, name in ROLE_NAMES.items() if kind in kinds)
     legend = f"<br>{legend} (Bereich im Hover)" if legend else ""
+    if len(parts) > 1:
+        legend += "<br>Farbe: blau Stress und übrige, lila Fallhöhe; je heller, desto niedriger"
     text = stamp(chart.source, chart.observed, chart.retrieved) + (f"<br>{chart.note}" if chart.note else "") + legend
+    xaxis = {"type": "date", "tickformatstops": DATE_FORMATS, "tickangle": 0}
+    if len(parts) > 1:
+        xaxis["anchor"] = f"y{len(parts)}"  # dates under the lower part
     layout = {
         "template": TEMPLATES[mode], "separators": ",.", "uirevision": chart.chart_id,
         "title": {"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
-        "margin": {"l": 8, "r": 8, "t": 56, "b": 62 + 14 * (4 + chart.note.count("<br>") + bool(legend))},
-        "xaxis": {"type": "date", "tickformatstops": DATE_FORMATS, "tickangle": 0},
-        "yaxis": {"autorange": "reversed", "automargin": True, "tickfont": {"size": 11},
-                  "tickmode": "array", "tickvals": names, "ticktext": ticks},
+        "margin": {"l": 8, "r": 8, "t": 56, "b": 62 + 14 * (4 + chart.note.count("<br>") + legend.count("<br>"))},
+        "xaxis": xaxis, **axes,
         "annotations": [stamp_annotation(text, mode)],
     }
     return {"data": data, "layout": layout}, graph_config(chart.chart_id, today)
@@ -472,16 +526,15 @@ def regime(chart: Regime, theme: str, today: date | None = None) -> tuple[dict, 
     rows = ["Ampel"]
     text = stamp(chart.source, chart.observed, chart.retrieved) + "<br>Farben: " + ", ".join(chart.names)
     if chart.vulnerability is not None:
-        # the neutral percentile colours of the heatmap: the status colours belong to the traffic light alone
-        steps = len(PERCENTILE_RAMP) - 1
+        # the purple percentile colours of the vulnerability (E-98): the status colours belong to the traffic light;
         # own y-axis: two one-row heatmaps on one category axis break plotly.js 4.1 (TypeError, 29.09.2026)
         data.append({
             "type": "heatmap", "x": x, "y": ["Fallhöhe"], "yaxis": "y2", "z": [list(chart.vulnerability)], "zmin": 0, "zmax": 100,
-            "colorscale": [[i / steps, colour] for i, colour in enumerate(PERCENTILE_RAMP)], "showscale": False,
+            "colorscale": _scale(VULNERABILITY_RAMP), "showscale": False,
             "hoverongaps": False, "hovertemplate": "%{x|%d.%m.%Y}: Fallhöhe %{z:.0f}<extra></extra>",
         })
         rows.append("Fallhöhe")
-        text += "<br>Fallhöhe: hell niedrig, dunkel hoch"
+        text += "<br>Fallhöhe (lila): hell niedrig, dunkel hoch"
     layout = {
         "template": TEMPLATES[mode], "separators": ",.", "uirevision": chart.chart_id,
         "title": {"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
@@ -525,6 +578,18 @@ class Roc:
     observed: date | None = None  # last day of the evaluation
     retrieved: datetime | None = None  # when the report was computed
     note: str = ""
+    colours: tuple = ()  # per curve: "stress" (blue), "vulnerability" (purple, dashed) or a palette slot index
+
+
+def curve_style(mode: str, key) -> tuple[str, str]:
+    """Colour and dash of a curve: the stress blue, the vulnerability purple dashed (in the dark mode it is too
+    close to the blue for colour-blind readers, E-98) or a slot of the palette."""
+    palette = PALETTE[mode]
+    if key == VULNERABILITY:
+        return palette[VULNERABILITY], "dash"
+    if key == "stress":
+        return palette["series"][0], "solid"
+    return palette["series"][int(key) % len(palette["series"])], "solid"
 
 
 def roc(chart: Roc, theme: str, today: date | None = None) -> tuple[dict, dict]:
@@ -534,8 +599,9 @@ def roc(chart: Roc, theme: str, today: date | None = None) -> tuple[dict, dict]:
     data = [{"type": "scatter", "x": [0, 1], "y": [0, 1], "mode": "lines", "name": "Zufall", "showlegend": False,
              "line": {"width": 1, "dash": "dash", "color": palette["muted"]}, "hoverinfo": "skip"}]
     for index, (name, fpr, tpr) in enumerate(chart.curves):
+        colour, dash = curve_style(mode, chart.colours[index] if index < len(chart.colours) else index)
         data.append({"type": "scatter", "x": list(fpr), "y": list(tpr), "mode": "lines", "name": name,
-                     "line": {"width": 2, "color": palette["series"][index % len(palette["series"])]},
+                     "line": {"width": 2, "color": colour, "dash": dash},
                      "hovertemplate": "Fehlalarmrate %{x:.0%} · Trefferquote %{y:.0%}<extra>" + name + "</extra>"})
     text = stamp(chart.source, chart.observed, chart.retrieved) + (f"<br>{chart.note}" if chart.note else "")
     axis = {"range": [0, 1], "tickformat": ".0%", "dtick": 0.2, "zeroline": False}
@@ -597,11 +663,11 @@ def bars(chart: Bars, theme: str, today: date | None = None) -> tuple[dict, dict
     return {"data": data, "layout": layout}, graph_config(chart.chart_id, today)
 
 
-def sparkline(x: list[date], y: list[float | None], theme: str) -> tuple[dict, dict]:
-    """Small line without axes; its date and value stand as text next to it (view 7)."""
+def sparkline(x: list[date], y: list[float | None], theme: str, accent: str = "") -> tuple[dict, dict]:
+    """Small line without axes; its date and value stand as text next to it (view 7); purple for the vulnerability."""
     mode = theme if theme in PALETTE else "light"
     data = [{"type": "scatter", "x": _iso(x), "y": list(y), "mode": "lines", "connectgaps": False, "hoverinfo": "skip",
-             "line": {"width": 1.5, "color": PALETTE[mode]["series"][0]}}]
+             "line": {"width": 1.5, "color": line_colours(mode, accent)[0]}}]
     layout = {"template": TEMPLATES[mode], "margin": {"l": 0, "r": 0, "t": 2, "b": 2}, "showlegend": False,
               "xaxis": {"visible": False}, "yaxis": {"visible": False}}
     return {"data": data, "layout": layout}, {"staticPlot": True, "displayModeBar": False, "responsive": True}
