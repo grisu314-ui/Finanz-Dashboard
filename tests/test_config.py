@@ -90,8 +90,9 @@ def test_repository_scoring_parameters():
     config = scoring_config()
     assert (config.window_years, config.min_history_years, config.min_blocks, config.hysteresis) == (10, 3, 3, 5.0)
     assert (config.display_window_years, config.min_history_years) == (3, 3)  # E-82: the user lowered 5 to 3
-    # E-80: Sahm and SOS on their own values, in percentage points
-    assert (config.orange_sahm, config.yellow_sos, config.sos_average_window, config.sos_low_window) == (0.5, 0.2, 26, 52)
+    # E-80, E-91: Sahm and SOS on their own values in percentage points; the trend over 200 trading days
+    assert (config.yellow_sahm, config.yellow_sos, config.sos_average_window, config.sos_low_window) == (0.5, 0.2, 26, 52)
+    assert config.trend_window == 200
 
 
 SERIES = (CONFIG_DIR / "series.toml").read_text(encoding="utf-8")

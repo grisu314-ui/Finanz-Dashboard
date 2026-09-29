@@ -12,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from fever.config import RULE_ONLY, VULNERABILITY, crisis_episodes, indicator_catalog, scoring_config, series_catalog
 from fever.release import NEW_YORK, is_stale
-from fever.scoring.composite import RULE_INDICATORS, SAHM_INDICATOR, SOS_INDICATOR
+from fever.scoring.composite import RULE_INDICATORS, SAHM_INDICATOR, SOS_INDICATOR, TREND_INDICATOR
 from fever.store.db import DataDirError
 from fever.store.status import HEARTBEAT_MAX_AGE
 from fever.web import components as ui
@@ -95,8 +95,9 @@ def _traffic_card(latest: dict, stamp) -> html.Div:
 # --- overview (report 6.3 view 1; start page since E-67) ------------------------------------------------------------
 
 TRACE_DAYS = 60  # report 6.3: current point with a 60-day trace
-MATRIX_NOTE = ("Nicht in den Flächen: Rot über VIX/VIX3M und<br>Kreditspread-Anstieg, Orange über die Sahm-Regel,<br>"
-               "Gelb über SOS-Indikator und Diffusionsindex,<br>Hysterese; die Ampel kann höher stehen als die Fläche.")
+MATRIX_NOTE = ("Nicht in den Flächen: Rot über VIX/VIX3M und<br>Kreditspread-Anstieg, Orange über die Sahm-Regel<br>"
+               "im Abwärtstrend, Gelb über Sahm-Regel, SOS-Indikator<br>und Diffusionsindex, Hysterese; die Ampel kann<br>"
+               "höher stehen als die Fläche.")
 
 
 def matrix_regions() -> tuple[Region, ...]:
@@ -328,7 +329,7 @@ def _indicator_charts(kennzahl_id, theme, row, retrieved) -> list:
             kennzahl_id, f"{title}: Wert", source,
             [Line("Wert", days, [r["value"] if r["status"] in shown else None for r in history], hover_decimals=2, shape="hv")],
             "Wert", observed=row["obs_date"], retrieved=retrieved, recessions=recessions, shaded=shaded,
-            shaded_label=shaded_label), theme),
+            shaded_label=shaded_label, zero_line=kennzahl_id == TREND_INDICATOR), theme),
         ui.chart_card(f"chart-{kennzahl_id}-percentile", Chart(
             f"{kennzahl_id}-percentile", f"{title}: Perzentil", source,
             [Line("Perzentil", days, [r["percentile"] if r["status"] == "ok" else None for r in history], hover_decimals=0, shape="hv")],
@@ -338,14 +339,21 @@ def _indicator_charts(kennzahl_id, theme, row, retrieved) -> list:
 
 
 def rule_periods(indicator_id: str) -> tuple[tuple[tuple[date, date], ...], str]:
-    """Score days on which the Sahm or SOS rule was active (E-80), from the stored traffic light; violet in the charts."""
-    if indicator_id not in (SAHM_INDICATOR, SOS_INDICATOR):
+    """Score days on which a rule of the Sahm rule, the SOS indicator or the trend was active (E-80, E-91),
+    from the stored traffic light; violet in the charts."""
+    c = scoring_config()
+    sahm, trend = fmt.number(c.yellow_sahm, 2), f"{c.trend_window}-Tage-Linie"
+    labels = {
+        SAHM_INDICATOR: f"Violett: Ampelregel aktiv (Sahm-Regel mindestens {sahm}: Gelb, mit S&P 500 unter der {trend} Orange)",
+        SOS_INDICATOR: f"Violett: Ampelregel aktiv ({texts.rule_text('yellow_sos')})",
+        TREND_INDICATOR: f"Violett: Orange über die Sahm-Regel (mindestens {sahm} und S&P 500 unter der {trend})",
+    }
+    if indicator_id not in labels:
         return (), ""
     rules = set(RULE_INDICATORS[indicator_id])
     history = db.composite_history("active_rules")
     flags = [bool(rules & set((r["active_rules"] or "").split(","))) for r in history]
-    label = "; ".join(texts.rule_text(rule) for rule in RULE_INDICATORS[indicator_id])
-    return runs([r["score_date"] for r in history], flags), f"Violett: Ampelregel aktiv ({label})"
+    return runs([r["score_date"] for r in history], flags), labels[indicator_id]
 
 
 def resteepening(points: list[tuple[date, float]]) -> str:
@@ -512,7 +520,7 @@ ITEM_COLUMNS = ("status", "value", "percentile", "percentile_display")  # what a
 
 
 def _indicator_item(ctx: _Context, indicator_id: str, *, shaded=(), shaded_label="", percentile=False,
-                    history: list[dict] | None = None, notes=()) -> html.Section:
+                    history: list[dict] | None = None, notes=(), zero_line=False) -> html.Section:
     row = ctx.rows.get(indicator_id)
     summary = _indicator_summary(indicator_id, row, ctx.fresh, ctx.now)
     if row is None:
@@ -527,7 +535,7 @@ def _indicator_item(ctx: _Context, indicator_id: str, *, shaded=(), shaded_label
     charts = [ui.chart_card(f"view-{indicator_id}-value", Chart(
         indicator_id, f"{title}: Wert", source, [Line("Wert", days, value, hover_decimals=None, shape="hv")], "Wert",
         observed=row["obs_date"], retrieved=retrieved, recessions=ctx.recessions, shaded=shaded,
-        shaded_label=shaded_label, full_history=True), ctx.theme)]
+        shaded_label=shaded_label, zero_line=zero_line, full_history=True), ctx.theme)]
     if percentile:
         lines = [Line(f"{ctx.config.window_years} Jahre (Score)", days,
                       [r["percentile"] if r["status"] == "ok" else None for r in history], hover_decimals=0, shape="hv")]
@@ -672,15 +680,16 @@ def _view_macro(ctx: _Context) -> list:
                       source="FRED (US-Finanzministerium)", shaded=inversion,
                       shaded_label="Violett: Inversion (10J − 3M unter null)", zero_line=True, notes=[resteepening(t10y3m)]),
         _rule_item(ctx, SAHM_INDICATOR),
+        _rule_item(ctx, TREND_INDICATOR),
         _rule_item(ctx, SOS_INDICATOR),
         _indicator_item(ctx, "claims"),
     ]
 
 
 def _rule_item(ctx: _Context, indicator_id: str) -> html.Section:
-    """Sahm rule and SOS indicator with the days their traffic light rule was active (E-80)."""
+    """Sahm rule, S&P 500 trend and SOS indicator with the days their traffic light rule was active (E-80, E-91)."""
     shaded, label = rule_periods(indicator_id)
-    return _indicator_item(ctx, indicator_id, shaded=shaded, shaded_label=label)
+    return _indicator_item(ctx, indicator_id, shaded=shaded, shaded_label=label, zero_line=indicator_id == TREND_INDICATOR)
 
 
 def _newest(ctx: _Context, series) -> date | None:

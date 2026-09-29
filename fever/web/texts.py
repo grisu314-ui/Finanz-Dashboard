@@ -15,7 +15,7 @@ from fever.config import (
     FREQUENCY_DAYS, RULE_ONLY, STRESS_BLOCKS, VULNERABILITY, Indicator, indicator_catalog, scoring_config, series_catalog,
 )
 from fever.scoring.composite import (
-    CREDIT_CHANGE_INDICATOR, RULE_INDICATORS, SAHM_INDICATOR, SOS_INDICATOR, VIX_RATIO_INDICATOR,
+    CREDIT_CHANGE_INDICATOR, RULE_INDICATORS, SAHM_INDICATOR, SOS_INDICATOR, TREND_INDICATOR, VIX_RATIO_INDICATOR,
 )
 
 TEXT_DIR = Path(__file__).resolve().parent / "texts"
@@ -174,6 +174,7 @@ _TRANSFORMS = {
     "change": lambda c: f"Veränderung des Werts über {c.change_window} Beobachtungen (Handelstage), in Einheiten der Reihe",
     "relative_change": lambda c: f"relative Stärke: Logveränderung des Verhältnisses der ersten zur zweiten Reihe über {c.relative_change_window} gemeinsame Handelstage",
     "sos": lambda c: f"Durchschnitt der letzten {c.sos_average_window} Wochenwerte minus dem niedrigsten dieser Durchschnitte in den {c.sos_low_window} Wochen davor, in Prozentpunkten",
+    "trend_gap": lambda c: f"Abstand des Werts vom Durchschnitt der letzten {c.trend_window} Beobachtungen (Handelstage), in Prozent; negativ = unter dieser Linie",
     "equity_share": lambda c: "Marktwert aller Aktien (nichtfinanzielle und finanzielle Unternehmen) geteilt durch Aktien plus Schuldtitel und Kredite von Bundesregierung, Bundesstaaten und Gemeinden, Haushalten, nichtfinanziellen Unternehmen und Ausland, in Prozent",
 }
 
@@ -186,8 +187,10 @@ def rule_line(indicator_id: str) -> str | None:
                              f"{_n(c.red_vix_ratio, 2)} liegt.",
         CREDIT_CHANGE_INDICATOR: f"Eigene Ampelregel: Rot, solange das Perzentil mindestens {_n(c.red_credit_change)} beträgt "
                                  f"(endet {_n(c.hysteresis)} Punkte darunter).",
-        SAHM_INDICATOR: f"Eigene Ampelregel: mindestens Orange, solange der Wert mindestens {_n(c.orange_sahm, 2)} beträgt "
-                        "(ohne Hysterese).",
+        SAHM_INDICATOR: f"Eigene Ampelregel: mindestens Gelb, solange der Wert mindestens {_n(c.yellow_sahm, 2)} beträgt; "
+                        f"Orange, solange zugleich der S&P 500 unter seiner {c.trend_window}-Tage-Linie liegt (ohne Hysterese).",
+        TREND_INDICATOR: f"Eigene Ampelregel mit der Sahm-Regel: Orange, solange der Wert unter null liegt und die Sahm-Regel "
+                         f"mindestens {_n(c.yellow_sahm, 2)} beträgt; ohne Abwärtstrend gilt dort Gelb (ohne Hysterese).",
         SOS_INDICATOR: f"Eigene Ampelregel: mindestens Gelb, solange der Wert über {_n(c.yellow_sos, 2)} liegt (ohne Hysterese).",
     }.get(indicator_id)
 
@@ -312,7 +315,8 @@ def _score_facts(kennzahl_id: str, c) -> list[tuple[str, str]]:
     if kennzahl_id == "traffic_light":
         return [("Stufen", ", ".join(LEVEL_NAMES)),
                 ("Berechnung", "Regeln auf dem geglätteten Stress, der Fallhöhe, dem Diffusionsindex, VIX/VIX3M, dem Anstieg des "
-                               "Kreditspreads Baa, der Sahm-Regel und dem SOS-Indikator; es gilt die höchste zutreffende Stufe")]
+                               "Kreditspreads Baa, der Sahm-Regel mit dem Trend des S&P 500 und dem SOS-Indikator; es gilt die "
+                               "höchste zutreffende Stufe")]
     block = kennzahl_id.removeprefix("block_")
     facts = [("Berechnung", "Median der Perzentile der gültigen Indikatoren im Block; ohne gültigen Indikator fehlt der Block")]
     if block == c.fast_block:
@@ -330,10 +334,11 @@ def thresholds(kennzahl_id: str) -> list[str]:
            f"über {c.change_window} Handelstage im Perzentil mindestens {_n(c.red_credit_change)}.")
     orange = (f"Orange: Stress mindestens {_n(c.orange_stress)}, oder Stress mindestens {_n(c.orange_stress_with_vulnerability)} "
               f"zusammen mit Fallhöhe mindestens {_n(c.orange_vulnerability)}, oder die Sahm-Regel mindestens "
-              f"{_n(c.orange_sahm, 2)} (ohne Hysterese).")
+              f"{_n(c.yellow_sahm, 2)}, während der S&P 500 unter seiner {c.trend_window}-Tage-Linie liegt (ohne Hysterese).")
     yellow = (f"Gelb: Fallhöhe mindestens {_n(c.yellow_vulnerability)}, oder mindestens {_n(c.yellow_diffusion_share)} % der "
-              f"gültigen Stress-Indikatoren über Perzentil {_n(c.yellow_diffusion_percentile)}, oder der SOS-Indikator über "
-              f"{_n(c.yellow_sos, 2)} (ohne Hysterese).")
+              f"gültigen Stress-Indikatoren über Perzentil {_n(c.yellow_diffusion_percentile)}, oder die Sahm-Regel mindestens "
+              f"{_n(c.yellow_sahm, 2)} ohne diesen Abwärtstrend, oder der SOS-Indikator über {_n(c.yellow_sos, 2)} "
+              "(beide ohne Hysterese).")
     colors = "Farben: Die Ampelfarben stehen nur für die Gesamtampel und immer mit ihrem Namen."
     if kennzahl_id == "traffic_light":
         return [red, orange, yellow, "Grün: keine Regel trifft zu.", hysteresis, colors]
@@ -384,7 +389,8 @@ def rule_text(rule: str) -> str:
         "red_credit_change": f"Rot: Anstieg des Kreditspreads Baa über {c.change_window} Handelstage im Perzentil mindestens {_n(c.red_credit_change)}",
         "orange_stress": f"Orange: Stress mindestens {_n(c.orange_stress)}",
         "orange_stress_vulnerability": f"Orange: Stress mindestens {_n(c.orange_stress_with_vulnerability)} und Fallhöhe mindestens {_n(c.orange_vulnerability)}",
-        "orange_sahm": f"Orange: Sahm-Regel mindestens {_n(c.orange_sahm, 2)}",
+        "orange_sahm_trend": f"Orange: Sahm-Regel mindestens {_n(c.yellow_sahm, 2)} und S&P 500 unter seiner {c.trend_window}-Tage-Linie",
+        "yellow_sahm": f"Gelb: Sahm-Regel mindestens {_n(c.yellow_sahm, 2)}",
         "yellow_sos": f"Gelb: SOS-Indikator über {_n(c.yellow_sos, 2)}",
         "yellow_vulnerability": f"Gelb: Fallhöhe mindestens {_n(c.yellow_vulnerability)}",
         "yellow_diffusion": f"Gelb: mindestens {_n(c.yellow_diffusion_share)} % der Stress-Indikatoren über Perzentil {_n(c.yellow_diffusion_percentile)}",

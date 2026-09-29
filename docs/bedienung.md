@@ -23,10 +23,10 @@ Die genauen Schwellenwerte stehen bewusst nicht hier, sondern in der App auf den
 |---|---|
 | Grün | keine auffällige Lage |
 | Gelb | erhöhte Verwundbarkeit ohne akuten Auslöser, oder viele Einzelwerte gleichzeitig erhöht |
-| Orange | deutlicher Stress, vor allem zusammen mit hoher Fallhöhe, oder ein ausgelöstes Rezessionssignal (Sahm-Regel) |
+| Orange | deutlicher Stress, vor allem zusammen mit hoher Fallhöhe, oder ein ausgelöstes Rezessionssignal (Sahm-Regel), während der S&P 500 unter seiner 200-Tage-Linie liegt |
 | Rot | akuter, breiter Stress oder ein schnelles Warnsignal (z. B. Volatilitätskurve invertiert) |
 
-Gelb gibt es außerdem als frühe Rezessionswarnung vom Arbeitsmarkt (SOS-Indikator). Die beiden Rezessionsregeln gelten, solange ihr Wert die Schwelle erfüllt, und bleiben nach Rezessionen oft bis in die Erholung hinein aktiv (Erklärseite „Ampel“).
+Gelb gibt es außerdem bei einem Rezessionssignal vom Arbeitsmarkt ohne Abwärtstrend (SOS-Indikator, Sahm-Regel). Die Rezessionsregeln gelten, solange ihre Werte die Schwellen erfüllen, und bleiben nach Rezessionen oft bis in die Erholung hinein aktiv (Erklärseite „Ampel“).
 
 - **Hysterese:** Eine Stufe wird erst verlassen, wenn der Wert klar unter die Schwelle fällt. Das verhindert tägliches Hin- und Herspringen.
 - **Konfidenz:** Anteil der Kennzahlen mit aktuellen Daten, gewichtet nach ihrem historischen Vorlauf. Niedrige Konfidenz heißt: Die Ampel steht auf dünner Datenbasis.
@@ -76,7 +76,7 @@ Gelb gibt es außerdem als frühe Rezessionswarnung vom Arbeitsmarkt (SOS-Indika
 | Bild speichern | Kamera-Symbol in der Chart-Leiste lädt ein PNG herunter; Titel, Quelle und Datenstand sind im Bild enthalten |
 | Vollbild | Button „Vollbild“ oben rechts über dem Chart; ESC oder „Schließen“ beendet es |
 | Graue Flächen | US-Rezessionen nach der NBER-Datierung, wie in den FRED-Grafiken; nur zur Orientierung, kein Teil eines Scores. Erklärung: Seite „Erklärungen“ → „Rezessionsbalken“ |
-| Violette Flächen | markierte Phasen: Backwardation (VIX/VIX3M), Inversion der Zinskurve, Tage mit aktiver Ampelregel (Sahm-Regel, SOS-Indikator); die Zeile unter dem Chart sagt, was gemeint ist |
+| Violette Flächen | markierte Phasen: Backwardation (VIX/VIX3M), Inversion der Zinskurve, Tage mit aktiver Ampelregel (Sahm-Regel, S&P 500 unter der 200-Tage-Linie, SOS-Indikator); die Zeile unter dem Chart sagt, was gemeint ist |
 | Ganze Ansicht als PDF | Browser → Drucken → „Als PDF speichern“; die Druckansicht ist hell und ohne Bedienelemente |
 
 Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar bleibt.
@@ -85,11 +85,11 @@ Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar 
 
 ## 7. Ansichten
 
-1. **Übersicht** (Startseite): Ampel mit den zutreffenden Regeln, Stress und Fallhöhe (geglättet, dazu ungeglättet), Konfidenz und Diffusionsindex; die Ampelmatrix (Stress nach rechts, Fallhöhe nach oben; die farbigen Flächen zeigen, welche Ampelstufe die Regeln aus Stress und Fallhöhe ergeben; die Linie ist die Spur der letzten 60 Handelstage) und die letzte Aktualisierung je Quelle. Die Einzelregeln (Rot über VIX/VIX3M und den Anstieg des Kreditspreads, Orange über die Sahm-Regel, Gelb über SOS-Indikator und Diffusionsindex) stehen nicht in den Flächen; die Ampel kann deshalb höher stehen, als der Punkt vermuten lässt. Auf dem Smartphone lesbar.
+1. **Übersicht** (Startseite): Ampel mit den zutreffenden Regeln, Stress und Fallhöhe (geglättet, dazu ungeglättet), Konfidenz und Diffusionsindex; die Ampelmatrix (Stress nach rechts, Fallhöhe nach oben; die farbigen Flächen zeigen, welche Ampelstufe die Regeln aus Stress und Fallhöhe ergeben; die Linie ist die Spur der letzten 60 Handelstage) und die letzte Aktualisierung je Quelle. Die Einzelregeln (Rot über VIX/VIX3M und den Anstieg des Kreditspreads, Orange über die Sahm-Regel im Abwärtstrend, Gelb über Sahm-Regel, SOS-Indikator und Diffusionsindex) stehen nicht in den Flächen; die Ampel kann deshalb höher stehen, als der Punkt vermuten lässt. Auf dem Smartphone lesbar.
 2. **Signale:** VIX-Termstruktur (heute), VIX/VIX3M mit violett markierter Backwardation, VIX, VRP, VVIX, SKEW, USD/JPY.
 3. **Breite:** fünf Verhältnisse von Nasdaq-Indizes als relative Stärke (gleich- gegen kapitalgewichtet, kleine gegen große Werte, Halbleiter und Regionalbanken gegen den Gesamtmarkt, Zykliker gegen Defensive), je mit Wert und Perzentil; ein niedriger Wert heißt, die breite bzw. zyklische Seite fällt zurück. Der Anteil über der 50/200-Tage-Linie fehlt (keine freie Quelle). Nasdaq-Daten nur für dich selbst verwenden.
 4. **Positionierung:** Positionierung am VIX-Futures-Markt (COT) mit Perzentil über 10 und 3 Jahre, Margin Debt; AAII folgt in Phase 2.
-5. **Makro:** Financial-Conditions- und Stressindizes, OFR FSI nach Kategorien und Regionen, Kreditspread Baa (Niveau und Anstieg) und HY-OAS-Niveau (im Score; das HY-OAS-Perzentil misst sich vorerst nur an den Jahren seit 2023), CCC − BB (nur Anzeige), Zinskurve mit violett markierter Inversion und dem Datum des letzten Re-Steepening, Sahm-Regel und SOS-Indikator mit violett markierten Tagen aktiver Ampelregel, Erstanträge.
+5. **Makro:** Financial-Conditions- und Stressindizes, OFR FSI nach Kategorien und Regionen, Kreditspread Baa (Niveau und Anstieg) und HY-OAS-Niveau (im Score; das HY-OAS-Perzentil misst sich vorerst nur an den Jahren seit 2023), CCC − BB (nur Anzeige), Zinskurve mit violett markierter Inversion und dem Datum des letzten Re-Steepening, Sahm-Regel, Abstand des S&P 500 zu seiner 200-Tage-Linie und SOS-Indikator mit violett markierten Tagen aktiver Ampelregel, Erstanträge.
 6. **Fallhöhe:** CAPE, Excess CAPE Yield, Aktienquote der Anleger (Anteil der Aktien am Finanzvermögen aus Aktien, Anleihen und Krediten, quartalsweise aus der Fed-Statistik Z.1), Geldmarktfonds im Verhältnis zu Aktien (nur Anzeige), Kreditspread Baa: Enge, Margin Debt, Top-10-Konzentration (Anteil der zehn größten Unternehmen im SPDR S&P 500 ETF, quartalsweise aus den Meldungen an die SEC, rund zwei Monate verzögert).
 7. **Visualisierung:**
    - *Stress-Historie mit Krisen:* die dunklen Balken oben markieren Krisen vom Hoch bis zum Tief des S&P 500; Maus darüber nennt Krise und Daten, die Tabelle darunter die Quellen.

@@ -138,6 +138,17 @@ def _equity_share(inputs, config):
     return 100 * equities / total.where(total > 0)
 
 
+def _trend_gap(inputs, config):
+    """Distance of the value from its mean over the last `trend_window` observations, in percent (E-91).
+
+    Negative = below the line (e.g. the S&P 500 under its 200-day line). Rounded to 10 decimals, so
+    float noise never decides "below".
+    """
+    series = inputs[0]
+    mean = series.rolling(config.trend_window).mean()
+    return (100 * (series / mean.where(mean > 0) - 1)).round(10)
+
+
 def _aligned(inputs):
     frame = pd.concat(inputs, axis=1, join="inner")
     return [frame.iloc[:, index] for index in range(frame.shape[1])]
@@ -165,4 +176,5 @@ _TRANSFORMS = {
     "change": _change,
     "sos": _sos,
     "equity_share": _equity_share,
+    "trend_gap": _trend_gap,
 }

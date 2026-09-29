@@ -53,7 +53,7 @@ Bewusste Abweichungen vom Bericht:
 - SQLite statt DuckDB: `web` und `worker` sind getrennte Prozesse, DuckDB erlaubt aber nur einen schreibenden Prozess oder mehrere nur lesende, nicht beides zugleich.
 - Kein Prefect, Grafana oder Streamlit: zu schwer oder doppelt.
 - Shiller-CAPE und Margin Debt schon in Phase 1, sonst bleibt die Fallhöhe-Achse leer. Margin Debt kommt aus der Fed-Statistik Z.1 (FRED `BOGZ1FL663067003Q`, quartalsweise), nicht von FINRA (E-42).
-- Entscheidungsrunde 29.09.2026 (E-80 bis E-90): Mindesthistorie 3 statt 5 Jahre; Sahm-Regel und SOS-Indikator als feste Ampelregeln; Aktienquote der Anleger (Z.1) und umgedrehter Kreditspread Baa in der Fallhöhe; S&P 500 für VRP und Aktien-Anleihen-Korrelation von Cboe statt FRED.
+- Entscheidungsrunde 29.09.2026 (E-80 bis E-91): Mindesthistorie 3 statt 5 Jahre; Sahm-Regel (Orange nur mit S&P 500 unter der 200-Tage-Linie, E-91) und SOS-Indikator als feste Ampelregeln; Aktienquote der Anleger (Z.1) und umgedrehter Kreditspread Baa in der Fallhöhe; S&P 500 für VRP und Aktien-Anleihen-Korrelation von Cboe statt FRED.
 
 Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `assets/`. Alternative Stacks schlägst du nicht vor.
 
@@ -101,7 +101,7 @@ migrations/  tests/  tests/fixtures/  docs/
 Ein Assistent ergänzt diese Dinge erfahrungsgemäß ungefragt. Hier nicht. Bei zwingendem Grund: erst fragen, nicht bauen.
 
 - Kein Login, keine Benutzerverwaltung, keine Sessions. Zugangsschutz ist Infrastruktur (O-3), nie Anwendungscode.
-- Kein CSV-Export von Chartdaten, keine eigene Ampel und keine absoluten Schwellen je Einzelkennzahl (entschieden 25.09.2026). Das betrifft die Einfärbung einzelner Kennzahlen; Regeln der Gesamtampel auf einzelnen Werten (VIX/VIX3M, Sahm-Regel, SOS-Indikator) sind entschieden (E-48, E-80).
+- Kein CSV-Export von Chartdaten, keine eigene Ampel und keine absoluten Schwellen je Einzelkennzahl (entschieden 25.09.2026). Das betrifft die Einfärbung einzelner Kennzahlen; Regeln der Gesamtampel auf einzelnen Werten (VIX/VIX3M, Sahm-Regel mit S&P-500-Trend, SOS-Indikator) sind entschieden (E-48, E-80, E-91).
 - Kein Abruf, Import oder Speichern der FINRA-Margin-Statistik, auch nicht per manuellem Download: Die Nutzungsbedingungen untersagen Speichern und Datenbanken ohne schriftliche Zustimmung (entschieden 26.09.2026, E-42).
 - Keine Konto-, Positions- oder Orderfunktionen, auch nicht über IBKR. Nur Marktdaten.
 - Keine Handelssignale, keine Renditeprognosen, keine „Crash-Wahrscheinlichkeit" ohne validiertes Modell.

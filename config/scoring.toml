@@ -20,6 +20,7 @@ relative_change_window = 63  # relative_change: strength of one index against an
 change_window = 20         # change: 20-day change of the credit spread BAA10Y (report 4.3 step 1, E-75)
 sos_average_window = 26    # sos: 26-week mean of the insured unemployment rate ... (Richmond Fed, E-80)
 sos_low_window = 52        # ... minus its lowest value in the 52 weeks before
+trend_window = 200         # trend_gap: S&P 500 against its mean of 200 trading days (growth-trend rule, E-91)
 
 [composite]
 min_blocks = 3             # stress composite = mean of the available blocks, at least this many (E-47, L-4)
@@ -43,7 +44,8 @@ yellow_diffusion_share = 40             # percent of the valid stress indicators
 yellow_diffusion_percentile = 80        # ... above this percentile
 hysteresis = 5             # a rule ends only this many points below its threshold (E-48, L-7)
 red_credit_change = 95     # red: percentile of the 20-day change of BAA10Y, standing in for the HY-OAS rise (E-75)
-# Recession rules on the values themselves, in percentage points (E-80). No hysteresis: both are
-# moving averages already; a rule holds while the newest valid value meets it.
-orange_sahm = 0.5          # orange: Sahm rule (SAHMREALTIME) at or above this
+# Recession rules on the values themselves, in percentage points (E-80, E-91). No hysteresis: all
+# are moving averages already; a rule holds while the newest valid values meet it.
+yellow_sahm = 0.5          # Sahm rule (SAHMREALTIME) at or above this: yellow; orange while the
+                           # S&P 500 is also below its trend_window mean (growth-trend rule, E-91)
 yellow_sos = 0.2           # yellow: SOS indicator above this (early warning)

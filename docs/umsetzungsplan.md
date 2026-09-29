@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 29.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-90)** · Nächster Schritt: Update auf TrueNAS (Abschnitt 9), danach M10 (Validierung, E-89) und M9 (Abnahme)
+Stand: 29.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-91)** · Nächster Schritt: Update auf TrueNAS (Abschnitt 9), danach M10 (Validierung, E-89) und M9 (Abnahme)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -25,7 +25,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026; Nachtrag Rezessionsbalken E-56 dort ⏳) | M1 (Lesen), M3 (Heartbeat) | erteilt 26.09.2026 |
 | M7 | Ansichten 1–7 | ☑ 27.09.2026: Übersicht (vormals Übersicht B) und Ansichten 2–6 (E-62, E-65, E-67), Perzentilbänder (E-64, Migration 0003) und Ansicht 7 (E-63, E-66); die Variante M7a ist wieder entfernt (E-67); auf TrueNAS ⏳; Ansicht Breite und Top-10-Konzentration mit Daten seit 28.09.2026 (E-68, E-71 bis E-74) | M5, M6, L-13 | M7a erteilt 26.09.2026, M7 erteilt 27.09.2026 |
 | M8 | Erklärtexte je Kennzahl | ☑ 28.09.2026: alle Texte und die Krisendaten in `config/episodes.toml` vom Nutzer freigegeben | parallel zu M6/M7 | erteilt 28.09.2026 |
-| R-29.09 | Entscheidungsrunde 29.09.2026: Sahm- und SOS-Regel, Rollen-Marken, Mindesthistorie 3 Jahre, Cboe-SPX, Re-Steepening-Hinweis, Kreditspread-Enge und Aktienquote in der Fallhöhe, Geldmarktfonds, y-Achse, HY-OAS-Niveau (E-80 bis E-90) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); auf TrueNAS ⏳ | M8 | erteilt 29.09.2026 |
+| R-29.09 | Entscheidungsrunde 29.09.2026: Sahm-Regel mit Trendbedingung und SOS-Regel, Rollen-Marken, Mindesthistorie 3 Jahre, Cboe-SPX, Re-Steepening-Hinweis, Kreditspread-Enge und Aktienquote in der Fallhöhe, Geldmarktfonds, y-Achse, HY-OAS-Niveau (E-80 bis E-91) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); auf TrueNAS ⏳ | M8 | erteilt 29.09.2026 |
 | M10 | Validierung (Bericht 4.3, Schritt 7): Walk-forward, Treffer und Fehlalarme je Ampelstufe, Vorlauf, Vergleich mit reinem VIX-Filter; vorgezogen aus Phase 2 (E-89) | ☐ nächster Meilenstein | R-29.09 auf TrueNAS | Plan vorlegen |
 | M9 | Abnahme Phase 1 | ☐ | M0–M8, M10 | – |
 
@@ -116,7 +116,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 28.09.2026 | E-77 | gunicorn-Threads (Nachtrag zu E-54, technisch nach Messung im Rahmen der Freigabe vom 28.09.2026) | 1 Prozess mit 1 Thread (`gthread`) statt 4 Threads | Parallele Callbacks bremsten sich über den GIL gegenseitig (sqlite3 gibt ihn je Zeile ab): Ansicht Visualisierung 5 Callbacks je 1,4–2,7 s parallel, zusammen 0,65 s nacheinander. Anfragen laufen jetzt nacheinander; eine langsame hält die übrigen höchstens rund 1 s auf |
 | 28.09.2026 | E-78 | Server-Cache (CLAUDE.md verbot einen Caching-Layer) | Nutzer: ja, wenn er etwas nützt. Gemessen: erneute Aufrufe einer Ansicht ohne neue Daten auf dem Server 5- bis 10-mal schneller (Makro 1,05 → 0,21 s); umgesetzt als Lesepuffer im Web-Prozess | Gilt je Datenstand: größte rowid der nur anfügbaren Tabelle `observation` und `computed_at` des Scoring-Laufs; jede neue Beobachtung und jeder Scoring-Lauf verwirft den ganzen Puffer. Erster Aufruf nach neuen Daten und das Zeichnen im Browser werden dadurch nicht schneller. Rund 60 MB mehr Speicher. Ausnahme in `CLAUDE.md` eingetragen |
 | 28.09.2026 | E-79 | O-7: Antwort der St. Louis Fed | Zustimmung erhalten (Nutzer) | O-7 und W-11 erledigt. Reihen Dritter über FRED (ICE, S&P, Nasdaq, Moody's) bleiben wie bisher private Nutzung ohne Weitergabe (E-69) |
-| 29.09.2026 | E-80 | Sahm-Regel und Rezessions-Vorwarnung (Entscheidungsrunde F1, F2) | Sahm-Regel (SAHMREALTIME) ab 0,5 → mindestens Orange; SOS-Indikator der Richmond Fed (26-Wochen-Schnitt der versicherten Arbeitslosenquote FRED `IURSA` minus Minimum dieses Schnitts in den 52 Wochen davor) über 0,2 → mindestens Gelb. Beide Regeln lesen den Wert, gelten solange er die Schwelle erfüllt, ohne Hysterese; das Sahm-Perzentil bleibt im Makro-Block | Neue Reihe `iursa` (wöchentlich, Verzug 12 Tage), neuer Indikator `sos` mit Block `rule` (nur Ampelregel: in keinem Block, nicht in Konfidenz und Diffusion, kein `v_score`). Parameter `orange_sahm`, `yellow_sos`, `sos_average_window`, `sos_low_window` in `scoring.toml`. SOS gerundet auf 10 Stellen, damit Rechenrauschen nie über die Schwelle entscheidet. Wirkung: Abschnitt 4, „Entscheidungsrunde 29.09.2026“ |
+| 29.09.2026 | E-80 | Sahm-Regel und Rezessions-Vorwarnung (Entscheidungsrunde F1, F2) | Sahm-Regel (SAHMREALTIME) ab 0,5 → mindestens Orange (am selben Tag durch E-91 ersetzt: Gelb, Orange nur im Abwärtstrend); SOS-Indikator der Richmond Fed (26-Wochen-Schnitt der versicherten Arbeitslosenquote FRED `IURSA` minus Minimum dieses Schnitts in den 52 Wochen davor) über 0,2 → mindestens Gelb. Beide Regeln lesen den Wert, gelten solange er die Schwelle erfüllt, ohne Hysterese; das Sahm-Perzentil bleibt im Makro-Block | Neue Reihe `iursa` (wöchentlich, Verzug 12 Tage), neuer Indikator `sos` mit Block `rule` (nur Ampelregel: in keinem Block, nicht in Konfidenz und Diffusion, kein `v_score`). Parameter `yellow_sos`, `sos_average_window`, `sos_low_window` in `scoring.toml` (für die Sahm-Regel seit E-91 `yellow_sahm`). SOS gerundet auf 10 Stellen, damit Rechenrauschen nie über die Schwelle entscheidet. Wirkung: Abschnitt 4, „Entscheidungsrunde 29.09.2026“ |
 | 29.09.2026 | E-81 | Kennzeichnung der Rolle (F3) | Farbige Marke mit Text neben dem Namen: Blau „Stress · Bereich“, Violett „Fallhöhe“, Grau „nur Anzeige“, umrandet „Ampelregel“; ein Wert mit zwei Rollen trägt beide Marken; auch in Heatmap (farbige Quadrate, Rolle im Hover) und Sparklines | `texts.roles`, `components.role_marks`; Violett steht damit auch für die Fallhöhe (in Charts weiter für markierte Phasen) |
 | 29.09.2026 | E-82 | Mindesthistorie (F4) | 3 Jahre statt 5 (Empfehlung war 5) | `min_history_years = 3`; Prüfung erlaubt jetzt `display_window_years <= min_history_years`. HY-OAS erreicht die drei Jahre ab 29.09.2026; Perzentile vieler Indikatoren beginnen zwei Jahre früher |
 | 29.09.2026 | E-83 | Kursquelle für VRP und Aktien-Anleihen-Korrelation (F5) | Cboe-CSV des S&P 500 (`SPX`, ab 1975, Format wie VVIX) statt FRED `SP500` (zehn Jahre) | Neue Reihe `spx`; beide Indikatoren haben Historie ab 1990 und ändern sich rückwirkend. FRED `SP500` liest kein Indikator mehr (bleibt im Katalog bis zur Entscheidung des Nutzers) |
@@ -126,6 +126,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 29.09.2026 | E-87 | Aktien-Anleihen-Korrelation (F9) | Bleibt Stress im Makro-Block (wie Bericht) | Befund im Erklärtext: Seit 2022 fast durchgehend hoch, zeigt eher das Zinsregime; hebt Makro-Block und Diffusion |
 | 29.09.2026 | E-88 | y-Achse beim Zoomen (F10) | Alle Zeitreihen passen die y-Achse an den sichtbaren Ausschnitt an (5 % Rand); feste Skalen (Perzentil, Stress, Fallhöhe, Ampelstufe) bleiben | Erste Ansicht auf dem Server (`figures.fitted_range`), danach `assets/autoscale.js` nach Zoom, Zeitraum-Knopf, Doppelklick und Aktualisierung; von Hand gezogene y-Bereiche bleiben bis zur nächsten x-Änderung |
 | 29.09.2026 | E-89 | Validierung (F11) | Validierung nach Bericht 4.3, Schritt 7 (Walk-forward, Treffer und Fehlalarme je Stufe, Vergleich mit reinem VIX-Filter) als nächster Meilenstein M10, vorgezogen aus Phase 2; Aggregation Stufe 2 erst danach und nur, wenn sie dort besser abschneidet | `CLAUDE.md`, Phasen angepasst; Umfang von M10 vor Beginn planen und freigeben lassen |
+| 29.09.2026 | E-91 | Sahm-Regel begrenzen (Vorher/Nachher: Orange bis weit in Erholungen, 2024 ohne Rezession) | Sahm-Regel ab 0,5 → mindestens Gelb; Orange nur, solange zugleich der S&P 500 (Cboe) unter seiner 200-Tage-Linie liegt (Growth-Trend-Regel nach Livermore 2016; Faber 2007). Ohne gültigen Trendwert bleibt es Gelb. Varianten zur Wahl: Orange 12 bzw. 6 Monate nach dem Auslösen, unverändert | Neuer Indikator `spx_trend` (Transformation `trend_gap`, Block `rule`), Parameter `trend_window = 200`, Regeln `orange_sahm_trend` und `yellow_sahm` (schließen sich aus). Tage, an denen allein die Sahm-Regel Orange auslöst: 1.216 → 262; Rundung auf 10 Stellen wie beim SOS-Indikator. Rund um die Linie wechselt Orange/Gelb öfter (Abschnitt 4) |
 | 29.09.2026 | E-90 | HY-OAS nach E-82 (Nachfrage) | HY-OAS-Niveau zusätzlich im Kreditblock, V = 3; Anstieg über 20 Tage und Rot-Regel bleiben auf `BAA10Y`, CCC − BB bleibt Anzeige | Indikator `hy_oas` statt Anzeige; das Perzentil misst sich vorerst nur an den Jahren seit 2023 (sichtbarer Hinweis in der Übersicht) |
 
 ---
@@ -930,34 +931,35 @@ Die Navigationszeiten vorher schwanken stark, weil sich die Callbacks mehrerer S
 
 Befund (Nutzer): `FEVER_SEC_CONTACT` steht in der `.env` des Dockge-Stacks und im Projektordner, trotzdem meldete der Sofort-Abruf um 18:48 MESZ „FEVER_SEC_CONTACT fehlt oder enthält keine E-Mail-Adresse“. Der Worker-Container sah also keinen gültigen Wert. Wahrscheinlichste Ursache: Die `compose.yaml` in Dockge ist noch die alte Kopie ohne die Worker-Zeile `FEVER_SEC_CONTACT: ${FEVER_SEC_CONTACT:-}` (E-32: Kopie von Hand), oder der Stack wurde nach der Änderung nur neu gestartet statt neu bereitgestellt; die `.env` im Projektordner liest der Stack nicht. Umsetzung: Die Meldung unterscheidet jetzt „kommt nicht im Container an“ (Zeile fehlt in `compose.yaml`), „im Container leer“ (Wert fehlt in der `.env` des Stacks) und „keine E-Mail-Adresse“, ohne den Wert zu nennen; der Worker warnt schon beim Start im Log; Prüfbefehl und Schritte in `docs/einrichtung.md`, Abschnitte 9 und 11. Geprüft im gebauten Image (alle drei Fälle und gesetzter Kontakt) und im Stack aus `compose.dockge.yaml`; auf TrueNAS ⏳.
 
-### Entscheidungsrunde 29.09.2026 (E-80 bis E-90)
+### Entscheidungsrunde 29.09.2026 (E-80 bis E-91)
 
-Anlass (Nutzer, 28./29.09.2026): Sahm-Regel als Rezessionssignal mit Vorwarnung, sichtbare Rolle je Wert, kürzere Mindesthistorie, Zinskurve prüfen, investiertes und investierbares Geld, alle Berechnungen gegen die Forschung prüfen, y-Achse beim Zoomen. Recherche und elf Auswahlfragen mit Belegen (Entscheidungsseite im Chat, 29.09.2026), Antworten F1 bis F11 und HY-OAS-Nachfrage: Abschnitt 2, E-80 bis E-90.
+Anlass (Nutzer, 28./29.09.2026): Sahm-Regel als Rezessionssignal mit Vorwarnung, sichtbare Rolle je Wert, kürzere Mindesthistorie, Zinskurve prüfen, investiertes und investierbares Geld, alle Berechnungen gegen die Forschung prüfen, y-Achse beim Zoomen. Recherche und elf Auswahlfragen mit Belegen (Entscheidungsseite im Chat, 29.09.2026), Antworten F1 bis F11, HY-OAS-Nachfrage und Begrenzung der Sahm-Regel: Abschnitt 2, E-80 bis E-91.
 
 **Umsetzung:**
 - Quellen: `spx` (Cboe), `iursa` (FRED, wöchentlich), sieben Z.1-Reihen für die Aktienquote und `mmmffaq027s` (Geldmarktfonds), alle über die bestehenden Parser. Verzug geprüft an den Erstveröffentlichungen in ALFRED (29.09.2026): IURSA 12 Tage bei 230 von 246 Wochen, Z.1 158 bis 169 Tage, einmal 192 (Shutdown 2025), also wie Margin Debt 175. Erstabruf in `data-dev/`: 13.043, 2.907 und je 305 Zeilen, keine verworfen.
-- Scoring: Transformationen `sos` und `equity_share`, Block `rule` für Indikatoren, die nur eine Ampelregel liest (`config.RULE_ONLY`), Regeln `orange_sahm` (Wert ≥ Schwelle) und `yellow_sos` (Wert > Schwelle) ohne Hysterese, nur mit gültigem Wert (nicht veraltet, Mindesthistorie erfüllt). Indikatoren `sos`, `credit_spread_tight`, `equity_allocation`, `hy_oas`; VRP und Korrelation auf `spx`.
-- Oberfläche: Rollen-Marken (`texts.roles`), Heatmap mit Quadraten und Rolle im Hover, Sahm und SOS mit violetten Flächen für die Tage aktiver Regel, Hinweis auf das letzte Re-Steepening, Geldmarktfonds als Anzeige, y-Achse (`figures.fitted_range`, `assets/autoscale.js`).
-- Tests: Pflichttests für die neuen Regeln genau auf der Schwelle und ohne Hysterese, Look-ahead-Test mit allen neuen Indikatoren (beide Regeln lösen dort aus), Rundung gegen Rechenrauschen, SOS und Aktienquote von Hand, Rollen, Re-Steepening, y-Bereich. 464 Tests grün.
+- Scoring: Transformationen `sos`, `equity_share` und `trend_gap`, Block `rule` für Indikatoren, die nur eine Ampelregel liest (`config.RULE_ONLY`), Regeln `yellow_sahm` und `orange_sahm_trend` (Sahm ≥ Schwelle, Orange nur mit S&P 500 unter der 200-Tage-Linie, E-91) und `yellow_sos` (Wert > Schwelle), alle ohne Hysterese und nur mit gültigem Wert (nicht veraltet, Mindesthistorie erfüllt). Indikatoren `sos`, `spx_trend`, `credit_spread_tight`, `equity_allocation`, `hy_oas`; VRP und Korrelation auf `spx`.
+- Oberfläche: Rollen-Marken (`texts.roles`), Heatmap mit Quadraten und Rolle im Hover, Sahm, S&P-500-Trend und SOS mit violetten Flächen für die Tage aktiver Regel (aus den gespeicherten Ampelregeln), Hinweis auf das letzte Re-Steepening, Geldmarktfonds als Anzeige, y-Achse (`figures.fitted_range`, `assets/autoscale.js`).
+- Tests: Pflichttests für die neuen Regeln genau auf der Schwelle und ohne Hysterese, Look-ahead-Test mit allen neuen Indikatoren (alle drei Wertregeln lösen dort aus), Rundung gegen Rechenrauschen, SOS, Trend und Aktienquote von Hand, Rollen, Re-Steepening, y-Bereich. 465 Tests grün.
 - Browser (Entwicklungsumgebung, 29.09.2026, 1280 px hell und 390 px dunkel): alle Ansichten und neuen Erklärseiten ohne Fehler; beim Laden kein zusätzliches Neuzeichnen (Server- und Browserrechnung stimmen überein); nach „1 J“, „6 M“, „5 J“, „Max“, waagrechtem Zoom, Doppelklick und `Plotly.react` (wie die Aktualisierung) liegt der sichtbare Bereich mit höchstens 5 % Rand in der y-Achse; Perzentil-Charts bleiben bei 0–100.
 
-**Vorher/Nachher der Ampel** (Entwicklungsdatenbank, 9.281 Handelstage 02.01.1990 bis 25.09.2026; vorher = Scores vom 28.09.2026):
+**Vorher/Nachher der Ampel** (Entwicklungsdatenbank, 9.281 Handelstage 02.01.1990 bis 25.09.2026; vorher = Scores vom 28.09.2026; nachher = Stand mit E-91):
 
-| Stufe | Tage vorher | Tage nachher |
-|---|---|---|
-| Grün | 5.835 | 4.635 |
-| Gelb | 1.778 | 2.114 |
-| Orange | 614 | 1.659 |
-| Rot | 1.054 | 873 |
+| Stufe | Tage vorher | Tage nachher (E-80, Sahm → Orange) | Tage nachher (mit E-91) |
+|---|---|---|---|
+| Grün | 5.835 | 4.635 | 4.635 |
+| Gelb | 1.778 | 2.114 | 3.068 |
+| Orange | 614 | 1.659 | 705 |
+| Rot | 1.054 | 873 | 873 |
 
-- Sahm-Regel mindestens Orange: 10.12.1990–06.01.1993, 09.07.2001–06.12.2002, 08.05.2008–07.07.2010, 08.05.2020–07.05.2021 und 07.08.2024–06.11.2024 (ohne Rezession). Die Regel bleibt bis weit in die Erholung aktiv: Tage mindestens Orange 1991 2 → 252, 1992 3 → 254, 2009 162 → 252, 2010 20 → 128, 2021 0 → 87.
+- Sahm-Regel nach E-80 (Orange, solange ≥ 0,5): 10.12.1990–06.01.1993, 09.07.2001–06.12.2002, 08.05.2008–07.07.2010, 08.05.2020–07.05.2021 und 07.08.2024–06.11.2024 (ohne Rezession); Orange bis weit in die Erholung (Tage mindestens Orange 1991 2 → 252, 1992 3 → 254, 2021 0 → 87). Deshalb begrenzt (E-91). Varianten, gezählt als Tage, an denen allein die Sahm-Regel Orange auslöst: unverändert 1.216; Orange 12 Monate, dann Gelb 725 (2020–21 und 2024 bleiben Orange); 6 Monate 349 (2001–02 nur einen Monat); nur im Abwärtstrend 262 (gewählt).
+- Mit E-91 Orange über die Sahm-Regel: 10.12.1990–23.01.1991, 09.07.2001–06.12.2002 (mit kurzen Unterbrechungen), 08.05.2008–29.05.2009, 20.05.–07.07.2010, 08.–26.05.2020, dazu einzelne Tage 1991, 1992, 2009 und 2020 an der 200-Tage-Linie; sonst Gelb, 07.08.–06.11.2024 nur Gelb. Tage mindestens Orange je Jahr gegenüber vorher: 1991 2 → 35, 1992 3 → 14, 2002 168 → 234, 2009 162 → 146, 2010 20 → 33, 2020 92 → 87, 2021 0 → 0.
 - SOS mindestens Gelb: 13.09.1990–15.04.1992, 05.04.2001–24.12.2002, 24.04.2008–28.04.2010, 09.04.2020–12.05.2021; kein Signal ohne Rezession, jeweils zwei Wochen bis gut drei Monate vor der Sahm-Regel.
 - Weniger Orange 1998 (89 → 43), 1999 (94 → 0) und 2003 (77 → 0): VRP und Aktien-Anleihen-Korrelation zählen jetzt ab 1990 (E-83); Beispiel 15.10.1999: Block Volatilität 93,6 → 58,4 (VIX 93,6 und VRP 23,1).
 - Fallhöhe-Gelb 2000 252 → 0 Tage (mittlere Fallhöhe 89,6 → 73,3), 1998 234 → 184: Die Baa-Spreads waren 1998 bis 2000 schon weit, die umgedrehte Komponente (E-85) senkt die Fallhöhe dieser Jahre. Mehr Fallhöhe-Gelb 2017 (0 → 120), 2018 (66 → 177), 2022 (0 → 131), 2025 (0 → 141) und 2026 (9 → 190).
 - Heute (25.09.2026) unverändert Gelb über die Fallhöhe: Fallhöhe 80,6 → 84,8, Stress 36,6 → 36,8; Aktienquote 56,4 % (Perzentil 99), Kreditspread-Enge Perzentil 99,8, SOS −0,004, Sahm −0,07.
-- Scoring-Lauf 21 s in der Entwicklungsumgebung (31 Indikatoren).
+- Scoring-Lauf 22 s in der Entwicklungsumgebung (32 Indikatoren).
 
-Beide Nebenwirkungen (Sahm-Orange in Erholungen, Fallhöhe 2000) sind Folgen der Entscheidungen, keine Fehler; ob die Regeln die Ampel verbessern, prüft M10 (E-89). Sie werden nicht nach Augenschein nachjustiert (`CLAUDE.md`: keine im Backtest optimierten Schwellen).
+Die Nebenwirkung Sahm-Orange in Erholungen hat der Nutzer mit E-91 begrenzt; die Variante stützt sich auf eine veröffentlichte Regel (Livermore 2016) und wurde nicht an diesen Daten optimiert, die Auswertung oben ist aber dieselbe Stichprobe. Die Fallhöhe 2000 bleibt (Nutzer 29.09.2026: Begrenzung der Sahm-Regel statt Entfernen der Kreditspread-Enge). Ob die Regeln die Ampel verbessern, prüft M10 (E-89).
 
 ---
 
@@ -1076,7 +1078,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 | Datenordner im Git-Arbeitsverzeichnis (E-28) | `git clean -fdx` löscht Datenbank und Backups zugleich | Warnung in `docs/einrichtung.md` und `CLAUDE.md`; optional TrueNAS-Snapshots des Datasets `data` |
 | Shiller-Download über wechselnden Link (E-43) | Umbau der Seite oder neuer Dateiname stoppt CAPE und Excess CAPE Yield | sichtbarer Fehler im Datenstand; Parser in `fever/sources/shiller.py` anpassen |
 | Betrieb direkt vom Entwicklungsbranch (E-30) | ein ungeprüfter Push landet beim nächsten Update im Betrieb | nur geprüften Stand pushen; Update nur auf Anweisung in `docs/einrichtung.md` |
-| Rezessionsregeln ohne Hysterese (E-80) | Sahm-Orange hält bis weit in Erholungen an (1991–92, 2009–10, 2020–21), 2024 ohne Rezession | Wirkung dokumentiert (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); Prüfung in M10, keine Anpassung nach Augenschein |
+| Rezessionsregeln ohne Hysterese (E-80, E-91) | Sahm-Gelb hält bis weit in Erholungen an; an der 200-Tage-Linie wechselt Orange/Gelb öfter | Wirkung dokumentiert (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); Prüfung in M10 |
 | y-Achsen-Skript nutzt Plotly-Interna (`_fullLayout`, E-88) | nach einem Plotly-Update passt sich die y-Achse nicht mehr an (Daten bleiben richtig) | nach jedem Update von Dash/Plotly Zoom im Browser prüfen (Abschnitt 10) |
 
 ---
@@ -1084,10 +1086,10 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 ## 9. Übergabe an die nächste Sitzung
 
 - **Stand (29.09.2026):**
-  - M0 bis M8 erledigt; Entscheidungsrunde 29.09.2026 umgesetzt und in der Entwicklungsumgebung geprüft (E-80 bis E-90; Abschnitt 4, „Entscheidungsrunde 29.09.2026“, mit Vorher/Nachher der Ampel). 464 Tests grün.
+  - M0 bis M8 erledigt; Entscheidungsrunde 29.09.2026 umgesetzt und in der Entwicklungsumgebung geprüft (E-80 bis E-91; Abschnitt 4, „Entscheidungsrunde 29.09.2026“, mit Vorher/Nachher der Ampel). 465 Tests grün.
   - Auf TrueNAS noch nicht eingespielt. Ob TrueNAS schon vom Branch `claude-raramo` läuft (E-76), ist nicht bestätigt.
   - `data-dev/` enthält die zehn neuen Reihen und Scores nach neuem Stand (Abruf 29.09.2026).
-  - Entscheidungen bis E-90.
+  - Entscheidungen bis E-91.
 - **Nächster Schritt:**
   1. TrueNAS: falls noch nicht geschehen, Update „schnellere Seiten und Branch `claude-raramo`“, dann „Entscheidungsrunde 29.09.2026“ (`docs/einrichtung.md`, Abschnitt 9): `git pull`, Build, „Deploy“, Sofort-Abruf, `fever.score`. Keine Migration.
   2. M10 (Validierung, E-89): Plan vorlegen (Daten: Scores ab 1990 und S&P 500 von Cboe; Walk-forward, Treffer und Fehlalarme je Stufe, Vorlauf, Vergleich mit reinem VIX-Filter; Einordnung der Nebenwirkungen aus Abschnitt 4) und freigeben lassen.
@@ -1099,7 +1101,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
   - FRED `SP500` liest seit E-83 kein Indikator mehr; die Reihe wird weiter abgerufen, bis der Nutzer entscheidet.
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`. Am 28.09.2026 zusätzlich erreichbar: `fred.stlouisfed.org` (CSV ohne Schlüssel), `www.ssga.com`, `www.sec.gov`, `data.sec.gov`, `indexes.nasdaq.com`; `archive.org` antwortete mit 429. Für SEC-Probeabrufe in der Cloud nur einen Platzhalterkontakt (`…@example.org`) setzen, nie die Adresse des Nutzers. Am 28.09.2026 abends lief der Sofort-Abruf aller 72 Reihen in der Cloud ohne Probleme.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** Umgang mit den Nebenwirkungen der Runde 29.09.2026 (Sahm-Orange bis in Erholungen, Fallhöhe 2000; Vorschlag: so lassen und in M10 prüfen); FRED `SP500` aus dem Katalog nehmen (gespeicherte Werte bleiben); O-6 (Phase 2); die Optionen unter „Nicht umgesetzt“ (Ladezeiten), falls die Seiten auf TrueNAS noch zu langsam sind.
+- **Offene Entscheidungen des Nutzers:** FRED `SP500` aus dem Katalog nehmen (gespeicherte Werte bleiben); O-6 (Phase 2); die Optionen unter „Nicht umgesetzt“ (Ladezeiten), falls die Seiten auf TrueNAS noch zu langsam sind.
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe, Compose-Prüfung und Ladezeit-Messung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---

@@ -242,7 +242,7 @@ Dockge zeigt `web` nach rund einer Minute als „healthy“.
 
 ✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ⏳ TrueNAS. Prüfung der Migration beim Start (E-70): ✅ Entwicklungsumgebung 28.09.2026 mit dem gebauten Image auf einer Datenbank mit Stand 0002 (Worker und `fever.score` melden „Migration fehlt“ und starten nicht, `/health` 503, Banner im Browser; `fever.backup` läuft; nach `alembic upgrade head` normaler Start); ⏳ TrueNAS.
 
-**Update auf die Entscheidungsrunde 29.09.2026 (E-80 bis E-90, ohne Migration, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 29.09.2026 (Abruf der zehn neuen Reihen, Scoring, Browser); ⏳ TrueNAS. Voraussetzung: TrueNAS läuft schon vom Branch `claude-raramo` (sonst zuerst der nächste Block). Neu sind zehn Reihen (S&P 500 von Cboe, versicherte Arbeitslosenquote, acht Z.1-Reihen), vier Indikatoren und geänderte Ampelregeln; die Ampel ändert sich auch rückwirkend (`docs/umsetzungsplan.md`, Abschnitt 4, „Entscheidungsrunde 29.09.2026“).
+**Update auf die Entscheidungsrunde 29.09.2026 (E-80 bis E-91, ohne Migration, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 29.09.2026 (Abruf der zehn neuen Reihen, Scoring, Browser); ⏳ TrueNAS. Voraussetzung: TrueNAS läuft schon vom Branch `claude-raramo` (sonst zuerst der nächste Block). Neu sind zehn Reihen (S&P 500 von Cboe, versicherte Arbeitslosenquote, acht Z.1-Reihen), fünf Indikatoren und geänderte Ampelregeln; die Ampel ändert sich auch rückwirkend (`docs/umsetzungsplan.md`, Abschnitt 4, „Entscheidungsrunde 29.09.2026“).
 
 ```bash
 cd /mnt/Daten-Z1/apps/feewer
@@ -264,7 +264,7 @@ sudo docker exec finanz-dashboard-worker-1 python -m fever.score
 #   erwartet: INFO __main__: Scores berechnet: 9… Tage ab 02.01.1990, zuletzt <letzter Handelstag>: … (rund 20 bis 30 s)
 ```
 
-Danach im Dashboard: Marken neben den Namen (blau Stress mit Bereich, violett Fallhöhe, grau nur Anzeige, umrandet Ampelregel), in der Ansicht Makro Sahm-Regel und SOS-Indikator mit violetten Flächen für aktive Regeln und das Datum des letzten Re-Steepening, in der Ansicht Fallhöhe Aktienquote, Geldmarktfonds und Kreditspread-Enge. Die y-Achse passt sich nach Zoom und Zeitraum-Knopf an (`docs/bedienung.md`).
+Danach im Dashboard: Marken neben den Namen (blau Stress mit Bereich, violett Fallhöhe, grau nur Anzeige, umrandet Ampelregel), in der Ansicht Makro Sahm-Regel, S&P-500-Trend und SOS-Indikator mit violetten Flächen für aktive Regeln und das Datum des letzten Re-Steepening, in der Ansicht Fallhöhe Aktienquote, Geldmarktfonds und Kreditspread-Enge. Die y-Achse passt sich nach Zoom und Zeitraum-Knopf an (`docs/bedienung.md`).
 
 **Update auf schnellere Seiten und Branch `claude-raramo` (28.09.2026, E-76 bis E-78, ohne Migration):** ⏳ TrueNAS. Einmal den Branch wechseln; danach gilt wieder der Standardablauf unten mit `git pull`.
 

@@ -1080,8 +1080,8 @@ license = "SEC EDGAR: öffentliche Meldung einer US-Behörde, ohne Genehmigung v
 #   name         display text
 #   series       input series ids, in the order the transformation expects
 #   transform    level | ratio | difference | vrp | stock_bond_corr | above_low | fx_change | fx_vol
-#                | yoy | cot_net_short | relative_change | change | sos | equity_share (definitions in
-#                fever/scoring/transforms.py; windows in scoring.toml [transforms])
+#                | yoy | cot_net_short | relative_change | change | sos | equity_share | trend_gap
+#                (definitions in fever/scoring/transforms.py; windows in scoring.toml [transforms])
 #   orientation  "high" or "low": which end of the indicator means more stress or vulnerability
 #   block        volatility | credit | macro | breadth | positioning (stress), vulnerability, or rule:
 #                only a traffic light rule reads it (E-80); not in blocks, confidence or diffusion
@@ -1230,6 +1230,15 @@ name = "SOS-Indikator (versicherte Arbeitslosenquote)"
 series = ["iursa"]
 transform = "sos"
 orientation = "high"
+block = "rule"
+
+# Trend of the S&P 500 (E-91): the Sahm rule turns the traffic light orange only while it is negative.
+
+[indicator.spx_trend]
+name = "S&P 500: Abstand zur 200-Tage-Linie"
+series = ["spx"]
+transform = "trend_gap"
+orientation = "low"
 block = "rule"
 
 [indicator.stock_bond_corr]

@@ -235,10 +235,12 @@ def test_credit_rule_reads_the_percentile_of_the_credit_spread_change():
     assert rows[0].level == composite.RED and rows[0].active_rules == ("red_credit_change",)
 
 
-def test_sahm_rule_fires_at_the_threshold_and_ends_right_below_it():
-    """E-80: no hysteresis; the rule holds while the value is at or above the threshold."""
-    steps = [(None, None, None, None, None, sahm) for sahm in (0.49, 0.5, 0.63, 0.5, 0.49, None)]
-    assert ["orange_sahm" in active for active in run_rules(steps)] == [False, True, True, True, False, False]
+def test_sahm_rule_is_yellow_and_orange_only_in_a_downtrend():
+    """E-80, E-91: at or above the threshold yellow; orange while the S&P 500 is below its 200-day line;
+    no hysteresis; without a valid trend value it stays yellow."""
+    cases = [(0.49, -1.0), (0.5, None), (0.5, 0.0), (0.5, -0.0001), (0.63, -3.0), (0.49, -3.0), (None, -3.0)]
+    steps = [(None, None, None, None, None, sahm, None, trend) for sahm, trend in cases]
+    assert run_rules(steps) == [(), ("yellow_sahm",), ("yellow_sahm",), ("orange_sahm_trend",), ("orange_sahm_trend",), (), ()]
 
 
 def test_sos_rule_fires_only_above_the_threshold_and_ends_right_below_it():
@@ -251,10 +253,15 @@ def test_value_rules_read_the_newest_valid_value():
     histories = [fixed("vix", [day], 10), fixed("nfci", [day], 10), fixed("ebp", [day], 10),
                  fixed("sahm", [day], 70, value=0.5), fixed("sos", [day], 99, value=0.21)]
     _, rows = compute([day], histories, CONFIG)
-    assert rows[0].level == composite.ORANGE and rows[0].active_rules == ("orange_sahm", "yellow_sos")
-    stale = [fixed("sahm", [day - timedelta(days=120)], 70, value=0.9), fixed("sos", [day - timedelta(days=60)], 99, value=0.9)]
+    assert rows[0].level == composite.YELLOW and rows[0].active_rules == ("yellow_sahm", "yellow_sos")
+    _, rows = compute([day], histories + [fixed("spx_trend", [day], 90, value=-0.5)], CONFIG)
+    assert rows[0].level == composite.ORANGE and rows[0].active_rules == ("orange_sahm_trend", "yellow_sos")
+    stale = [fixed("sahm", [day - timedelta(days=120)], 70, value=0.9), fixed("sos", [day - timedelta(days=60)], 99, value=0.9),
+             fixed("spx_trend", [day - timedelta(days=10)], 90, value=-0.5)]
     _, rows = compute([day], histories[:3] + stale, CONFIG)
     assert rows[0].active_rules == ()  # a stale value never keeps a rule on (E-10)
+    _, rows = compute([day], histories + stale[2:], CONFIG)
+    assert rows[0].active_rules == ("yellow_sahm", "yellow_sos")  # stale trend: no downtrend known, yellow
 
 
 def test_a_rule_only_indicator_enters_no_block_no_confidence_and_no_diffusion():
@@ -270,7 +277,7 @@ def test_a_rule_only_indicator_enters_no_block_no_confidence_and_no_diffusion():
 
 def test_rule_only_indicators_are_read_by_a_rule_and_carry_no_weight():
     rule_only = {i for i, x in INDICATORS.items() if x.block == RULE_ONLY}
-    assert rule_only == {"sos"} and rule_only <= set(composite.RULE_INDICATORS)
+    assert rule_only == {"sos", "spx_trend"} and rule_only <= set(composite.RULE_INDICATORS)
     assert all(INDICATORS[i].v_score == 0 for i in rule_only)
     assert all(rule in composite._RULE_LEVEL for rules in composite.RULE_INDICATORS.values() for rule in rules)
 
@@ -318,7 +325,7 @@ def synthetic_raw(end):
 
 LOOKAHEAD_INDICATORS = ["vix", "vix_vix3m", "vvix", "vrp", "stock_bond_corr", "nfci", "ebp", "sofr_iorb", "ecy", "margin_yoy",
                         "breadth_equal_weight", "top10_concentration", "credit_spread_level", "credit_spread_change",
-                        "sahm", "sos", "hy_oas", "credit_spread_tight", "equity_allocation"]
+                        "sahm", "sos", "hy_oas", "credit_spread_tight", "equity_allocation", "spx_trend"]
 
 
 def test_result_for_t_is_identical_with_and_without_later_observations():
@@ -334,7 +341,7 @@ def test_result_for_t_is_identical_with_and_without_later_observations():
         assert [row for row in full_composites if row.score_date == t] == [row for row in composites if row.score_date == t]
     assert any(row.level > 0 for row in full_composites) and any(row.stress is not None for row in full_composites)
     fired = {rule for row in full_composites for rule in row.active_rules}
-    assert {"orange_sahm", "yellow_sos"} <= fired  # the value rules are covered by the comparison above
+    assert {"orange_sahm_trend", "yellow_sahm", "yellow_sos"} <= fired  # the value rules are covered above
 
 
 # --- transformations -------------------------------------------------------------------------------
@@ -446,6 +453,19 @@ def test_sos_float_noise_does_not_cross_the_threshold():
     result = indicator_values(INDICATORS["sos"], [rate], config)
     assert result.iloc[0] == 0.2  # (1.9 + 2.5 + 1.9) / 3 - 1.9 is 0.20000000000000018 without rounding
     assert run_rules([(None,) * 6 + (result.iloc[0],)])[0] == ()  # exactly on the threshold: not above
+
+
+def test_trend_gap_by_hand():
+    """E-91: distance from the mean of the last trend_window closes in percent; negative = below the line."""
+    config = replace(CONFIG, trend_window=3)
+    spx = series([100.0, 110.0, 120.0, 90.0, 110.0])
+    result = indicator_values(INDICATORS["spx_trend"], [spx], config)
+    assert list(result.index) == list(spx.index[2:])
+    assert list(result) == pytest.approx([100 * (120 / 110 - 1), 100 * (90 / 320 * 3 - 1), 100 * (110 / (320 / 3) - 1)])
+    assert result.iloc[1] < 0 and INDICATORS["spx_trend"].series[0].id == "spx"
+    flat = indicator_values(INDICATORS["spx_trend"], [series([1.1, 0.3, 0.7])], config)
+    assert flat.iloc[-1] == 0.0  # 0.7 on its own mean: -1.1e-14 without rounding would count as "below"
+    assert run_rules([(None,) * 5 + (0.6, None, flat.iloc[-1])])[0] == ("yellow_sahm",)
 
 
 def test_equity_share_by_hand_on_common_dates():

@@ -231,7 +231,7 @@ def _is_int(value) -> bool:
 TRANSFORMS = {
     "level": 1, "ratio": 2, "difference": 2, "vrp": 2, "stock_bond_corr": 2,
     "above_low": 1, "fx_change": 2, "fx_vol": 2, "yoy": 1, "cot_net_short": 3, "relative_change": 2, "change": 1,
-    "sos": 1, "equity_share": 7,
+    "sos": 1, "equity_share": 7, "trend_gap": 1,
 }
 STRESS_BLOCKS = ("volatility", "credit", "macro", "breadth", "positioning")  # report 4.3, step 2
 VULNERABILITY = "vulnerability"
@@ -341,7 +341,7 @@ _SCORING_KEYS = {
     "transforms": {
         "realized_vol_window": int, "correlation_window": int, "low_window": int,
         "fx_change_window": int, "fx_vol_window": int, "relative_change_window": int, "change_window": int,
-        "sos_average_window": int, "sos_low_window": int,
+        "sos_average_window": int, "sos_low_window": int, "trend_window": int,
     },
     "composite": {"min_blocks": int, "min_vulnerability": int},
     "smoothing": {
@@ -352,7 +352,7 @@ _SCORING_KEYS = {
         "red_stress": float, "red_vix_ratio": float, "red_vix_ratio_days": int, "orange_stress": float,
         "orange_stress_with_vulnerability": float, "orange_vulnerability": float,
         "yellow_vulnerability": float, "yellow_diffusion_share": float, "yellow_diffusion_percentile": float,
-        "hysteresis": float, "red_credit_change": float, "orange_sahm": float, "yellow_sos": float,
+        "hysteresis": float, "red_credit_change": float, "yellow_sahm": float, "yellow_sos": float,
     },
 }
 
@@ -373,6 +373,7 @@ class ScoringConfig:
     change_window: int
     sos_average_window: int
     sos_low_window: int
+    trend_window: int
     min_blocks: int
     min_vulnerability: int
     fast_block: str
@@ -390,7 +391,7 @@ class ScoringConfig:
     yellow_diffusion_percentile: float
     hysteresis: float
     red_credit_change: float
-    orange_sahm: float  # percentage points of the Sahm rule, not a percentile
+    yellow_sahm: float  # percentage points of the Sahm rule, not a percentile
     yellow_sos: float  # percentage points of the SOS indicator, not a percentile
 
 

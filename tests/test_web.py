@@ -446,7 +446,7 @@ def test_role_marks_name_every_role_of_a_value():
 
 def test_views_show_the_new_kennzahlen(data):
     macro = rendered(views.view("makro", "light", NOW))
-    for kennzahl in ("sahm", "sos", "hy_oas"):
+    for kennzahl in ("sahm", "sos", "spx_trend", "hy_oas"):
         assert f"/kennzahl/{kennzahl}" in macro
     assert "Lizenz ICE Data Indices" in macro and "Re-Steepening" not in macro  # no curve data in the fixture
     vulnerability = rendered(views.view("fallhoehe", "light", NOW))
@@ -458,12 +458,13 @@ def test_views_show_the_new_kennzahlen(data):
 def test_rule_periods_come_from_the_stored_traffic_light(monkeypatch):
     """The violet days are the days the scoring stored the rule as active; the web recomputes nothing."""
     days = [date(2026, 1, d) for d in range(1, 6)]
-    stored = ["", "orange_sahm", "orange_sahm,yellow_sos", "yellow_diffusion", "orange_sahm"]
+    stored = ["", "yellow_sahm", "orange_sahm_trend,yellow_sos", "yellow_diffusion", "yellow_sahm"]
     monkeypatch.setattr(web_db, "composite_history", lambda *columns: [
         {"score_date": d, "active_rules": rules} for d, rules in zip(days, stored)])
     periods, label = views.rule_periods("sahm")
     assert periods == ((days[1], days[3]), (days[4], days[4] + timedelta(days=1)))
-    assert label == "Violett: Ampelregel aktiv (Orange: Sahm-Regel mindestens 0,50)"
+    assert label == "Violett: Ampelregel aktiv (Sahm-Regel mindestens 0,50: Gelb, mit S&P 500 unter der 200-Tage-Linie Orange)"
+    assert views.rule_periods("spx_trend")[0] == ((days[2], days[3]),)
     periods, label = views.rule_periods("sos")
     assert periods == ((days[2], days[3]),) and "SOS-Indikator über 0,20" in label
     assert views.rule_periods("vix") == ((), "")
@@ -488,13 +489,16 @@ def test_money_market_share_uses_common_quarters():
 
 def test_generated_texts_name_the_recession_rules():
     lines = " ".join(texts.thresholds("traffic_light"))
-    assert "Sahm-Regel mindestens 0,50 (ohne Hysterese)" in lines and "SOS-Indikator über 0,20 (ohne Hysterese)" in lines
-    assert texts.rule_text("orange_sahm") == "Orange: Sahm-Regel mindestens 0,50"
+    assert "Sahm-Regel mindestens 0,50, während der S&P 500 unter seiner 200-Tage-Linie liegt (ohne Hysterese)" in lines
+    assert "Sahm-Regel mindestens 0,50 ohne diesen Abwärtstrend, oder der SOS-Indikator über 0,20" in lines
+    assert texts.rule_text("orange_sahm_trend") == "Orange: Sahm-Regel mindestens 0,50 und S&P 500 unter seiner 200-Tage-Linie"
+    assert texts.rule_text("yellow_sahm") == "Gelb: Sahm-Regel mindestens 0,50"
     assert texts.rule_text("yellow_sos") == "Gelb: SOS-Indikator über 0,20"
+    assert texts.roles("spx_trend") == [("Ampelregel", "rule")]
     sos = " ".join(texts.contribution("sos"))
     assert "nicht in Stress, Fallhöhe, Konfidenz oder Diffusionsindex" in sos and "mindestens Gelb" in sos
     assert dict(texts.steckbrief("sos"))["Gewicht in der Konfidenz"].startswith("keins")
-    assert any("mindestens Orange" in line for line in texts.contribution("sahm"))
+    assert any("mindestens Gelb" in line and "Orange, solange zugleich" in line for line in texts.contribution("sahm"))
     assert any("Derselbe Wert zählt zusätzlich im Bereich Fallhöhe" in line for line in texts.contribution("credit_spread_level"))
     assert "Nur Ampelregel" in rendered(views.explanations())
 
