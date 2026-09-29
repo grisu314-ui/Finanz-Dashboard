@@ -28,7 +28,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | R-29.09 | Entscheidungsrunde 29.09.2026: Sahm-Regel mit Trendbedingung und SOS-Regel, Rollen-Marken, Mindesthistorie 3 Jahre, Cboe-SPX, Re-Steepening-Hinweis, Kreditspread-Enge und Aktienquote in der Fallhöhe, Geldmarktfonds, y-Achse, HY-OAS-Niveau (E-80 bis E-92) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); auf TrueNAS eingespielt (Nutzer 29.09.2026) | M8 | erteilt 29.09.2026 |
 | M10 | Validierung (Bericht 4.3, Schritt 7): Walk-forward, Treffer und Fehlalarme je Ampelstufe, Vorlauf, Vergleich mit reinem VIX-Filter; vorgezogen aus Phase 2 (E-89) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M10, „Ergebnisse“); auf TrueNAS eingespielt (Migration 0004, Nutzer 29.09.2026) | R-29.09 | erteilt 29.09.2026 (Plan ohne Rückfrage) |
 | M11 | Walk-forward-Test geschätzter Stress-Gewichte (Logit auf den Stress-Blöcken, jährlich nur mit Daten davor geschätzt; nur Auswertung, E-94) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M11, „Ergebnisse“); gleiche Gewichte bleiben (E-97); auf TrueNAS unbestätigt, spätestens mit dem nächsten Update (ohne Migration) | M10 | erteilt 29.09.2026 |
-| M9 | Abnahme Phase 1 | ☐ Rückmeldung des Nutzers 29.09.2026: „deutlich besser“; ob das die Abnahme ist, ist gefragt (Abschnitt 9) | M0–M8, M10 | – |
+| M9 | Abnahme Phase 1 | ☐ Nutzer 29.09.2026: „deutlich besser“; Abnahme nach dem Update auf E-98 und der Sichtprüfung auf Smartphone und Desktop (Auswahl „Nach dem Update“) | M0–M8, M10 | – |
 
 **Warum diese Reihenfolge:** FRED liefert die ICE-BofA-Spreads seit April 2026 nur noch für drei Jahre (Bericht, TL;DR). Jeder Tag ohne laufenden Worker verschiebt den Anfang des lokalen Archivs um einen Tag nach hinten. Deshalb geht ein minimaler Worker mit FRED und Cboe (M0–M3) in Betrieb, bevor Scoring und Oberfläche entstehen.
 
@@ -1272,10 +1272,10 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
   - M0 bis M8, Entscheidungsrunde 29.09.2026 (E-80 bis E-92), M10 (Validierung, E-93) und M11 (geschätzte Gewichte, E-94) umgesetzt und in der Entwicklungsumgebung geprüft; E-95 (kein Gelb allein aus der Fallhöhe), E-96 (Fallhöhe-Streifen in der Regime-Zeitleiste), E-97 (gleiche Gewichte bleiben, keine Codeänderung) und E-98 (alles zur Fallhöhe in Lila) umgesetzt. 491 Tests grün.
   - TrueNAS (Nutzer, 29.09.2026): läuft vom Branch `claude-raramo` (E-76), Migration 0004 eingespielt, Seiten spürbar schneller, vor allem beim wiederholten Aufruf. Ob M11 und E-95 schon eingespielt sind, ist unbestätigt; E-98 noch nicht.
   - `data-dev/` steht auf 0004, mit Scores und Validierungsbericht vom 29.09.2026.
-  - M9: Rückmeldung des Nutzers „M9 Annahme..deutlich besser“; ob das die Abnahme ist, ist per Auswahlfrage gestellt.
+  - M9: Rückmeldung des Nutzers „M9 Annahme..deutlich besser“; auf Nachfrage: Abnahme nach dem Update auf E-98 und seiner Sichtprüfung (Empfehlung).
 - **Nächster Schritt:**
   1. TrueNAS: Update ohne Migration (`docs/einrichtung.md`, Abschnitt 9, „Update auf M11, E-95 und E-98“): Pull, Build, „Deploy“; der Worker rechnet Scores und Validierung von selbst neu, sofort mit `fever.score` und `fever.validate`.
-  2. M9 (Abnahme Phase 1) nach der Antwort des Nutzers eintragen.
+  2. M9 (Abnahme Phase 1) als erledigt eintragen, sobald der Nutzer das Update und die Sichtprüfung meldet; dazu `docs/bedienung.md` und `docs/einrichtung.md` von ⏳ auf ✅, wo er es bestätigt, und den README-Status.
   3. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9); für `iursa` und die Z.1-Reihen neu.
   4. Folgerungen aus M10 und M11 für Phase 2 (Aggregation Stufe 2 nur, wenn sie in der Validierung besser abschneidet, E-89) entscheidet der Nutzer.
 - **Hinweise:**
@@ -1283,7 +1283,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`. Am 28.09.2026 zusätzlich erreichbar: `fred.stlouisfed.org` (CSV ohne Schlüssel), `www.ssga.com`, `www.sec.gov`, `data.sec.gov`, `indexes.nasdaq.com`; `archive.org` antwortete mit 429. Für SEC-Probeabrufe in der Cloud nur einen Platzhalterkontakt (`…@example.org`) setzen, nie die Adresse des Nutzers. Am 28.09.2026 abends lief der Sofort-Abruf aller 72 Reihen in der Cloud ohne Probleme.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** M9 (Abnahme); O-6 (Phase 2). Die Optionen unter „Nicht umgesetzt“ (Ladezeiten) entfallen vorerst: Die Seiten sind auf TrueNAS nach Rückmeldung des Nutzers schnell genug.
+- **Offene Entscheidungen des Nutzers:** O-6 (Phase 2); M9 wartet nur auf die Rückmeldung nach dem Update. Die Optionen unter „Nicht umgesetzt“ (Ladezeiten) entfallen vorerst: Die Seiten sind auf TrueNAS nach Rückmeldung des Nutzers schnell genug.
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe, Compose-Prüfung und Ladezeit-Messung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---
