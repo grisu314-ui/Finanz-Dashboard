@@ -11,7 +11,7 @@ Stress und Fallhöhe beschreiben verschiedene Dinge: akute Anspannung und Verwun
 
 ## So liest du sie
 - **Grün:** keine der Regeln trifft zu.
-- **Gelb:** erhöhte Verwundbarkeit ohne akuten Auslöser, viele Einzelwerte gleichzeitig auffällig, oder ein Rezessionssignal vom Arbeitsmarkt (SOS-Indikator, Sahm-Regel bei intaktem Aufwärtstrend des S&P 500).
+- **Gelb:** viele Einzelwerte gleichzeitig auffällig, oder ein Rezessionssignal vom Arbeitsmarkt (SOS-Indikator, Sahm-Regel bei intaktem Aufwärtstrend des S&P 500). Eine hohe Fallhöhe allein färbt die Ampel nicht.
 - **Orange:** deutlicher Stress, besonders zusammen mit hoher Fallhöhe, oder ein ausgelöstes Rezessionssignal (Sahm-Regel), während der S&P 500 unter seiner 200-Tage-Linie liegt.
 - **Rot:** breiter akuter Stress oder ein schnelles Warnsignal wie eine invertierte Volatilitätskurve.
 
@@ -22,9 +22,10 @@ Unter der Ampel steht, welche Regeln gerade zutreffen. Eine Stufe wird erst verl
 - Der Composite ist geglättet und reagiert auf schnelle Schocks spät; die VIX/VIX3M-Regel gleicht das nur teilweise aus.
 - In Phase 1 fehlt der Block Positionierung, im Block Breite der Anteil über der 50/200-Tage-Linie (E-72), und die Regel über den Anstieg der Kreditspreads nutzt vorerst Moody's Baa statt des HY-OAS (E-75). Die Ampel stützt sich deshalb auf weniger oder andere Bausteine als im Bericht vorgesehen.
 - Fehlt der Stress-Composite, entscheiden die übrigen Regeln (Entscheidung E-51).
+- Abweichend vom Bericht (Abschn. 4.3, Schritt 5) gibt es kein Gelb allein aus hoher Fallhöhe (Entscheidung E-95, nach der Validierung): Die ruhige, aber verwundbare Lage zeigen die Fallhöhe selbst und ihr Streifen in der Regime-Zeitleiste; die Ampel hebt sie nur zusammen mit Stress auf Orange.
 - Die Rezessionsregeln gelten, solange ihre Werte die Schwellen erfüllen, ohne Hysterese (Entscheidungen E-80 und E-91). Beide Arbeitsmarktsignale bleiben nach dem Beginn einer Rezession oft bis weit in die Erholung hinein erhöht. Eigene Auswertung (29.09.2026): Die Sahm-Regel hielt die Ampel mindestens auf Gelb von 12/1990 bis 01/1993, 07/2001 bis 12/2002, 05/2008 bis 07/2010, 05/2020 bis 05/2021 und 08/2024 bis 11/2024 ohne Rezession; auf Orange nur, solange der S&P 500 unter seiner 200-Tage-Linie lag, vor allem 2001–02 und 2008–09. Rund um die Linie wechselt die Stufe dabei öfter zwischen Gelb und Orange.
 - Einschätzung: Die Schwellen sind Startwerte aus dem Bericht und nicht an Krisen optimiert; das ist Absicht, um Überanpassung zu vermeiden (Abschn. 4.3, Schritt 7).
 
 ## Quellen
 - docs/recherche.md, Kurzfazit und Abschnitt 4.3 (Stand 25.09.2026)
-- docs/umsetzungsplan.md, Entscheidungen E-47 bis E-51 (26.09.2026), E-80 und E-91 (29.09.2026)
+- docs/umsetzungsplan.md, Entscheidungen E-47 bis E-51 (26.09.2026), E-80, E-91 und E-95 (29.09.2026)

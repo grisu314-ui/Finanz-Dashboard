@@ -39,7 +39,8 @@ red_vix_ratio_days = 3     # ... on this many trading days in a row; ends after 
 orange_stress = 80
 orange_stress_with_vulnerability = 75   # together with vulnerability >= orange_vulnerability
 orange_vulnerability = 80
-yellow_vulnerability = 80  # report: "at stress < 75"; above that the orange rule applies anyway
+# No yellow rule on the vulnerability alone (user 29.09.2026, E-95; report 4.3: vulnerability >= 80 at stress < 75):
+# after the validation (M10, M11) a high vulnerability raises the level only together with stress (orange rule above).
 yellow_diffusion_share = 40             # percent of the valid stress indicators ...
 yellow_diffusion_percentile = 80        # ... above this percentile
 hysteresis = 5             # a rule ends only this many points below its threshold (E-48, L-7)

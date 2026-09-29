@@ -324,11 +324,12 @@ def test_matrix_regions_follow_the_rules_in_scoring_toml(monkeypatch):
     from fever.config import scoring_config
     c = scoring_config()
     regions = views.matrix_regions()
-    assert [r.level for r in regions] == [0, 1, 2, 2, 3]  # drawn low to high: the highest level covers the rest
-    assert (regions[1].y0, regions[4].x0, regions[3].x0) == (c.yellow_vulnerability, c.red_stress, c.orange_stress)
-    assert (regions[2].x0, regions[2].y0) == (c.orange_stress_with_vulnerability, c.orange_vulnerability)
-    monkeypatch.setattr(views, "scoring_config", lambda: replace(c, red_stress=95, yellow_vulnerability=70))
-    assert (views.matrix_regions()[4].x0, views.matrix_regions()[1].y0) == (95, 70)
+    # drawn low to high: the highest level covers the rest; no yellow area, the vulnerability alone is no rule (E-95)
+    assert [r.level for r in regions] == [0, 2, 2, 3]
+    assert (regions[3].x0, regions[2].x0) == (c.red_stress, c.orange_stress)
+    assert (regions[1].x0, regions[1].y0) == (c.orange_stress_with_vulnerability, c.orange_vulnerability)
+    monkeypatch.setattr(views, "scoring_config", lambda: replace(c, red_stress=95, orange_vulnerability=70))
+    assert (views.matrix_regions()[3].x0, views.matrix_regions()[1].y0) == (95, 70)
 
 
 def test_matrix_chart_standard_and_labels():
@@ -339,9 +340,9 @@ def test_matrix_chart_standard_and_labels():
     figure, config = matrix(chart, "dark", today=date(2026, 9, 26))
     figure = validated(figure)
     assert config["showSendToCloud"] is False and config["toImageButtonOptions"]["filename"] == "matrix_26-09-2026"
-    assert len(figure.layout.shapes) == 5 and figure.layout.xaxis.range == (0, 100)
+    assert len(figure.layout.shapes) == 4 and figure.layout.xaxis.range == (0, 100)  # four areas, no yellow one (E-95)
     labels = [(a.text, a.textangle) for a in figure.layout.annotations if a.text in ("Grün", "Gelb", "Orange", "Rot")]
-    assert labels == [("Grün", 0), ("Gelb", 0), ("Orange", 0), ("Orange", -90), ("Rot", -90)]  # full-height bands upright
+    assert labels == [("Grün", 0), ("Orange", 0), ("Orange", -90), ("Rot", -90)]  # full-height bands upright
     assert figure.data[1].text == ("Stand 25.09.2026",) and "Hinweis" in figure.layout.annotations[-1].text
 
 
@@ -351,7 +352,7 @@ def test_overview_shows_cards_matrix_and_sources(data):
     for kennzahl in ("traffic_light", "stress", "vulnerability", "confidence", "diffusion"):
         assert f"/kennzahl/{kennzahl}" in text
     graph = next(c for c in _walk_components(page) if type(c).__name__ == "Graph")
-    assert graph.id == "matrix" and len(validated(graph.figure).layout.shapes) == 5
+    assert graph.id == "matrix" and len(validated(graph.figure).layout.shapes) == 4
     assert "Letzte Aktualisierung je Quelle" in text and "Cboe (Indizes)" in text
 
 

@@ -351,7 +351,7 @@ _SCORING_KEYS = {
     "rules": {
         "red_stress": float, "red_vix_ratio": float, "red_vix_ratio_days": int, "orange_stress": float,
         "orange_stress_with_vulnerability": float, "orange_vulnerability": float,
-        "yellow_vulnerability": float, "yellow_diffusion_share": float, "yellow_diffusion_percentile": float,
+        "yellow_diffusion_share": float, "yellow_diffusion_percentile": float,
         "hysteresis": float, "red_credit_change": float, "yellow_sahm": float, "yellow_sos": float,
     },
 }
@@ -386,7 +386,6 @@ class ScoringConfig:
     orange_stress: float
     orange_stress_with_vulnerability: float
     orange_vulnerability: float
-    yellow_vulnerability: float
     yellow_diffusion_share: float
     yellow_diffusion_percentile: float
     hysteresis: float
@@ -414,7 +413,7 @@ def _scoring_config(config_dir: Path, content: bytes) -> ScoringConfig:
     if config.min_blocks > len(STRESS_BLOCKS):
         raise ConfigError(f"scoring.composite.min_blocks: höchstens {len(STRESS_BLOCKS)} Blöcke")
     for key in ("red_stress", "orange_stress", "orange_stress_with_vulnerability", "orange_vulnerability",
-                "yellow_vulnerability", "yellow_diffusion_share", "yellow_diffusion_percentile", "hysteresis", "red_credit_change"):
+                "yellow_diffusion_share", "yellow_diffusion_percentile", "hysteresis", "red_credit_change"):
         if getattr(config, key) > 100:
             raise ConfigError(f"scoring.rules.{key}: höchstens 100 (Perzentilskala)")
     return config

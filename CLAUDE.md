@@ -54,6 +54,7 @@ Bewusste Abweichungen vom Bericht:
 - Kein Prefect, Grafana oder Streamlit: zu schwer oder doppelt.
 - Shiller-CAPE und Margin Debt schon in Phase 1, sonst bleibt die Fallhöhe-Achse leer. Margin Debt kommt aus der Fed-Statistik Z.1 (FRED `BOGZ1FL663067003Q`, quartalsweise), nicht von FINRA (E-42).
 - Entscheidungsrunde 29.09.2026 (E-80 bis E-92): Mindesthistorie 3 statt 5 Jahre; Sahm-Regel (Orange nur mit S&P 500 unter der 200-Tage-Linie, E-91) und SOS-Indikator als feste Ampelregeln; Aktienquote der Anleger (Z.1) und umgedrehter Kreditspread Baa in der Fallhöhe; S&P 500 für VRP und Aktien-Anleihen-Korrelation von Cboe statt FRED.
+- Kein Gelb allein aus hoher Fallhöhe (Nutzer 29.09.2026, E-95, nach der Validierung M10/M11; Bericht 4.3, Schritt 5 sah es vor): Die Fallhöhe hebt die Ampel nur zusammen mit Stress (Orange) und steht sonst für sich, auch als eigener Streifen in der Regime-Zeitleiste (E-96).
 
 Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `assets/`. Alternative Stacks schlägst du nicht vor.
 

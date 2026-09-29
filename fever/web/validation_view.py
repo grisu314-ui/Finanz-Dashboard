@@ -336,11 +336,11 @@ def fitted_rules(report: dict) -> list[str] | None:
                    "Gewichte bleiben.")
     vulnerability_rule = {
         "better": "Regel 2 (E-95): Die Fallhöhe trägt vor Rückgängen über den Stress hinaus Information über den "
-                  "Zeitpunkt; das spricht für die Gelb-Regel der Fallhöhe.",
-        "worse": "Regel 2 (E-95): Mit der Fallhöhe trennt das Modell vor Rückgängen schlechter; das spricht fürs "
-                 "Streichen der Gelb-Regel der Fallhöhe.",
-        "same": "Regel 2 (E-95): Kein belastbarer Beitrag der Fallhöhe zum Zeitpunkt; die Gelb-Regel bleibt eine "
-                "Abwägung, denn sie zeigt ein Regime, keinen Zeitpunkt.",
+                  "Zeitpunkt. Die Gelb-Regel der Fallhöhe ist seit 29.09.2026 gestrichen; bei diesem Ergebnis neu abwägen.",
+        "worse": "Regel 2 (E-95): Mit der Fallhöhe trennt das Modell vor Rückgängen schlechter; das stützt das Streichen "
+                 "der Gelb-Regel der Fallhöhe (29.09.2026).",
+        "same": "Regel 2 (E-95): Kein belastbarer Beitrag der Fallhöhe zum Zeitpunkt. Die Gelb-Regel der Fallhöhe hat "
+                "der Nutzer danach gestrichen (29.09.2026).",
     }[vulnerability["verdict"]]
     return [weights, vulnerability_rule]
 

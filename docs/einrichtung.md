@@ -271,7 +271,7 @@ sudo docker exec finanz-dashboard-worker-1 python -m fever.validate
 #   „keine auswertbaren Tage“ bei Rückgang und Bärenmarkt: Der S&P 500 (spx) fehlt noch, Sofort-Abruf prüfen
 ```
 
-Danach im Dashboard: Marken neben den Namen (blau Stress mit Bereich, violett Fallhöhe, grau nur Anzeige, umrandet Ampelregel), in der Ansicht Makro Sahm-Regel, S&P-500-Trend und SOS-Indikator mit violetten Flächen für aktive Regeln und das Datum des letzten Re-Steepening, in der Ansicht Fallhöhe Aktienquote, Geldmarktfonds und Kreditspread-Enge, in der Navigation die Ansicht „Validierung“. Die y-Achse passt sich nach Zoom und Zeitraum-Knopf an (`docs/bedienung.md`).
+Danach im Dashboard: Marken neben den Namen (blau Stress mit Bereich, violett Fallhöhe, grau nur Anzeige, umrandet Ampelregel), in der Ansicht Makro Sahm-Regel, S&P-500-Trend und SOS-Indikator mit violetten Flächen für aktive Regeln und das Datum des letzten Re-Steepening, in der Ansicht Fallhöhe Aktienquote, Geldmarktfonds und Kreditspread-Enge, in der Navigation die Ansicht „Validierung“. Die y-Achse passt sich nach Zoom und Zeitraum-Knopf an (`docs/bedienung.md`). Seit E-95 gibt es kein Gelb mehr allein wegen hoher Fallhöhe: Die Ampel ändert sich auch rückwirkend und steht bei hoher Fallhöhe und niedrigem Stress auf Grün (Entwicklungsdatenbank 25.09.2026: Grün statt Gelb).
 
 **Update auf schnellere Seiten und Branch `claude-raramo` (28.09.2026, E-76 bis E-78, ohne Migration):** ⏳ TrueNAS. Einmal den Branch wechseln; danach gilt wieder der Standardablauf unten mit `git pull`.
 

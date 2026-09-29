@@ -194,8 +194,10 @@ def test_rules_fire_exactly_on_the_threshold():
     assert "red_stress" in run_rules([(90.0, None, None, None)])[0]
     assert "red_stress" not in run_rules([(89.999, None, None, None)])[0]
     assert run_rules([(80.0, None, None, None)])[0] == ("orange_stress",)
-    assert run_rules([(75.0, 80.0, None, None)])[0] == ("orange_stress_vulnerability", "yellow_vulnerability")
-    assert run_rules([(74.999, 80.0, None, None)])[0] == ("yellow_vulnerability",)
+    assert run_rules([(75.0, 80.0, None, None)])[0] == ("orange_stress_vulnerability",)
+    assert run_rules([(75.0, 79.999, None, None)])[0] == ()
+    assert run_rules([(74.999, 80.0, None, None)])[0] == ()  # the vulnerability alone never raises the level (E-95)
+    assert run_rules([(10.0, 100.0, None, None)])[0] == ()
     assert run_rules([(None, None, 40.0, None)])[0] == ("yellow_diffusion",)
     assert run_rules([(None, None, 39.999, None)])[0] == ()
 

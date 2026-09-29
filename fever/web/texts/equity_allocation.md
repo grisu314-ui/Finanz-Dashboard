@@ -17,7 +17,7 @@ Livermore zeigte, dass diese Aktienquote die Aktienrenditen der folgenden zehn J
 ## Grenzen und Fallstricke
 - Quartalsweise und spät: Z.1 erscheint rund zehn Wochen nach Quartalsende; der Wert beschreibt das Quartalsende, nicht heute.
 - Z.1 wird revidiert, auch weit zurück; wie bei allen Reihen zählt je Quartal der neueste Stand.
-- Keine Renditeprognose: Das Dashboard nutzt die Quote nur als Teil der Fallhöhe. Ob der enge Zusammenhang außerhalb von Livermores Stichprobe hält, ist hier nicht geprüft; die Validierung der Ampel folgt als nächster Meilenstein (Entscheidung E-89).
+- Keine Renditeprognose: Das Dashboard nutzt die Quote nur als Teil der Fallhöhe. Ob der enge Zusammenhang außerhalb von Livermores Stichprobe hält, ist hier nicht geprüft; die Validierung (Ansicht 8) prüft die Ampel als Ganzes und den Beitrag der Fallhöhe zum Zeitpunkt, nicht diese Quote einzeln (Entscheidungen E-89, E-94).
 - Einschätzung: Mehr Unternehmen bleiben länger privat und mehr Vermögen liegt außerhalb der USA; beides verändert, was die Quote misst.
 
 ## Quellen

@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 29.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92); M10 Validierung in der Entwicklungsumgebung umgesetzt (E-93); Fallhöhe-Streifen in der Regime-Zeitleiste (E-96); M11 Walk-forward-Test geschätzter Gewichte in der Entwicklungsumgebung umgesetzt (E-94)** · Nächster Schritt: Entscheidung E-95, Update auf TrueNAS mit Migration 0004 (Abschnitt 9), danach M9 (Abnahme)
+Stand: 29.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92); M10 Validierung in der Entwicklungsumgebung umgesetzt (E-93); Fallhöhe-Streifen in der Regime-Zeitleiste (E-96); M11 Walk-forward-Test geschätzter Gewichte in der Entwicklungsumgebung umgesetzt (E-94); kein Gelb allein aus der Fallhöhe (E-95)** · Nächster Schritt: Update auf TrueNAS mit Migration 0004 (Abschnitt 9), danach M9 (Abnahme)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -132,7 +132,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 29.09.2026 | E-90 | HY-OAS nach E-82 (Nachfrage) | HY-OAS-Niveau zusätzlich im Kreditblock, V = 3; Anstieg über 20 Tage und Rot-Regel bleiben auf `BAA10Y`, CCC − BB bleibt Anzeige | Indikator `hy_oas` statt Anzeige; das Perzentil misst sich vorerst nur an den Jahren seit 2023 (sichtbarer Hinweis in der Übersicht) |
 | 29.09.2026 | E-93 | Festlegungen der Validierung (M10), die der Bericht offenlässt | Eigene Festlegungen im freigegebenen Plan (Nutzer: „ohne Freigabeaufforderung sofort ausführen“), vom Nutzer nach Vorlage der Ergebnisse bestätigt (29.09.2026, Empfehlung): Bärenmarkt ab 20 % mit Horizont 63 Handelstage; Rückgänge nach Lunde/Timmermann (2004) mit gleicher Schwelle in beide Richtungen, Beginn am ersten Handelstag nach dem Hoch; VIX-Filter mit dem Alarmanteil der Ampelstufe in den Jahren davor (walk-forward ab 2000); Auswertung ab 2000 an Tagen mit bekanntem Ergebnis und allen Signalen; Alarmphasen mit Lücken bis 5 Handelstage zusammengefasst; Block-Bootstrap mit Blöcken von 126 Handelstagen, 1.000 Ziehungen, 90-%-Intervalle, fester Startwert; „besser/schlechter“ nur, wenn das ganze Intervall des Unterschieds auf einer Seite von null liegt; AUC je Zeitraum nur mit einem darin beginnenden Ereignis. Brier-Score und Test mit Put-Absicherung entfallen (Phase 3) | Parameter in `scoring.toml`, `[validation]`; Tabelle `validation_report` (Migration 0004); Ansicht 8 „Validierung“. Nur Auswertung: keine Rückwirkung auf Scores oder Ampel. Ergebnisse: Abschnitt 4, M10 |
 | 29.09.2026 | E-94 | Gewichte der Stress-Signale optimieren (Nutzer, nach den Ergebnissen von M10) | Walk-forward-Test planen (Empfehlung; Alternativen: nicht jetzt, auf ganzer Historie optimieren) | Plan M11 in Abschnitt 4: Logit auf den Stress-Blöcken (das Logit aus Phase 3, Stufe 3) als reine Auswertung vorgezogen; nichts wirkt auf Scores oder Ampel; Übernahme geschätzter Gewichte nur auf Anweisung und nur nach der vorab festgelegten Regel |
-| 29.09.2026 | E-95 | Ampelregel „Gelb bei hoher Fallhöhe“ streichen? (Nutzer: „führt nur zu Fehlalarmen“) | Entscheidung nach dem Walk-forward-Test (M11); bis dahin bleibt die Regel | Befund dazu: Abschnitt 4, „Nachfragen zur Validierung“ (diese Gelb-Tage waren in M10 nicht schlechter als die übrigen Alarme) |
+| 29.09.2026 | E-95 | Ampelregel „Gelb bei hoher Fallhöhe“ streichen? (Nutzer: „führt nur zu Fehlalarmen“) | Zuerst: Entscheidung nach dem Walk-forward-Test (M11). Nach M11 (Regel 2: kein belastbarer Beitrag der Fallhöhe zum Zeitpunkt): **streichen** (Nutzer; Empfehlung war Beibehalten), Umsetzung freigegeben mit dem Hinweis, dass die Ampel heute dann Grün statt Gelb zeigt | Regel `yellow_vulnerability` und ihr Parameter entfernt, Ampelmatrix ohne Gelb-Fläche, Texte; Abweichung vom Bericht (4.3, Schritt 5) in `CLAUDE.md`. Vorher/Nachher und Wirkung auf die Validierung: Abschnitt 4, „E-95“ |
 | 29.09.2026 | E-96 | Fallhöhe in der Regime-Zeitleiste | Eigener Streifen unter der Ampel in der Perzentil-Farbskala der Heatmap (Empfehlung; Regenbogen abgelehnt: Ampelfarben sind der Gesamtampel vorbehalten, Regenbogenskalen zeigen Stufen, die es nicht gibt) | `figures.regime` mit zweitem Streifen auf eigener y-Achse, Box 300 px; Ansicht Visualisierung |
 
 ---
@@ -888,7 +888,7 @@ Plan vom 29.09.2026, vom Nutzer ohne Rückfrage freigegeben („Plan für M10 er
 - Migrationsprobe (Entwicklungsumgebung, 29.09.2026, gebautes Image als 568:568 auf einer Kopie mit Stand 0003): `fever.validate` vorher „Migration fehlt: Datenbank auf 0003, Programm erwartet 0004“; `fever.backup`, `alembic upgrade head` („Running upgrade 0003 -> 0004“), `alembic current` „0004 (head)“, `fever.score` 24 s, `fever.validate` 0,8 s. Ohne Reihe `spx` (vor ihrem ersten Abruf) meldet die Validierung für Rückgänge und Bärenmärkte „keine auswertbaren Tage“.
 - Browser (Entwicklungsumgebung, 390 px hell und 1280 px dunkel): alle drei Ereignisse ohne Konsolenfehler, kein waagrechtes Scrollen; Legenden der Charts in eigenen Zeilen unter dem Titel, Achsentitel über den Datierungszeilen.
 
-**Ergebnisse** (Entwicklungsdatenbank, Scores vom 29.09.2026, S&P 500 ab 02.01.1975 bis 28.09.2026, VIX bis 25.09.2026; Auswertung ab 03.01.2000; Intervalle 90 %; Momentaufnahme, die Ansicht zeigt den jeweils aktuellen Stand):
+**Ergebnisse** (vor E-95, also noch mit Gelb aus der Fallhöhe; danach Abschnitt „E-95“) (Entwicklungsdatenbank, Scores vom 29.09.2026, S&P 500 ab 02.01.1975 bis 28.09.2026, VIX bis 25.09.2026; Auswertung ab 03.01.2000; Intervalle 90 %; Momentaufnahme, die Ansicht zeigt den jeweils aktuellen Stand):
 
 | Ereignis | Tage (mit Ereignis) | Ereignisse seit 1975 (mit ganzem Vorlauf ab 2000) | AUC Stress | AUC VIX-Perzentil | Unterschied | Urteil |
 |---|---|---|---|---|---|---|
@@ -919,7 +919,7 @@ Fragen des Nutzers nach M10, beantwortet mit der Entwicklungsdatenbank (Auswertu
 - **Fallhöhe, Zeitpunkt:** AUC 0,55 (0,43–0,67) vor Rückgängen ab 10 %, 0,41 vor VIX-Spitzen: keine Aussage über den Zeitpunkt.
 - **Fallhöhe, Tiefe:** Rangkorrelation mit dem größten Rückgang der folgenden 252 Handelstage 0,08 (8.996 Tage 1990–2025); AUC für einen Rückgang ab 20 % binnen eines Jahres 0,46 (Stress 0,70). Je Jahrzehnt steigend: 0,07; 0,17; 0,38; 0,68 (1990er bis 2020er). Tiefe der 28 Rückgänge seit 1990 gegen die Fallhöhe am Hoch: −0,29 (die tiefsten 2002 und 2008 bei niedriger Fallhöhe). Belege der Forschung für CAPE betreffen Renditen über 10 Jahre; dafür reichen 35 Jahre kaum.
 - **Gelb allein aus der Fallhöhe:** 749 von 1.551 Gelb-Tagen seit 2000 (48 %), fast alle 2017/18, 2021/22 und 2025/26. Auf die 647 auswertbaren folgte zu 37 % ein Rückgang ab 10 % (übrige Alarmtage 32 %, Basisrate 21 %); sie gingen den Rückgängen ab 29.01.2018, 21.09.2018, 04.01., 30.03. und 17.08.2022 sowie 20.02.2025 voraus. Ohne diese Regel: Alarm an 34 statt 44 % der Tage, Precision 32 statt 33 %, Recall 52 statt 70 %, gewarnt 15 statt 19 von 22, Fehlalarm-Phasen 1,1 statt 0,9 je Jahr, Unterschied zum VIX-Filter +5 (−0 bis +10) statt +6 (+3 bis +12), also nicht mehr belastbar. Dieselbe Stichprobe, sechs Ereignisse.
-- Entscheidungen: E-94 (M11 planen), E-95 (Gelb-Regel nach M11), E-96 (Fallhöhe-Streifen, umgesetzt 29.09.2026: Tests grün, Browser 390 px hell und 1280 px dunkel ohne Fehler, Hover „Fallhöhe 73“).
+- Entscheidungen: E-94 (M11 planen), E-95 (Gelb-Regel: nach M11 gestrichen, Abschnitt „E-95“), E-96 (Fallhöhe-Streifen, umgesetzt 29.09.2026: Tests grün, Browser 390 px hell und 1280 px dunkel ohne Fehler, Hover „Fallhöhe 73“).
 
 ### M11 – Walk-forward-Test geschätzter Stress-Gewichte (Plan vom 29.09.2026, E-94)
 
@@ -973,6 +973,29 @@ Fragen des Nutzers nach M10, beantwortet mit der Entwicklungsdatenbank (Auswertu
 - **Ursache sichtbar in den Gewichten je Jahr:** Bis 2012 gab die Schätzung dem Makro-Block ein negatives Gewicht (2000 −39 %, 2003 −24 %, 2012 −21 %), weil hoher Makro-Stress in den 1990ern selten vor Rückgängen stand; ab 2013 kippt es ins Positive. Die Volatilität trägt 34 bis 69 %. Instabile Gewichte bei wenigen Ereignissen, wie nach dem Forecast-Combination-Puzzle erwartet.
 - **Regel 2 (E-95):** Die Fallhöhe hebt die AUC vor Rückgängen um 0,03, das Intervall reicht knapp unter null: kein belastbarer Beitrag. Ihr Gewicht im Modell B ist in 26 von 27 Jahren positiv (2003 −10 %) und liegt seit 2013 bei 20 bis 40 %. Nach der vorab festgelegten Regel bleibt die Gelb-Regel eine Abwägung; die Entscheidung liegt beim Nutzer.
 
+
+### E-95: Gelb allein aus der Fallhöhe gestrichen (29.09.2026)
+
+Entscheidung des Nutzers nach M11 (Regel 2 ohne belastbaren Beitrag der Fallhöhe zum Zeitpunkt); meine Empfehlung war Beibehalten (Befunde oben: diese Gelb-Tage gingen Rückgängen öfter voraus als die übrigen Alarme). Abweichung vom Bericht, Abschn. 4.3, Schritt 5, in `CLAUDE.md` eingetragen.
+
+**Umsetzung:** Regel `yellow_vulnerability` aus `fever/scoring/composite.py`, Parameter aus `scoring.toml` und `fever/config.py` entfernt; die Orange-Regel „Stress und Fallhöhe hoch“ bleibt. Ampelmatrix ohne Gelb-Fläche (`views.matrix_regions`), „Schwellen und Farben“ von Ampel und Fallhöhe, Erklärtexte Ampel, Fallhöhe und Aktienquote, Regel 2 in der Validierungsansicht. Tests: Regeln genau auf der Schwelle (75/80 → nur Orange, 74,999/80 und 10/100 → keine Regel), Matrix mit vier Flächen; 490 Tests grün, darunter alle Pflichttests.
+
+**Vorher/Nachher der Ampel** (Entwicklungsdatenbank, 9.281 Handelstage 02.01.1990 bis 25.09.2026):
+
+| Stufe | vorher | nachher |
+|---|---|---|
+| Grün | 4.635 | 6.224 |
+| Gelb | 3.068 | 1.479 |
+| Orange | 705 | 705 |
+| Rot | 873 | 873 |
+
+- Gelb zu Grün an 1.589 Tagen, nur in Jahren mit hoher Fallhöhe bei niedrigem Stress: 1994 (188), 1995 (107), 1996 (131), 1997 (251), 1998 (163), 2017 (120), 2018 (123), 2021 (162), 2022 (53), 2025 (104), 2026 (187). Orange und Rot unverändert.
+- Heute (25.09.2026): Grün statt Gelb (Fallhöhe 84,8, Stress 36,8); das Gelb seit 02.04.2026 kam allein aus der Fallhöhe.
+
+**Wirkung auf die Validierung** (Auswertung ab 2000):
+- Rückgänge: Alarm an mindestens Gelb 34 statt 44 % der Tage, Precision 32 statt 33 %, Recall 52 statt 70 %, gewarnt 15 statt 19 von 22, Fehlalarm-Phasen 1,1 statt 0,9 je Jahr; gegen den VIX-Filter +3 (−6 bis +10) statt +6 (+3 bis +12) Prozentpunkte, also nicht mehr belastbar besser. AUC der Ampelstufe 0,63 statt 0,68. Kurzfazit der Ansicht damit: kein belastbarer Unterschied zum VIX-Filter.
+- VIX-Spitzen: Gelb jetzt belastbar schlechter als der VIX-Filter (Precision 46 gegen 68 %, −21 Prozentpunkte); Orange und Rot unverändert.
+- Der VIX-Filter „wie Gelb“ ändert sich mit: Seine Schwellen richten sich nach dem Alarmanteil der Ampel in den Vorjahren, der ohne die gestrichenen Tage (vor allem 1994–98) sinkt; er gibt jetzt an 22 % der Tage Alarm. Stress, VIX-Perzentil und die geschätzten Gewichte (M11) sind unverändert.
 
 ### O-1: Recherche Ausweichquellen (28.09.2026, 10:36–11:30 UTC)
 
@@ -1232,10 +1255,10 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
   - Nachfragen des Nutzers zur Validierung beantwortet (Abschnitt 4, „Nachfragen zur Validierung“); daraus E-94 (Plan M11), E-95 (Gelb aus der Fallhöhe: Entscheidung nach M11) und E-96 (Fallhöhe-Streifen in der Regime-Zeitleiste, umgesetzt und im Browser geprüft). 484 Tests grün.
   - Auf TrueNAS noch nichts davon eingespielt. Ob TrueNAS schon vom Branch `claude-raramo` läuft (E-76), ist nicht bestätigt.
   - `data-dev/` steht auf 0004, mit Scores und Validierungsbericht vom 29.09.2026.
-  - Entscheidungen bis E-96; die Festlegungen der Validierung (E-93) hat der Nutzer nach Vorlage der Ergebnisse bestätigt.
+  - Entscheidungen bis E-96; die Festlegungen der Validierung (E-93) hat der Nutzer nach Vorlage der Ergebnisse bestätigt. M11 umgesetzt (gleiche Gewichte bleiben besser), danach E-95 umgesetzt: kein Gelb allein aus der Fallhöhe, die Ampel ändert sich auch rückwirkend (heute Grün statt Gelb). 490 Tests grün.
 - **Nächster Schritt:**
   1. TrueNAS: falls noch nicht geschehen, Update „schnellere Seiten und Branch `claude-raramo`“, dann „Entscheidungsrunde 29.09.2026 und Validierung (M10)“ (`docs/einrichtung.md`, Abschnitt 9): Probe der Migration an einer Backup-Kopie, Stack stoppen, Backup, `alembic upgrade head` (0004), „Deploy“, Sofort-Abruf, `fever.score`, `fever.validate`.
-  2. E-95 (Gelb aus der Fallhöhe) mit dem Nutzer entscheiden; Grundlage: Abschnitt 4, M11, „Ergebnisse“ (Regel 1 nicht erfüllt, Regel 2 ohne belastbaren Beitrag). Folgerungen aus M10 und M11 (etwa für Aggregation Stufe 2 in Phase 2, E-89) entscheidet der Nutzer.
+  2. Folgerungen aus M10 und M11 (etwa für Aggregation Stufe 2 in Phase 2, E-89) entscheidet der Nutzer; E-95 ist entschieden und umgesetzt (Gelb-Regel der Fallhöhe gestrichen, Abschnitt 4, „E-95“).
   3. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9); für `iursa` und die Z.1-Reihen neu.
   4. M9 (Abnahme Phase 1).
 - **Hinweise:**

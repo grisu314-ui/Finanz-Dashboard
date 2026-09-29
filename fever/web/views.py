@@ -97,7 +97,6 @@ def matrix_regions() -> tuple[Region, ...]:
     c = scoring_config()
     return (
         Region(0, "Grün", 0, 100, 0, 100),
-        Region(1, "Gelb", 0, 100, c.yellow_vulnerability, 100),
         Region(2, "Orange", c.orange_stress_with_vulnerability, 100, c.orange_vulnerability, 100),
         Region(2, "Orange", c.orange_stress, 100, 0, 100),
         Region(3, "Rot", c.red_stress, 100, 0, 100),

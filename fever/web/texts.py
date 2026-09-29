@@ -336,17 +336,18 @@ def thresholds(kennzahl_id: str) -> list[str]:
     orange = (f"Orange: Stress mindestens {_n(c.orange_stress)}, oder Stress mindestens {_n(c.orange_stress_with_vulnerability)} "
               f"zusammen mit Fallhöhe mindestens {_n(c.orange_vulnerability)}, oder die Sahm-Regel mindestens "
               f"{_n(c.yellow_sahm, 2)}, während der S&P 500 unter seiner {c.trend_window}-Tage-Linie liegt (ohne Hysterese).")
-    yellow = (f"Gelb: Fallhöhe mindestens {_n(c.yellow_vulnerability)}, oder mindestens {_n(c.yellow_diffusion_share)} % der "
-              f"gültigen Stress-Indikatoren über Perzentil {_n(c.yellow_diffusion_percentile)}, oder die Sahm-Regel mindestens "
-              f"{_n(c.yellow_sahm, 2)} ohne diesen Abwärtstrend, oder der SOS-Indikator über {_n(c.yellow_sos, 2)} "
-              "(beide ohne Hysterese).")
+    yellow = (f"Gelb: mindestens {_n(c.yellow_diffusion_share)} % der gültigen Stress-Indikatoren über Perzentil "
+              f"{_n(c.yellow_diffusion_percentile)}, oder die Sahm-Regel mindestens {_n(c.yellow_sahm, 2)} ohne diesen "
+              f"Abwärtstrend, oder der SOS-Indikator über {_n(c.yellow_sos, 2)} (beide ohne Hysterese). Die Fallhöhe allein "
+              "färbt die Ampel nicht (E-95).")
     colors = "Farben: Die Ampelfarben stehen nur für die Gesamtampel und immer mit ihrem Namen."
     if kennzahl_id == "traffic_light":
         return [red, orange, yellow, "Grün: keine Regel trifft zu.", hysteresis, colors]
     if kennzahl_id == "stress":
         return [red, orange, hysteresis]
     if kennzahl_id == "vulnerability":
-        return [orange, yellow, hysteresis]
+        return [orange, "Allein färbt die Fallhöhe die Ampel nicht (E-95): nur zusammen mit Stress, über die Orange-Regel.",
+                hysteresis]
     if kennzahl_id == "diffusion":
         return [yellow, hysteresis]
     if kennzahl_id == "confidence":
@@ -410,6 +411,5 @@ def rule_text(rule: str) -> str:
         "orange_sahm_trend": f"Orange: Sahm-Regel mindestens {_n(c.yellow_sahm, 2)} und S&P 500 unter seiner {c.trend_window}-Tage-Linie",
         "yellow_sahm": f"Gelb: Sahm-Regel mindestens {_n(c.yellow_sahm, 2)}",
         "yellow_sos": f"Gelb: SOS-Indikator über {_n(c.yellow_sos, 2)}",
-        "yellow_vulnerability": f"Gelb: Fallhöhe mindestens {_n(c.yellow_vulnerability)}",
         "yellow_diffusion": f"Gelb: mindestens {_n(c.yellow_diffusion_share)} % der Stress-Indikatoren über Perzentil {_n(c.yellow_diffusion_percentile)}",
     }.get(rule, rule)

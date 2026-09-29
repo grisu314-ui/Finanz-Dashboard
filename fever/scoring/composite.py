@@ -41,7 +41,7 @@ RULE_INDICATORS = {
 _RULE_LEVEL = {
     "red_stress": RED, "red_vix_ratio": RED, "red_credit_change": RED,
     "orange_stress": ORANGE, "orange_stress_vulnerability": ORANGE, "orange_sahm_trend": ORANGE,
-    "yellow_vulnerability": YELLOW, "yellow_diffusion": YELLOW, "yellow_sahm": YELLOW, "yellow_sos": YELLOW,
+    "yellow_diffusion": YELLOW, "yellow_sahm": YELLOW, "yellow_sos": YELLOW,  # no yellow on the vulnerability alone (E-95)
 }
 
 
@@ -196,8 +196,6 @@ class _Rules:
                 and self._threshold(previous["orange_stress_vulnerability"], vulnerability, c.orange_vulnerability)
             ),
             "orange_sahm_trend": sahm_signal and downtrend,
-            # report: vulnerability >= 80 "at stress < 75"; at stress >= 75 the orange rule applies anyway
-            "yellow_vulnerability": self._threshold(previous["yellow_vulnerability"], vulnerability, c.yellow_vulnerability),
             "yellow_diffusion": self._threshold(previous["yellow_diffusion"], diffusion, c.yellow_diffusion_share),
             "yellow_sahm": sahm_signal and not downtrend,
             "yellow_sos": sos is not None and sos > c.yellow_sos,  # strictly above (E-80)
