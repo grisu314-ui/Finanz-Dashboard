@@ -17,6 +17,7 @@ from fever.store.db import data_dir, make_engine
 from fever.store.observations import latest_pairs
 from fever.store.status import read_heartbeat, read_status
 from fever.store.tables import composite_score, indicator_score, observation
+from fever.store.validation import StoredReport, read_report
 
 
 @cache
@@ -58,6 +59,13 @@ def per_data_version(read):
                 _kept[key] = value
         return value
     return wrapper
+
+
+def validation_report() -> StoredReport | None:
+    """The stored validation report (M10, E-93). Read every time, not kept: the validation run follows the
+    scoring run a few seconds later without changing the data version (E-78)."""
+    with engine().connect() as conn:
+        return read_report(conn)
 
 
 def latest_composite() -> dict | None:

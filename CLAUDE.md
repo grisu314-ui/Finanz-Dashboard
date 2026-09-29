@@ -31,7 +31,7 @@ Zweck ist Regime- und Risikoanzeige, keine Crash-Prognose. Ziel ist genau die hi
    - Scoring nach Bericht 4.3, Schritte 1–6, Aggregation nur Stufe 1.
    - Ansichten 1–7 aus Bericht 6.3, soweit Daten vorhanden, dazu „Datenstand".
    - Kurzinfo und Erklärseite je Kennzahl, Chart-Bedienung (Zoom, Zeitraum, Bildexport, Vollbild, Druck), Auto-Aktualisierung; Doku für KI und Anwender.
-   - Validierung nach Bericht 4.3, Schritt 7 (Walk-forward, ROC, Vorlauf, Vergleich mit reinem VIX-Filter), vorgezogen als nächster Meilenstein M10 (Nutzer 29.09.2026, E-89); Umfang vor Beginn planen und freigeben lassen.
+   - Validierung nach Bericht 4.3, Schritt 7 (Walk-forward, ROC, Vorlauf, Vergleich mit reinem VIX-Filter), vorgezogen als Meilenstein M10 (Nutzer 29.09.2026, E-89); umgesetzt 29.09.2026 als Ansicht 8 (E-93). Nur Auswertung, nie Rückwirkung auf Scores.
 2. Alerts, AAII, Aggregation Stufe 2 (korrelationsgewichtet; nur, wenn sie in der Validierung besser abschneidet, E-89), revisionsgenaue Rückrechnung.
 3. Optionsdaten (ThetaData/IBKR: Termstruktur, Skew, GEX), Logit-Modell (Stufe 3).
 
@@ -71,6 +71,7 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
   - Dashboard im Heimnetz: `http://<IP-von-TrueNAS>:8003`; Health: `curl -s http://127.0.0.1:8003/health`
   - Sofort-Abruf aller Reihen (unabhängig vom Abrufplan): `sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update`
   - Scores sofort neu berechnen: `sudo docker exec finanz-dashboard-worker-1 python -m fever.score`
+  - Validierung sofort neu berechnen: `sudo docker exec finanz-dashboard-worker-1 python -m fever.validate`
   - SEC-Kontakt prüfen, ohne den Wert zu zeigen: `sudo docker exec finanz-dashboard-worker-1 python -c "import os; from fever.sources.sec import contact_problem; print(contact_problem(os.environ.get('FEVER_SEC_CONTACT')) or 'SEC-Kontakt in Ordnung')"`
   - Neue Migration vorher an einer Backup-Kopie proben: `docs/einrichtung.md`, Schritt 9
 
@@ -82,18 +83,20 @@ fever/store/       Tabellen (SQLAlchemy Core), Lese- und Schreibfunktionen
 fever/scoring/     reine Berechnung, importiert nichts aus web/ oder store/
 fever/worker.py    Abrufschleife, Heartbeat, stößt den Scoring-Lauf an
 fever/score.py     Scoring-Lauf: Werte lesen, fever/scoring rechnen lassen, Score-Tabellen ersetzen; vom Worker und direkt aufrufbar
+fever/validation.py  Backtest der Ampel (M10, E-93): reine Berechnung, importiert nichts aus web/ oder store/
+fever/validate.py  Validierungslauf nach dem Scoring: Scores und Kurse lesen, Bericht in validation_report ersetzen; vom Worker und direkt aufrufbar
 fever/release.py   geschätzte Veröffentlichung einer Beobachtung (E-14), für Abruf, Worker und Scoring
 fever/backup.py    VACUUM INTO und Aufbewahrung; vom Worker und direkt aufrufbar
 fever/web/         Dash-App: Layouts, Callbacks, Health-Endpunkt
 config/series.toml   Rohreihen (Quelle, ID, Frequenz, Veröffentlichungszeit, Verzug, Toleranz,
                      Plausibilitätsgrenzen) und abgeleitete Indikatoren (Transformation,
                      Orientierung, Block bzw. Fallhöhe)
-config/scoring.toml  Fenster, Mindesthistorie, Schwellen, Halbwertszeiten, Matrixregeln
+config/scoring.toml  Fenster, Mindesthistorie, Schwellen, Halbwertszeiten, Matrixregeln, Parameter der Validierung
 migrations/  tests/  tests/fixtures/  docs/
 ```
 
 - Nur der Worker schreibt. `web` setzt auf jeder Verbindung `PRAGMA query_only = ON` und berechnet keine Scores.
-- Der Worker ist eine einfache Schleife, die alle 15 Minuten fällige Abrufe ausführt; kein Scheduler-Framework, kein Cron im Container. Nach neuen Daten, geänderter `scoring.toml`/`series.toml` oder neuer Programmversion des Scorings rechnet er die Scores neu und speichert sie.
+- Der Worker ist eine einfache Schleife, die alle 15 Minuten fällige Abrufe ausführt; kein Scheduler-Framework, kein Cron im Container. Nach neuen Daten, geänderter `scoring.toml`/`series.toml` oder neuer Programmversion des Scorings rechnet er die Scores neu und speichert sie, danach bei Bedarf die Validierung (E-93).
 - Ausgangspunkt für `series.toml` sind die Berichtsabschnitte 2 und 6.1.
 
 ## Was ausdrücklich NICHT gebaut wird

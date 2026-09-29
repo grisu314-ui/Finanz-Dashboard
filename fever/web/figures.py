@@ -479,6 +479,104 @@ def regime(chart: Regime, theme: str, today: date | None = None) -> tuple[dict, 
     return {"data": data, "layout": layout}, graph_config(chart.chart_id, today)
 
 
+# Charts with an axis title below the plot: the dating lines start under it (tick labels, gap, title)
+X_TITLE_SHIFT = -72
+
+
+def _top_title(text: str) -> dict:
+    """Title at the top edge; the legend above the plot grows towards it (one row per name on a phone),
+    so the top margin leaves room for all names in rows of their own."""
+    return {"text": text, "x": 0, "xanchor": "left", "y": 1, "yref": "container", "yanchor": "top", "pad": {"t": 12},
+            "font": {"size": 15}}
+
+
+def _bottom_margin(note: str) -> int:
+    return -X_TITLE_SHIFT + 14 * (3 + bool(note) + note.count("<br>")) + 12
+
+
+@dataclass(frozen=True)
+class Roc:
+    """ROC curves of the validation (M10, E-93): false positive rate on x, true positive rate on y."""
+
+    chart_id: str
+    title: str
+    source: str
+    curves: list[tuple[str, list[float], list[float]]]  # short name, rates of false and true alarms
+    observed: date | None = None  # last day of the evaluation
+    retrieved: datetime | None = None  # when the report was computed
+    note: str = ""
+
+
+def roc(chart: Roc, theme: str, today: date | None = None) -> tuple[dict, dict]:
+    mode = theme if theme in PALETTE else "light"
+    palette = PALETTE[mode]
+    # the diagonal is named in the plot, not in the legend: four short names fit two rows on a phone
+    data = [{"type": "scatter", "x": [0, 1], "y": [0, 1], "mode": "lines", "name": "Zufall", "showlegend": False,
+             "line": {"width": 1, "dash": "dash", "color": palette["muted"]}, "hoverinfo": "skip"}]
+    for index, (name, fpr, tpr) in enumerate(chart.curves):
+        data.append({"type": "scatter", "x": list(fpr), "y": list(tpr), "mode": "lines", "name": name,
+                     "line": {"width": 2, "color": palette["series"][index % len(palette["series"])]},
+                     "hovertemplate": "Fehlalarmrate %{x:.0%} · Trefferquote %{y:.0%}<extra>" + name + "</extra>"})
+    text = stamp(chart.source, chart.observed, chart.retrieved) + (f"<br>{chart.note}" if chart.note else "")
+    axis = {"range": [0, 1], "tickformat": ".0%", "dtick": 0.2, "zeroline": False}
+    diagonal = {"text": "Zufall", "x": 0.6, "y": 0.56, "xref": "x", "yref": "y", "xanchor": "left", "yanchor": "top",
+                "showarrow": False, "font": {"size": 11, "color": palette["muted"]}}
+    layout = {
+        "template": TEMPLATES[mode], "separators": ",.", "uirevision": chart.chart_id, "showlegend": True,
+        "title": _top_title(chart.title),
+        "legend": {"orientation": "h", "x": 0, "xanchor": "left", "y": 1.02, "yanchor": "bottom"},
+        "margin": {"l": 56, "r": 16, "t": 48 + 19 * len(chart.curves), "b": _bottom_margin(chart.note)},
+        "xaxis": {**axis, "title": {"text": "Fehlalarmrate"}},
+        "yaxis": {**axis, "title": {"text": "Trefferquote"}},
+        "annotations": [diagonal, stamp_annotation(text, mode, yshift=X_TITLE_SHIFT)],
+    }
+    return {"data": data, "layout": layout}, graph_config(chart.chart_id, today)
+
+
+@dataclass(frozen=True)
+class Bars:
+    """Grouped bars over categories, e.g. the lead times of the validation (M10)."""
+
+    chart_id: str
+    title: str
+    source: str
+    categories: list[str]
+    series: list[tuple[str, list[int]]]  # name, one count per category
+    x_title: str
+    y_title: str
+    observed: date | None = None
+    retrieved: datetime | None = None
+    note: str = ""
+    legend_title: str = ""  # shown before the names, e.g. "Ampel:"
+
+
+def bars(chart: Bars, theme: str, today: date | None = None) -> tuple[dict, dict]:
+    mode = theme if theme in PALETTE else "light"
+    palette = PALETTE[mode]
+    data = [{"type": "bar", "x": list(chart.categories), "y": list(counts), "name": name,
+             "marker": {"color": palette["series"][index % len(palette["series"])]},
+             "hovertemplate": "%{x}: %{y}<extra>" + name + "</extra>"}
+            for index, (name, counts) in enumerate(chart.series)]
+    text = stamp(chart.source, chart.observed, chart.retrieved) + (f"<br>{chart.note}" if chart.note else "")
+    legend = {"orientation": "h", "x": 0, "xanchor": "left", "y": 1.02, "yanchor": "bottom"}
+    if chart.legend_title:
+        legend["title"] = {"text": chart.legend_title}
+    layout = {
+        "template": TEMPLATES[mode], "separators": ",.", "uirevision": chart.chart_id, "barmode": "group",
+        "showlegend": len(chart.series) > 1,
+        "title": _top_title(chart.title),
+        "legend": legend,
+        "margin": {"l": 56, "r": 16, "t": 48 + 19 * len(chart.series), "b": _bottom_margin(chart.note)},
+        # few short categories: never turned, so the axis title keeps its place above the dating lines
+        "xaxis": {"title": {"text": chart.x_title}, "type": "category", "tickangle": 0, "tickfont": {"size": 11}},
+        # whole numbers: one tick per count up to six, then coarser
+        "yaxis": {"title": {"text": chart.y_title}, "rangemode": "tozero",
+                  "dtick": max(1, math.ceil(max((max(counts, default=0) for _, counts in chart.series), default=0) / 6))},
+        "annotations": [stamp_annotation(text, mode, yshift=X_TITLE_SHIFT)],
+    }
+    return {"data": data, "layout": layout}, graph_config(chart.chart_id, today)
+
+
 def sparkline(x: list[date], y: list[float | None], theme: str) -> tuple[dict, dict]:
     """Small line without axes; its date and value stand as text next to it (view 7)."""
     mode = theme if theme in PALETTE else "light"

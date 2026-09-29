@@ -49,3 +49,17 @@ red_credit_change = 95     # red: percentile of the 20-day change of BAA10Y, sta
 yellow_sahm = 0.5          # Sahm rule (SAHMREALTIME) at or above this: yellow; orange while the
                            # S&P 500 is also below its trend_window mean (growth-trend rule, E-91)
 yellow_sos = 0.2           # yellow: SOS indicator above this (early warning)
+
+[validation]               # backtest of the traffic light (M10, report 4.3 step 7, E-93). Evaluation only:
+                           # nothing here feeds back into the scores (CLAUDE.md: no thresholds from a backtest)
+drawdown = 10              # event a: the S&P 500 falls at least this many percent from its running high ...
+drawdown_horizon = 63      # ... in a decline beginning within this many trading days (report)
+vix_level = 30             # event b: a VIX close above this ...
+vix_horizon = 21           # ... on one of the next this many trading days (report)
+bear = 20                  # event c: bear market, a decline of at least this many percent ...
+bear_horizon = 63          # ... beginning within this many trading days (own choice; the report names none)
+walk_forward_start = 2000  # evaluation from this year; the VIX filter is recalibrated every year (report)
+episode_gap = 5            # alarm days at most this many trading days apart form one alarm (own choice)
+bootstrap_block = 126      # block bootstrap: blocks of this many trading days, twice the horizon ...
+bootstrap_samples = 1000   # ... this many resamples ...
+confidence = 90            # ... intervals of this width in percent (own choices)

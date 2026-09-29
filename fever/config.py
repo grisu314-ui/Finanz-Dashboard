@@ -22,7 +22,7 @@ CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
 # Allowed top-level tables per file; anything else is an error (typo protection).
 _ALLOWED_TABLES = {
     "series": {"series", "indicator"},
-    "scoring": {"percentile", "transforms", "composite", "smoothing", "rules"},
+    "scoring": {"percentile", "transforms", "composite", "smoothing", "rules", "validation"},
     "episodes": {"episode"},
 }
 # Files whose tables hold one sub-table per entry ([series.vix]); the others hold values.
@@ -405,25 +405,7 @@ def _scoring_config(config_dir: Path, content: bytes) -> ScoringConfig:
     data = _parse("scoring", config_dir, content)
     values = {}
     for table, keys in _SCORING_KEYS.items():
-        entries = data.get(table, {})
-        missing = sorted(set(keys) - set(entries))
-        if missing:
-            raise ConfigError(f"scoring.{table}: Parameter fehlen: {', '.join(missing)}")
-        unknown = sorted(set(entries) - set(keys))
-        if unknown:
-            raise ConfigError(f"scoring.{table}: unbekannte Parameter: {', '.join(unknown)}")
-        for key, kind in keys.items():
-            value = entries[key]
-            if kind is str:
-                ok = isinstance(value, str)
-            elif kind is int:
-                ok = _is_int(value) and value > 0
-            else:
-                ok = isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
-            if not ok:
-                expected = {str: "ein Text", int: "eine ganze Zahl > 0", float: "eine Zahl > 0"}[kind]
-                raise ConfigError(f"scoring.{table}.{key} muss {expected} sein")
-            values[key] = float(value) if kind is float else value
+        values.update(_checked_values(data, table, keys))
     config = ScoringConfig(**values)
     if config.fast_block not in STRESS_BLOCKS:
         raise ConfigError(f"scoring.smoothing.fast_block: unbekannter Block {config.fast_block!r}")
@@ -435,6 +417,73 @@ def _scoring_config(config_dir: Path, content: bytes) -> ScoringConfig:
                 "yellow_vulnerability", "yellow_diffusion_share", "yellow_diffusion_percentile", "hysteresis", "red_credit_change"):
         if getattr(config, key) > 100:
             raise ConfigError(f"scoring.rules.{key}: höchstens 100 (Perzentilskala)")
+    return config
+
+
+def _checked_values(data: dict, table: str, keys: dict) -> dict:
+    """The parameters of one table of scoring.toml: all required, none unknown, each of its type and > 0."""
+    entries = data.get(table, {})
+    missing = sorted(set(keys) - set(entries))
+    if missing:
+        raise ConfigError(f"scoring.{table}: Parameter fehlen: {', '.join(missing)}")
+    unknown = sorted(set(entries) - set(keys))
+    if unknown:
+        raise ConfigError(f"scoring.{table}: unbekannte Parameter: {', '.join(unknown)}")
+    values = {}
+    for key, kind in keys.items():
+        value = entries[key]
+        if kind is str:
+            ok = isinstance(value, str)
+        elif kind is int:
+            ok = _is_int(value) and value > 0
+        else:
+            ok = isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
+        if not ok:
+            expected = {str: "ein Text", int: "eine ganze Zahl > 0", float: "eine Zahl > 0"}[kind]
+            raise ConfigError(f"scoring.{table}.{key} muss {expected} sein")
+        values[key] = float(value) if kind is float else value
+    return values
+
+
+# --- validation (M10, E-93) ----------------------------------------------------------------------
+
+_VALIDATION_KEYS = {
+    "drawdown": float, "drawdown_horizon": int, "vix_level": float, "vix_horizon": int, "bear": float,
+    "bear_horizon": int, "walk_forward_start": int, "episode_gap": int, "bootstrap_block": int,
+    "bootstrap_samples": int, "confidence": float,
+}
+
+
+@dataclass(frozen=True)
+class ValidationConfig:
+    """scoring.toml [validation]: the backtest of report 4.3 step 7; never an input of the scores."""
+
+    drawdown: float  # percent
+    drawdown_horizon: int  # trading days
+    vix_level: float
+    vix_horizon: int
+    bear: float  # percent
+    bear_horizon: int
+    walk_forward_start: int  # year
+    episode_gap: int  # trading days
+    bootstrap_block: int  # trading days
+    bootstrap_samples: int
+    confidence: float  # percent
+
+
+def validation_config(config_dir: Path = CONFIG_DIR) -> ValidationConfig:
+    """scoring.toml [validation], checked for completeness, type and range."""
+    return _validation_config(config_dir, _read("scoring", config_dir))
+
+
+@lru_cache(maxsize=8)
+def _validation_config(config_dir: Path, content: bytes) -> ValidationConfig:
+    config = ValidationConfig(**_checked_values(_parse("scoring", config_dir, content), "validation", _VALIDATION_KEYS))
+    for key in ("drawdown", "bear", "confidence"):
+        if getattr(config, key) >= 100:
+            raise ConfigError(f"scoring.validation.{key}: unter 100 (Prozent)")
+    if not 1900 <= config.walk_forward_start <= 2100:
+        raise ConfigError("scoring.validation.walk_forward_start: eine Jahreszahl")
     return config
 
 

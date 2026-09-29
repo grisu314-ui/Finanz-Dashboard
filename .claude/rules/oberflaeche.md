@@ -31,11 +31,12 @@ Details, Begründungen und Entscheidungsprotokoll (E-1 bis E-7): `docs/umsetzung
 - In Plotly-Titeln, Annotationen und Hovertexten nur Texte aus der Konfiguration und selbst formatierte Werte, nie Rohtexte aus Quellen (Plotly interpretiert eine HTML-Teilmenge).
 
 ## Übersicht und Ansichten (Bericht 6.3; eine Version seit E-67)
-- `/` ist die Übersicht (Ansicht 1: Karten, Ampelmatrix, Quellen); `/ansicht/<name>` die Ansichten 2–7; Navigation in einer Zeile. Die alte Adresse `/uebersicht-b` leitet auf `/` um.
+- `/` ist die Übersicht (Ansicht 1: Karten, Ampelmatrix, Quellen); `/ansicht/<name>` die Ansichten 2–8; Navigation in einer Zeile. Die alte Adresse `/uebersicht-b` leitet auf `/` um.
 - Reine Anzeigereihen sind Kennzahlen in `texts.DISPLAYS`: mit Text, Steckbrief und „nur Anzeige, kein Score“; nie in einem Score.
 - Linienfarben in der Reihenfolge der Referenzpalette; ab drei Linien Endbeschriftungen. Violett = markierte Phasen im Chart (Backwardation, Inversion, Tage mit aktiver Ampelregel) und als Marke die Fallhöhe, Grau = Rezessionen, Statusfarben nur für die Ampel und die Ampelmatrix.
 - Verläufe der Ansichten starten mit der ganzen Historie ab dem ersten Wert; die Erklärseiten mit 5 Jahren.
 - Ansicht 7 ist ein statischer Rahmen mit eigenen Callbacks; Schalter und Auswahl tragen `persistence`, damit die Aktualisierung sie nicht zurücksetzt. Perzentilbänder kommen aus dem Scoring (Spalten `band_p10/p50/p90`), die Oberfläche rechnet sie nie selbst.
+- Ansicht 8 „Validierung“ (M10, E-93, `fever/web/validation_view.py`) ist ebenso ein statischer Rahmen mit Ereigniswahl (`persistence`) und Callback. Sie zeigt nur den Bericht, den der Worker speichert (`validation_report`), und rechnet nichts außer Formatierung und Klassen des Vorlauf-Histogramms. Der Bericht wird bei jedem Aufruf gelesen, nicht über `@per_data_version`: Er entsteht Sekunden nach dem Scoring, ohne dass sich der Datenstand ändert. Charts über `figures.roc` und `figures.bars`: Titel oben fest, Legende mit einer Zeile je Name unter dem Titel (auf dem Smartphone umbrochen), Datierung unter dem Achsentitel (`X_TITLE_SHIFT`).
 - „So fließt der Wert in den Bereich ein“ auf der Erklärseite jedes Indikators wird aus `series.toml` und `scoring.toml` erzeugt (`texts.contribution`); die heutige Rolle kommt aus den gespeicherten Scores.
 - Unter jedem Verlauf steht der Hinweis, dass je Beobachtung der neueste Stand zählt (`views.HISTORY_NOTE`).
 

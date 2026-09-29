@@ -366,7 +366,7 @@ def test_overview_trace_covers_the_last_60_score_days(data, monkeypatch):
 
 def test_one_navigation_row_and_the_old_overview_b_address(client):
     from fever.web.app import NAVIGATION
-    assert [path for path, _ in NAVIGATION][:2] == ["/", "/ansicht/signale"] and len(NAVIGATION) == 9
+    assert [path for path, _ in NAVIGATION][:2] == ["/", "/ansicht/signale"] and len(NAVIGATION) == 10
     layout = json.dumps(client.get("/_dash-layout").get_json(), ensure_ascii=False)
     assert all(path in layout for path, _ in NAVIGATION) and "Übersicht B" not in layout
     moved = client.get("/uebersicht-b")  # old address of the overview (E-67)
@@ -701,3 +701,106 @@ def test_visualisation_frame_keeps_switch_and_selection(client):
     assert components["heatmap-grain"].value == "weekly" and components["heatmap-grain"].persistence is True
     assert components["bands-indicator"].persistence is True and "vis-heatmap" in components
     assert "Yardeni" in rendered(frame) and client.get("/ansicht/visualisierung").status_code == 200
+
+
+# --- view 8: validation (M10, E-93) --------------------------------------------------------------------
+
+
+def store_constructed_report(directory, computed_at, score_computed_at=None):
+    """A report from the constructed history of tests/test_validation.py, stored as the worker does."""
+    from dataclasses import replace as replace_config
+    from fever.config import validation_config
+    from fever.store.validation import replace_report
+    from fever.validation import validate
+    from tests.test_validation import constructed
+    spx, vix, scores, vix_percentile, _ = constructed()
+    config = replace_config(validation_config(), walk_forward_start=1997, bootstrap_samples=50)
+    report = validate(spx, vix, scores, vix_percentile, config, 80.0)
+    with make_engine(directory).begin() as conn:
+        replace_report(conn, report, computed_at=computed_at, score_computed_at=score_computed_at or computed_at, config_hash="x")
+    return report
+
+
+def test_validation_view_without_and_with_a_report(data):
+    from fever.web import validation_view
+    assert "Noch keine Validierung berechnet" in rendered(validation_view.content("drawdown", "light", NOW))
+    store_constructed_report(data, NOW)
+    for event in ("drawdown", "vix", "bear", None):
+        page = validation_view.content(event, "dark", NOW)
+        text = rendered(page)
+        assert "Datenbank nicht lesbar" not in text and "berechnet" in text
+        for graph in (c for c in _walk_components(page) if type(c).__name__ == "Graph"):
+            validated(graph.figure)
+            json.dumps(graph.figure, allow_nan=False)
+    drawdown = rendered(validation_view.content("drawdown", "light", NOW))
+    for part in ("Kurzfazit", "Trennschärfe", "ROC-Kurve", "Treffer und Fehlalarme", "Vorlauf", "Fehlalarme", "Stabilität",
+                 "Grenzen", "Ampel mindestens Orange", "VIX-Filter wie Orange", "besser", "Prozentpunkte (Intervall",
+                 "davon 2 mit ganzem Vorlauf", "höchstens 63 Tage"):
+        assert part in drawdown, part
+    assert "Beruht auf älteren Scores" not in drawdown  # the fixture scored at NOW, the report is on those scores
+    store_constructed_report(data, NOW, score_computed_at=NOW - timedelta(hours=1))
+    assert "Beruht auf älteren Scores" in rendered(validation_view.content("drawdown", "light", NOW))
+    assert "Zu wenige Ereignisse" in rendered(validation_view.content("bear", "light", NOW))  # 14 % is no bear market
+
+
+def test_validation_view_names_missing_closes(data):
+    """Before the first retrieval of spx (Cboe) the declines have no day to evaluate: say so, not "too few"."""
+    from dataclasses import replace as replace_config
+    import pandas as pd
+    from fever.config import validation_config
+    from fever.store.validation import replace_report
+    from fever.validation import validate
+    from fever.web import validation_view
+    from tests.test_validation import constructed
+    _, vix, scores, vix_percentile, _ = constructed()
+    config = replace_config(validation_config(), walk_forward_start=1997, bootstrap_samples=20)
+    report = validate(pd.Series([], index=[], dtype=float), vix, scores, vix_percentile, config, 80.0)
+    with make_engine(data).begin() as conn:
+        replace_report(conn, report, computed_at=NOW, score_computed_at=NOW, config_hash="x")
+    text = rendered(validation_view.content("drawdown", "light", NOW))
+    assert "Keine auswertbaren Tage" in text and "Zu wenige Ereignisse" not in text
+    assert "ROC-Kurve" in rendered(validation_view.content("vix", "light", NOW))  # VIX spikes need no S&P 500
+
+
+def test_validation_frame_page_and_explanation(client, data):
+    from fever.web import validation_view
+    frame = validation_view.frame()
+    components = {c.id: c for c in _walk_components(frame) if isinstance(getattr(c, "id", None), str)}
+    radio = components["validation-event"]
+    assert radio.persistence is True and [o["value"] for o in radio.options] == ["drawdown", "vix", "bear"]
+    assert radio.options[0]["label"] == "Rückgang ab 10 % (Beginn in 63 Handelstagen)"
+    assert client.get("/ansicht/validierung").status_code == 200
+    page = rendered(views.kennzahl("validation", "light", NOW))
+    assert "Block-Bootstrap mit Blöcken von 126 Handelstagen und 1.000 Ziehungen" in page
+    assert "/kennzahl/validation" in rendered(views.explanations())
+    assert views.SOURCE_NAMES["validation"] == "Validierung (Berechnung im Worker)"
+
+
+def test_lead_bins_cover_the_horizon():
+    from fever.web.validation_view import lead_bins
+    assert lead_bins(63) == [(1, 21), (22, 42), (43, 62), (63, 63)]  # the horizon alone: alarm on from the start
+    assert lead_bins(21) == [(1, 7), (8, 14), (15, 20), (21, 21)]
+    assert lead_bins(3) == [(1, 1), (2, 2), (3, 3)] and lead_bins(1) == [(1, 1)]
+
+
+def test_the_overall_verdict_names_who_is_better():
+    from fever.web.validation_view import overall
+    assert overall(["same", "better", "same", "same"]).startswith("Ampel und Stress sind in mindestens einem Vergleich")
+    assert overall(["worse", "same"]).startswith("Der VIX-Filter ist")
+    assert overall(["better", "worse"]).startswith("Gemischt")
+    assert overall(["same", "same"]).startswith("Kein belastbarer Unterschied")
+
+
+def test_roc_and_bars_follow_the_standard():
+    from fever.web.figures import Bars, Roc, bars, roc
+    figure, config = roc(Roc("r", "ROC", "x", [("Stress (AUC 0,70)", [0, 0.5, 1], [0, 0.8, 1])]), "dark", today=date(2026, 9, 29))
+    figure = validated(figure)
+    assert config["showSendToCloud"] is False and config["toImageButtonOptions"]["filename"] == "r_29-09-2026"
+    assert figure.layout.xaxis.range == (0, 1) and figure.data[0].name == "Zufall" and figure.layout.meta is None
+    assert figure.data[0].showlegend is False and figure.layout.annotations[0].text == "Zufall"  # named in the plot
+    assert figure.layout.title.yref == "container" and figure.layout.annotations[-1].yshift == -72  # below the axis title
+    figure, _ = bars(Bars("b", "Vorlauf", "x", ["1–7", "verpasst"], [("Rot", [3, 1]), ("Gelb", [5, 0])], "Tage", "Ereignisse",
+                          legend_title="Ampel"), "light")
+    figure = validated(figure)
+    assert figure.layout.barmode == "group" and figure.layout.yaxis.dtick == 1 and figure.data[1].y == (5, 0)
+    assert figure.layout.xaxis.tickangle == 0 and figure.layout.legend.title.text == "Ampel"

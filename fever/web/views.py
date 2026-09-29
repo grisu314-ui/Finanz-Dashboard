@@ -8,15 +8,13 @@ import math
 from datetime import date, datetime, timedelta
 
 from dash import dcc, html
-from sqlalchemy.exc import SQLAlchemyError
 
 from fever.config import RULE_ONLY, VULNERABILITY, crisis_episodes, indicator_catalog, scoring_config, series_catalog
 from fever.release import NEW_YORK, is_stale
 from fever.scoring.composite import RULE_INDICATORS, SAHM_INDICATOR, SOS_INDICATOR, TREND_INDICATOR
-from fever.store.db import DataDirError
 from fever.store.status import HEARTBEAT_MAX_AGE
 from fever.web import components as ui
-from fever.web import db, texts
+from fever.web import db, texts, validation_view
 from fever.web import format as fmt
 from fever.web.figures import (
     Band, Chart, Curve, CurvePoint, Heatmap, Line, Matrix, Regime, Region, curve, heatmap, matrix, regime, sparkline,
@@ -26,6 +24,7 @@ SOURCE_NAMES = {
     "cboe": "Cboe (Indizes)", "cfe": "Cboe Futures Exchange (VX-Futures)", "fred": "FRED (St. Louis Fed)",
     "ecb": "EZB", "ofr": "Office of Financial Research", "fed": "Federal Reserve Board", "cftc": "CFTC",
     "shiller": "Robert J. Shiller", "sec": "SEC EDGAR (N-PORT)", "scoring": "Scoring (Berechnung im Worker)",
+    "validation": "Validierung (Berechnung im Worker)",
 }
 STATUS_NAMES = {
     "ok": "gültig", "stale": "veraltet", "history": "unter Mindesthistorie: angezeigt, nicht im Score",
@@ -42,14 +41,7 @@ PLACEHOLDERS = [
 ]
 
 
-def guarded(render):
-    """Show a notice instead of an error page when the database cannot be read."""
-    def wrapper(*args, **kwargs):
-        try:
-            return render(*args, **kwargs)
-        except (DataDirError, SQLAlchemyError) as exc:
-            return [html.Div(f"Datenbank nicht lesbar: {exc}", className="banner banner-alert", role="alert")]
-    return wrapper
+guarded = ui.guarded  # a notice instead of an error page when the database cannot be read
 
 
 def _today_new_york(now: datetime) -> date:
@@ -461,6 +453,7 @@ def _score_state(kennzahl_id, theme, now):
 VIEW_TITLES = {
     "signale": "Schnelle Marktsignale", "breite": "Marktbreite", "positionierung": "Sentiment und Positionierung",
     "makro": "Makro und Liquidität", "fallhoehe": "Fallhöhe", "visualisierung": "Visualisierung",
+    "validierung": "Validierung",
 }
 DISPLAY_VIEWS = {"vix_term": "signale", "skew": "signale", "ccc_bb": "makro", "anfci": "makro",
                  "ofr_fsi": "makro", "yield_curve": "makro", "cape": "fallhoehe", "money_market": "fallhoehe"}
@@ -494,6 +487,8 @@ def view(name: str | None, theme: str, now: datetime) -> list:
         return [html.H1("Ansicht nicht gefunden"), dcc.Link("Zur Übersicht", href="/")]
     if name == "visualisierung":
         return visualisation_frame()
+    if name == "validierung":
+        return validation_view.frame()
     context = _Context(theme, now)
     return [html.H1(VIEW_TITLES[name]), *builders[name](context), ui.note(HISTORY_NOTE)]
 

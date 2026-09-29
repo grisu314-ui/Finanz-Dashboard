@@ -25,7 +25,8 @@ GZIP_MIN_BYTES = 2048  # smaller answers gain nothing noticeable
 # One row (E-67): the views of report 6.3, then data status and explanations.
 NAVIGATION = [("/", "Übersicht"), ("/ansicht/signale", "Signale"), ("/ansicht/breite", "Breite"),
               ("/ansicht/positionierung", "Positionierung"), ("/ansicht/makro", "Makro"), ("/ansicht/fallhoehe", "Fallhöhe"),
-              ("/ansicht/visualisierung", "Visualisierung"), ("/datenstand", "Datenstand"), ("/erklaerungen", "Erklärungen")]
+              ("/ansicht/visualisierung", "Visualisierung"), ("/ansicht/validierung", "Validierung"),
+              ("/datenstand", "Datenstand"), ("/erklaerungen", "Erklärungen")]
 NOTICES = [
     "This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.",
     "Source: ECB statistics.",

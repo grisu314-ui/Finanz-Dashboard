@@ -106,3 +106,15 @@ composite_score = Table(
     Column("computed_at", UtcDateTime, nullable=False),
     Column("config_hash", String(64), nullable=False),
 )
+
+# Validation (M10, decision E-93): derived from the scores, replaced by every validation run
+# (fever.validate); one row, the report as JSON (fever.validation.validate).
+validation_report = Table(
+    "validation_report",
+    metadata,
+    Column("id", Integer, primary_key=True),  # always 1
+    Column("computed_at", UtcDateTime, nullable=False),
+    Column("score_computed_at", UtcDateTime, nullable=False),  # the scoring run the report is based on
+    Column("config_hash", String(64), nullable=False),
+    Column("content", Text, nullable=False),
+)

@@ -1,5 +1,6 @@
 """Worker: every 15 minutes fetch the due series, write the heartbeat, make the daily backup,
-and recompute the scores after new data or a changed configuration (M5, E-50).
+recompute the scores after new data or a changed configuration (M5, E-50) and validate new
+scores (M10, E-93).
 
 Schedule (decision E-31), planned in America/New_York:
 - A series is due on New York weekdays from its release_time on, once per New York day.
@@ -26,7 +27,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
-from fever import log, score
+from fever import log, score, validate
 from fever.backup import BackupError, has_backup, run_backup
 from fever.config import ConfigError, Series, group_members, series_catalog
 from fever.http import HttpClient
@@ -122,6 +123,8 @@ def run_cycle(
             state.last_success_day = now.astimezone(NEW_YORK).date()
     if not stop.is_set():
         _score(engine, clock)
+    if not stop.is_set():
+        _validate(engine, clock)
 
 
 def serve(
@@ -177,6 +180,19 @@ def _score(engine: Engine, clock) -> None:
         logger.exception("Scoring fehlgeschlagen")
         with engine.begin() as conn:
             record_error(conn, score.SOURCE, clock(), log.mask(f"{type(exc).__name__}: {exc}"))
+
+
+def _validate(engine: Engine, clock) -> None:
+    """Validate new scores (M10, E-93); an error is logged and recorded, the worker carries on."""
+    try:
+        if not validate.needs_run(engine, validate.config_hash()):
+            return
+        _heartbeat(engine, clock())
+        logger.info("%s", validate.describe(validate.run(engine, clock=clock)))
+    except Exception as exc:  # the report is derived: the fetches and scores must go on regardless
+        logger.exception("Validierung fehlgeschlagen")
+        with engine.begin() as conn:
+            record_error(conn, validate.SOURCE, clock(), log.mask(f"{type(exc).__name__}: {exc}"))
 
 
 def _heartbeat(engine: Engine, now: datetime) -> None:

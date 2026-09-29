@@ -97,7 +97,14 @@ Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar 
    - *Heatmap:* jede Zeile ein Indikator, die Farbe sein Perzentil (dunkler = höher); der Schalter wechselt zwischen wöchentlich über die ganze Historie und täglich für die letzten zwei Jahre. Leere Stellen: an diesem Tag nicht gültig (veraltet oder zu kurze Historie). Die farbigen Quadrate vor dem Namen sind die Marken (blau Stress, violett Fallhöhe, grau Ampelregel); Maus darüber nennt auch den Bereich.
    - *Perzentilbänder:* für den gewählten Indikator der Wert, der Bereich zwischen dem 10. und 90. Perzentil seines Vergleichsfensters (hellblau) und der Median (gestrichelt). Liegt der Wert über dem Band, ist er ungewöhnlich hoch.
    - *Sparklines:* alle Indikatoren der letzten 12 Monate auf einen Blick, mit Wert, Perzentil und Stand.
-8. **Datenstand** und **Erklärungen.**
+8. **Validierung** (Rückblick, seit M10): Wie gut kündigten Ampel, Stress und Fallhöhe frühere Ereignisse an, verglichen mit einem einfachen Filter auf das VIX-Perzentil? Oben wählst du das Ereignis (Rückgang des S&P 500, VIX-Spitze, Bärenmarkt; Marken und Horizonte stehen an der Auswahl).
+   - *Kurzfazit:* ein Satz, ob Ampel und Stress belastbar besser, schlechter oder nicht unterscheidbar sind. „Belastbar“ heißt: Das ganze Intervall des Unterschieds liegt auf einer Seite von null.
+   - *Trennschärfe:* ROC-Kurven und AUC (0,5 = Zufall, 1 = perfekt) für Stress, Fallhöhe, Ampelstufe und VIX-Perzentil.
+   - *Treffer und Fehlalarme:* je Ampelstufe und je Vergleichsfilter, wie oft Alarm war, wie viele Alarmtage vor einem Ereignis lagen (Precision), wie viele Tage vor einem Ereignis Alarm hatten (Recall), wie viele Ereignisse gewarnt wurden und wie viele Fehlalarm-Phasen es je Jahr gab. Der Vergleichsfilter gibt etwa so oft Alarm wie die Stufe in den Jahren davor.
+   - *Vorlauf:* wie viele Handelstage vor dem Beginn die Ampel zuerst Alarm gab; „≥ Horizont“ heißt, der Alarm war schon vorher an. Die Tabelle darunter nennt jedes Ereignis.
+   - *Fehlalarme, Stabilität, Grenzen:* die Fehlalarm-Phasen als Listen, die Trennschärfe je Jahrzehnt und was die Auswertung nicht kann.
+   - Nur ein Rückblick: keine Wahrscheinlichkeit für heute, kein Handelssignal, und nichts davon verändert die Ampel. Einzelheiten auf der Erklärseite „Validierung“.
+9. **Datenstand** und **Erklärungen.**
 
 In den Ansichten starten die Verläufe mit der ganzen Historie; Grau sind US-Rezessionen. Die Marke „nur Anzeige“ steht bei Reihen, die nicht in Stress oder Fallhöhe eingehen.
 

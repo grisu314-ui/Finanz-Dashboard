@@ -242,17 +242,20 @@ Dockge zeigt `web` nach rund einer Minute als „healthy“.
 
 ✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ⏳ TrueNAS. Prüfung der Migration beim Start (E-70): ✅ Entwicklungsumgebung 28.09.2026 mit dem gebauten Image auf einer Datenbank mit Stand 0002 (Worker und `fever.score` melden „Migration fehlt“ und starten nicht, `/health` 503, Banner im Browser; `fever.backup` läuft; nach `alembic upgrade head` normaler Start); ⏳ TrueNAS.
 
-**Update auf die Entscheidungsrunde 29.09.2026 (E-80 bis E-92, ohne Migration, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 29.09.2026 (Abruf der zehn neuen Reihen, Scoring, Browser); ⏳ TrueNAS. Voraussetzung: TrueNAS läuft schon vom Branch `claude-raramo` (sonst zuerst der nächste Block). Neu sind zehn Reihen (S&P 500 von Cboe, versicherte Arbeitslosenquote, acht Z.1-Reihen), fünf Indikatoren und geänderte Ampelregeln; die Ampel ändert sich auch rückwirkend (`docs/umsetzungsplan.md`, Abschnitt 4, „Entscheidungsrunde 29.09.2026“).
+**Update auf die Entscheidungsrunde 29.09.2026 und die Validierung (E-80 bis E-93, mit Migration 0004, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 29.09.2026 (Abruf der zehn neuen Reihen, Scoring, Validierung, Browser; Migrationsprobe mit dem gebauten Image als 568:568 auf einer Kopie mit Stand 0003); ⏳ TrueNAS. Voraussetzung: TrueNAS läuft schon vom Branch `claude-raramo` (sonst zuerst der nächste Block). Neu sind zehn Reihen (S&P 500 von Cboe, versicherte Arbeitslosenquote, acht Z.1-Reihen), fünf Indikatoren, geänderte Ampelregeln (die Ampel ändert sich auch rückwirkend, `docs/umsetzungsplan.md`, Abschnitt 4, „Entscheidungsrunde 29.09.2026“) und die Ansicht „Validierung“ mit der neuen Tabelle `validation_report` (M10). Das neue Programm startet erst nach der Migration.
 
 ```bash
 cd /mnt/Daten-Z1/apps/feewer
 git pull
-git diff --stat HEAD@{1} -- compose.dockge.yaml .env.example migrations/    # erwartet: keine Ausgabe
+git diff --stat HEAD@{1} -- compose.dockge.yaml .env.example    # erwartet: keine Ausgabe
+git diff --stat HEAD@{1} -- migrations/                          # erwartet: migrations/versions/0004_validation_report.py
 sudo docker compose build
 ```
 
-1. In Dockge beim Stack `finanz-dashboard` „Deploy“ (nicht „Neustart“: nur „Deploy“ startet die Container mit dem neuen Image).
-2. Die neuen Reihen sofort holen und die Scores neu rechnen (sonst holt der Worker sie am nächsten New-Yorker Werktag ab ihrer Veröffentlichungszeit):
+1. Migration an einer Backup-Kopie proben: Block „Neue Migration zuerst an einer Kopie testen“ unten (Stack läuft dabei weiter).
+2. Standardablauf unten ab „Stack stoppen“: Backup, `$RUN alembic upgrade head` (erwartet u. a. `Running upgrade 0003 -> 0004, Validation report …`), `$RUN alembic current` (erwartet `0004 (head)`).
+3. In Dockge beim Stack `finanz-dashboard` „Deploy“ (nicht „Neustart“: nur „Deploy“ startet die Container mit dem neuen Image).
+4. Die neuen Reihen sofort holen, Scores und Validierung neu rechnen (sonst holt der Worker die Reihen am nächsten New-Yorker Werktag ab ihrer Veröffentlichungszeit und rechnet danach selbst):
 
 ```bash
 sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
@@ -262,9 +265,12 @@ sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
 #   am Ende: INFO __main__: Sofort-Abruf beendet: 81 Reihen, 0 mit Problemen   (FRED SP500 entfällt, E-92)
 sudo docker exec finanz-dashboard-worker-1 python -m fever.score
 #   erwartet: INFO __main__: Scores berechnet: 9… Tage ab 02.01.1990, zuletzt <letzter Handelstag>: … (rund 20 bis 30 s)
+sudo docker exec finanz-dashboard-worker-1 python -m fever.validate
+#   erwartet: INFO __main__: Validierung berechnet: Rückgang: AUC Stress …, VIX … (…); VIX-Spitze: …; Bärenmarkt: … (… s)
+#   „keine auswertbaren Tage“ bei Rückgang und Bärenmarkt: Der S&P 500 (spx) fehlt noch, Sofort-Abruf prüfen
 ```
 
-Danach im Dashboard: Marken neben den Namen (blau Stress mit Bereich, violett Fallhöhe, grau nur Anzeige, umrandet Ampelregel), in der Ansicht Makro Sahm-Regel, S&P-500-Trend und SOS-Indikator mit violetten Flächen für aktive Regeln und das Datum des letzten Re-Steepening, in der Ansicht Fallhöhe Aktienquote, Geldmarktfonds und Kreditspread-Enge. Die y-Achse passt sich nach Zoom und Zeitraum-Knopf an (`docs/bedienung.md`).
+Danach im Dashboard: Marken neben den Namen (blau Stress mit Bereich, violett Fallhöhe, grau nur Anzeige, umrandet Ampelregel), in der Ansicht Makro Sahm-Regel, S&P-500-Trend und SOS-Indikator mit violetten Flächen für aktive Regeln und das Datum des letzten Re-Steepening, in der Ansicht Fallhöhe Aktienquote, Geldmarktfonds und Kreditspread-Enge, in der Navigation die Ansicht „Validierung“. Die y-Achse passt sich nach Zoom und Zeitraum-Knopf an (`docs/bedienung.md`).
 
 **Update auf schnellere Seiten und Branch `claude-raramo` (28.09.2026, E-76 bis E-78, ohne Migration):** ⏳ TrueNAS. Einmal den Branch wechseln; danach gilt wieder der Standardablauf unten mit `git pull`.
 
@@ -315,7 +321,7 @@ $RUN python -m fever.backup        # Sicherung vor der Migration
 $RUN alembic upgrade head
 #   erwartet ohne neue Migration nur zwei Zeilen "INFO [alembic.runtime.migration] …", kein "Running upgrade"
 $RUN alembic current
-#   erwartet: die neueste Nummer mit "(head)", derzeit 0003 (head)
+#   erwartet: die neueste Nummer mit "(head)", derzeit 0004 (head)
 # in Dockge: Stack "finanz-dashboard" starten
 sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update    # nur wenn neue Reihen dazukamen (Schritt 7)
 ```
@@ -332,9 +338,11 @@ sudo mkdir -p $PROBE
 sudo cp "data/backup/$(sudo ls -t data/backup | grep manual | head -1)" $PROBE/fever.sqlite3    # Kopie des Backups, nicht der laufenden Datenbank
 sudo chown -R 568:568 $PROBE
 sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v $PROBE:/data fever:local alembic upgrade head
-#   erwartet u. a. (Update auf M7): Running upgrade 0002 -> 0003, Percentile bands 10/50/90 in indicator_score …
+#   erwartet u. a. (Update auf M10): Running upgrade 0003 -> 0004, Validation report (M10, decision E-93): …
 sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v $PROBE:/data fever:local python -m fever.score
 #   erwartet: INFO __main__: Scores berechnet: … Tage ab …, zuletzt …: Stress …, Fallhöhe …, Ampel …, Konfidenz … % (… s)
+sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v $PROBE:/data fever:local python -m fever.validate
+#   erwartet: INFO __main__: Validierung berechnet: … (… s); vor dem ersten Abruf von spx bei Rückgang und Bärenmarkt „keine auswertbaren Tage“
 sudo rm -r $PROBE
 ```
 
@@ -348,6 +356,13 @@ sudo docker exec finanz-dashboard-worker-1 python -m fever.score
 ```
 
 Die Werte zeigt ab M6 die Oberfläche; bis dahin nur diese Log-Zeile.
+
+**Validierung (ab M10, E-93):** Nach jedem Scoring-Lauf mit neuen Scores und nach einer Änderung von `scoring.toml` oder des Validierungscodes rechnet der Worker die Validierung neu (Ansicht „Validierung“); im Log steht dann `INFO __main__: Validierung berechnet: …`. Sofort (wenige Sekunden):
+
+```bash
+sudo docker exec finanz-dashboard-worker-1 python -m fever.validate
+#   erwartet: INFO __main__: Validierung berechnet: Rückgang: AUC Stress …, VIX … (…); VIX-Spitze: …; Bärenmarkt: … (… s)
+```
 
 ## 10. Backup und Wiederherstellung
 
@@ -414,6 +429,8 @@ Den Ordner `alt-…` erst löschen, wenn wieder alles korrekt läuft. Zeigt `ale
 | „FEVER_SEC_CONTACT ist im Container leer …“ | Der Wert fehlt in der `.env` des Dockge-Stacks (die `.env` im Projektordner liest der Stack nicht), oder der Stack wurde danach nur neu gestartet: eintragen, „Deploy“ |
 | „FEVER_SEC_CONTACT enthält keine E-Mail-Adresse …“ | Schreibweise `FEVER_SEC_CONTACT=Vorname Nachname name@beispiel.de` |
 | Log-Zeile „Scoring fehlgeschlagen“ | Die Abrufe laufen weiter; der Fehler steht unter `scoring` im Datenstand. Mit `sudo docker exec finanz-dashboard-worker-1 python -m fever.score` wiederholen und die Ausgabe melden |
+| Log-Zeile „Validierung fehlgeschlagen“ | Abrufe und Scores laufen weiter; der Fehler steht unter „Validierung (Berechnung im Worker)“ im Datenstand. Mit `sudo docker exec finanz-dashboard-worker-1 python -m fever.validate` wiederholen und die Ausgabe melden |
+| Ansicht „Validierung“: „Keine auswertbaren Tage“ | Es fehlen Schlusskurse des S&P 500 (Reihe `spx`, Cboe) oder des VIX: Datenstand prüfen, Sofort-Abruf (Schritt 7), danach `python -m fever.validate` wie oben |
 
 SEC-Kontakt prüfen, ohne den Wert anzuzeigen (✅ Entwicklungsumgebung 28.09.2026 im gebauten Image: fehlend, leer und gesetzt; ⏳ TrueNAS):
 
@@ -441,8 +458,9 @@ Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
 | Sofort-Abruf aller Reihen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update` | ✅ TrueNAS und Entwicklungsumgebung 26.09.2026 |
 | Mountpunkt und Benutzer prüfen | `sudo docker inspect finanz-dashboard-worker-1 --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{end}} user={{.Config.User}}'` (erwartet: `/mnt/Daten-Z1/apps/feewer/data -> /data user=568:568`) | ✅ TrueNAS 26.09.2026 |
 | Sofort-Backup | `sudo docker exec finanz-dashboard-worker-1 python -m fever.backup` (Stack gestoppt: `$RUN python -m fever.backup`) | ✅ Entwicklungsumgebung 25.09.2026 |
-| Migration (Ablauf) | Probe an einer Backup-Kopie (Schritt 9) → Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten | ✅ TrueNAS 26.09.2026 (0001 → 0002; Scoring danach erfolgreich) und Entwicklungsumgebung (mit Probe, zuletzt 0002 → 0003 am 27.09.2026) |
+| Migration (Ablauf) | Probe an einer Backup-Kopie (Schritt 9) → Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten | ✅ TrueNAS 26.09.2026 (0001 → 0002; Scoring danach erfolgreich) und Entwicklungsumgebung (mit Probe, zuletzt 0003 → 0004 am 29.09.2026) |
 | Dashboard-Log | `sudo docker logs -f finanz-dashboard-web-1` | ✅ Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
 | Dashboard-Health | `curl -s http://127.0.0.1:8003/health` (erwartet `{"status":"ok"}`) | ✅ Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
 | Scores sofort neu berechnen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.score` | ✅ TrueNAS und Entwicklungsumgebung 26.09.2026 |
+| Validierung sofort neu berechnen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.validate` (Stack gestoppt: `$RUN python -m fever.validate`) | ✅ Entwicklungsumgebung 29.09.2026 (gebautes Image als 568:568), ⏳ TrueNAS |
 | SEC-Kontakt prüfen | Befehl in Abschnitt 11 (erwartet `SEC-Kontakt in Ordnung`) | ✅ Entwicklungsumgebung 28.09.2026, ⏳ TrueNAS |

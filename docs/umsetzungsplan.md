@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 29.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92)** · Nächster Schritt: Update auf TrueNAS (Abschnitt 9), danach M10 (Validierung, E-89) und M9 (Abnahme)
+Stand: 29.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92); M10 Validierung in der Entwicklungsumgebung umgesetzt (E-93)** · Nächster Schritt: Update auf TrueNAS mit Migration 0004 (Abschnitt 9), Ergebnisse von M10 und E-93 mit dem Nutzer besprechen, danach M9 (Abnahme)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -26,7 +26,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M7 | Ansichten 1–7 | ☑ 27.09.2026: Übersicht (vormals Übersicht B) und Ansichten 2–6 (E-62, E-65, E-67), Perzentilbänder (E-64, Migration 0003) und Ansicht 7 (E-63, E-66); die Variante M7a ist wieder entfernt (E-67); auf TrueNAS ⏳; Ansicht Breite und Top-10-Konzentration mit Daten seit 28.09.2026 (E-68, E-71 bis E-74) | M5, M6, L-13 | M7a erteilt 26.09.2026, M7 erteilt 27.09.2026 |
 | M8 | Erklärtexte je Kennzahl | ☑ 28.09.2026: alle Texte und die Krisendaten in `config/episodes.toml` vom Nutzer freigegeben | parallel zu M6/M7 | erteilt 28.09.2026 |
 | R-29.09 | Entscheidungsrunde 29.09.2026: Sahm-Regel mit Trendbedingung und SOS-Regel, Rollen-Marken, Mindesthistorie 3 Jahre, Cboe-SPX, Re-Steepening-Hinweis, Kreditspread-Enge und Aktienquote in der Fallhöhe, Geldmarktfonds, y-Achse, HY-OAS-Niveau (E-80 bis E-92) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); auf TrueNAS ⏳ | M8 | erteilt 29.09.2026 |
-| M10 | Validierung (Bericht 4.3, Schritt 7): Walk-forward, Treffer und Fehlalarme je Ampelstufe, Vorlauf, Vergleich mit reinem VIX-Filter; vorgezogen aus Phase 2 (E-89) | ☐ nächster Meilenstein | R-29.09 auf TrueNAS | Plan vorlegen |
+| M10 | Validierung (Bericht 4.3, Schritt 7): Walk-forward, Treffer und Fehlalarme je Ampelstufe, Vorlauf, Vergleich mit reinem VIX-Filter; vorgezogen aus Phase 2 (E-89) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M10, „Ergebnisse“); auf TrueNAS ⏳ (Migration 0004) | R-29.09 | erteilt 29.09.2026 (Plan ohne Rückfrage) |
 | M9 | Abnahme Phase 1 | ☐ | M0–M8, M10 | – |
 
 **Warum diese Reihenfolge:** FRED liefert die ICE-BofA-Spreads seit April 2026 nur noch für drei Jahre (Bericht, TL;DR). Jeder Tag ohne laufenden Worker verschiebt den Anfang des lokalen Archivs um einen Tag nach hinten. Deshalb geht ein minimaler Worker mit FRED und Cboe (M0–M3) in Betrieb, bevor Scoring und Oberfläche entstehen.
@@ -129,6 +129,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 29.09.2026 | E-91 | Sahm-Regel begrenzen (Vorher/Nachher: Orange bis weit in Erholungen, 2024 ohne Rezession) | Sahm-Regel ab 0,5 → mindestens Gelb; Orange nur, solange zugleich der S&P 500 (Cboe) unter seiner 200-Tage-Linie liegt (Growth-Trend-Regel nach Livermore 2016; Faber 2007). Ohne gültigen Trendwert bleibt es Gelb. Varianten zur Wahl: Orange 12 bzw. 6 Monate nach dem Auslösen, unverändert | Neuer Indikator `spx_trend` (Transformation `trend_gap`, Block `rule`), Parameter `trend_window = 200`, Regeln `orange_sahm_trend` und `yellow_sahm` (schließen sich aus). Tage, an denen allein die Sahm-Regel Orange auslöst: 1.216 → 262; Rundung auf 10 Stellen wie beim SOS-Indikator. Rund um die Linie wechselt Orange/Gelb öfter (Abschnitt 4) |
 | 29.09.2026 | E-92 | FRED `SP500` ohne Verwendung seit E-83 | Aus dem Katalog genommen (Empfehlung) | Kein Abruf mehr; die gespeicherten Beobachtungen und Rohdateien bleiben, nichts wird gelöscht. 81 Reihen |
 | 29.09.2026 | E-90 | HY-OAS nach E-82 (Nachfrage) | HY-OAS-Niveau zusätzlich im Kreditblock, V = 3; Anstieg über 20 Tage und Rot-Regel bleiben auf `BAA10Y`, CCC − BB bleibt Anzeige | Indikator `hy_oas` statt Anzeige; das Perzentil misst sich vorerst nur an den Jahren seit 2023 (sichtbarer Hinweis in der Übersicht) |
+| 29.09.2026 | E-93 | Festlegungen der Validierung (M10), die der Bericht offenlässt | Eigene Festlegungen im freigegebenen Plan (Nutzer: „ohne Freigabeaufforderung sofort ausführen“), zur Bestätigung offen: Bärenmarkt ab 20 % mit Horizont 63 Handelstage; Rückgänge nach Lunde/Timmermann (2004) mit gleicher Schwelle in beide Richtungen, Beginn am ersten Handelstag nach dem Hoch; VIX-Filter mit dem Alarmanteil der Ampelstufe in den Jahren davor (walk-forward ab 2000); Auswertung ab 2000 an Tagen mit bekanntem Ergebnis und allen Signalen; Alarmphasen mit Lücken bis 5 Handelstage zusammengefasst; Block-Bootstrap mit Blöcken von 126 Handelstagen, 1.000 Ziehungen, 90-%-Intervalle, fester Startwert; „besser/schlechter“ nur, wenn das ganze Intervall des Unterschieds auf einer Seite von null liegt; AUC je Zeitraum nur mit einem darin beginnenden Ereignis. Brier-Score und Test mit Put-Absicherung entfallen (Phase 3) | Parameter in `scoring.toml`, `[validation]`; Tabelle `validation_report` (Migration 0004); Ansicht 8 „Validierung“. Nur Auswertung: keine Rückwirkung auf Scores oder Ampel. Ergebnisse: Abschnitt 4, M10 |
 
 ---
 
@@ -835,6 +836,77 @@ Laut Bericht 6.3, soweit Daten vorhanden:
 3. `docs/bedienung.md` und `docs/einrichtung.md` von ⏳ auf ✅, wo geprüft.
 4. README-Status aktualisieren.
 
+### M10 – Validierung (Bericht 4.3, Schritt 7; Ansicht 8 aus 6.3; E-89, E-93)
+
+Plan vom 29.09.2026, vom Nutzer ohne Rückfrage freigegeben („Plan für M10 erstellen und ohne Freigabeaufforderung sofort ausführen“). Festlegungen, die der Bericht offenlässt, sind als eigene markiert (E-93) und stehen als Parameter in `config/scoring.toml`, `[validation]`.
+
+**Ziel:** Prüfen, ob Ampel, Stress und Fallhöhe vergangene Einbrüche und VIX-Spitzen besser ankündigen als ein naiver VIX-Perzentil-Filter. Nur Auswertung: nichts davon wirkt auf die Scores zurück (`CLAUDE.md`: keine im Backtest optimierten Schwellen), und nichts ist eine Wahrscheinlichkeit für heute.
+
+**Ereignisse** (Bericht 4.3, Schritt 7):
+- (a) Rückgang des S&P 500 um mindestens 10 % vom laufenden Hoch, Beginn innerhalb der nächsten 63 Handelstage.
+- (b) VIX-Schluss über 30 an einem der nächsten 21 Handelstage.
+- (c) Bärenmarkt: Rückgang um mindestens 20 %, Beginn innerhalb der nächsten 63 Handelstage (Horizont eigene Festlegung; der Bericht nennt keinen).
+- Rückgangsphasen mechanisch nach Lunde/Timmermann (2004) mit gleicher Schwelle in beide Richtungen: Eine Phase beginnt am Schlusskurs-Hoch, sobald der Kurs die Schwelle darunter schließt, und endet am Tief, sobald er von dort um dieselbe Schwelle steigt; das nächste Hoch zählt ab diesem Tief. Beginn = erster Handelstag nach dem Hoch. Kurse: `spx` (Cboe) ab 1975.
+- Tage, deren Horizont über das Datenende oder in einen noch unbestätigten Rückgang reicht, bleiben ohne Ergebnis und fallen aus der Auswertung (Zensur am Ende).
+
+**Signale:** Ampel mindestens Gelb, mindestens Orange und Rot (feste Regeln, nicht kalibriert); stetig Stress und Fallhöhe (geglättet), Ampelstufe und das VIX-Perzentil über 10 Jahre (gespeichert wie im Dashboard).
+
+**Vergleiche:**
+- VIX-Filter mit gleichem Alarmanteil je Ampelstufe, walk-forward: ab 2000 für jedes Jahr die Schwelle aus den Jahren davor, so dass der VIX-Filter dort so oft Alarm gab wie die Ampelstufe; ohne Ereignisse, also ohne Blick auf spätere Ergebnisse (Bericht: „ab 2000 jährlich neu kalibrieren, Schwellen nur mit Daten bis t“).
+- VIX-Perzentil über der Markierung „erhöht“ (fest).
+- „Immer Alarm“: die Basisrate (entspricht „immer investiert“ als Klassifikation).
+
+**Metriken** (Auswertung ab 2000):
+- AUC mit ROC-Kurve je stetigem Signal; Differenz Stress minus VIX-Perzentil mit Konfidenzintervall und Urteil (besser, nicht unterscheidbar, schlechter).
+- Precision und Recall je Ampelstufe und VIX-Filter, Differenz der Precision Ampel minus VIX-Filter mit Konfidenzintervall.
+- Ereignisse gewarnt (x von n) und Vorlauf je Ereignis: Handelstage vom ersten Alarm im Horizont vor dem Beginn bis zum Beginn; Vorlauf-Histogramm.
+- Fehlalarme: Alarmphasen (Lücken bis 5 Handelstage zusammengefasst, eigene Festlegung) ohne Ereignis im Horizont, je Jahr und als Liste.
+- Stabilität: AUC je Zeitraum (1993–1999 vor dem Walk-forward, 2000–2009, 2010–2019, ab 2020) und die jährlichen Schwellen des VIX-Filters. „Walk-forward-Stabilität der Gewichte“ entfällt: Die Blöcke sind gleich gewichtet, geschätzt wird nichts.
+- Konfidenzintervalle per Block-Bootstrap (Bericht): Blöcke von 126 Handelstagen (doppelter Horizont), 1.000 Ziehungen, 90 %, fester Startwert (eigene Festlegungen).
+- Entfällt in M10: Brier-Score (erst mit dem Logit in Phase 3) und der ökonomische Test mit Put-Absicherung (ThetaData, Phase 3; wäre zudem ein Handelssignal).
+
+**Architektur:**
+- `fever/validation.py`: reine Berechnung (numpy, pandas), importiert nichts aus `web/` oder `store/`.
+- `fever/validate.py`: Lauf: Scores, VIX-Perzentil, S&P 500 und VIX aus der Datenbank lesen, rechnen, Bericht als JSON in der neuen Tabelle `validation_report` ersetzen (Migration 0004); Status unter „validation“ im Datenstand. Der Worker startet ihn nach dem Scoring, wenn neue Scores oder eine geänderte Validierung (Code oder `[validation]`) vorliegen; direkt mit `python -m fever.validate`.
+- Oberfläche: Ansicht 8 „Validierung“ (`/ansicht/validierung`) mit Ereigniswahl, Kurzfazit, ROC-Kurve, Tabelle Precision/Recall, Vorlauf-Histogramm und Ereignisliste, Fehlalarm-Liste, Stabilität, Grenzen; Erklärseite „Validierung“.
+
+**Risiken:** wenige unabhängige Ereignisse (weite Intervalle); überlappende Horizonte (deshalb Block-Bootstrap); Phase-1-Scores mit neuesten Vintages und geschätzten Veröffentlichungen, also nicht revisionsgenau; die Regeln des Berichts und die Entscheidungen E-80 bis E-91 entstanden mit Kenntnis dieser Historie, die Auswertung ist deshalb nicht streng out-of-sample; einige Sekunden mehr Worker-Laufzeit; Migration auf TrueNAS nötig.
+
+**Tests:** Rückgangsphasen, Ereignisse und Zensur von Hand; AUC mit Gleichständen von Hand, gewichtete AUC gleich AUC auf wiederholten Tagen; Precision, Recall, Vorlauf und Fehlalarme von Hand; Walk-forward-Schwelle eines Jahres unverändert ohne spätere Daten; Bootstrap reproduzierbar; Migration und Tabellendefinition; Lauf speichert den Bericht, Worker startet ihn nur bei Bedarf; Ansicht mit und ohne Bericht, jede Figur gültig.
+
+**Schritte:** Plan (dieser Abschnitt) → Parameter und Prüfung → Berechnung mit Tests → Migration, Speicher, Lauf, Worker → Oberfläche und Texte → Lauf auf `data-dev/`, Browser → Ergebnisse, Doku, Commit, Push.
+
+**Umsetzung (29.09.2026):**
+- `config/scoring.toml`, `[validation]`: elf Parameter, geprüft in `fever/config.py` (`validation_config`: Prozente unter 100, Jahreszahl, ganze Zahlen). Wie jede Änderung an `scoring.toml` oder `fever/config.py` löst das Update einen Scoring-Lauf aus, danach die Validierung; die Scores bleiben gleich (geprüft an einer Kopie von `data-dev/`: alle 9.281 Tage und 296.992 Indikatorwerte mit altem und neuem Stand identisch).
+- `fever/validation.py` (reine Berechnung), `fever/validate.py` (Lauf, `python -m fever.validate`), `fever/store/validation.py`, Migration 0004 (`validation_report`, eine Zeile mit dem Bericht als JSON). Der Worker startet die Validierung nach dem Scoring, wenn die Scores neuer sind als der Bericht oder sich Code bzw. `scoring.toml` geändert haben (Fingerabdruck); Fehler stehen unter „validation“ im Datenstand. Laufzeit 2,6 s in der Entwicklungsumgebung.
+- Ansicht 8 `/ansicht/validierung` (`fever/web/validation_view.py`): statischer Rahmen mit Ereigniswahl (`persistence`), Inhalt per Callback; Kurzfazit, Trennschärfe (ROC-Kurven, AUC mit Intervall), Treffer und Fehlalarme, Vorlauf-Histogramm (verpasst, drei Klassen, „≥ Horizont“) mit Ereignisliste, Fehlalarm-Listen, Stabilität je Zeitraum mit den Schwellen des VIX-Filters je Jahr, Grenzen. Der Bericht wird bei jedem Aufruf gelesen (klein, kein Lesepuffer: er entsteht Sekunden nach dem Scoring, ohne dass sich der Datenstand ändert). Fabriken `figures.roc` und `figures.bars`; Erklärseite `validation`.
+- Tests: `tests/test_validation.py` (13) und in `tests/test_web.py` (6): Rückgänge genau auf der Schwelle, laufender Rückgang, Zensur am Ende, VIX-Ereignisse, AUC mit Gleichständen und Gewichten, ROC, Precision/Recall, Vorlauf, Alarmphasen, Bootstrap reproduzierbar, Walk-forward ohne spätere Jahre, Zeiträume nur mit Ereignis, konstruierte Historie mit bekanntem Ergebnis, Parameterprüfung, Lauf und Worker, Ansicht mit und ohne Bericht, ohne S&P-500-Kurse, jede Figur gültig.
+- Migrationsprobe (Entwicklungsumgebung, 29.09.2026, gebautes Image als 568:568 auf einer Kopie mit Stand 0003): `fever.validate` vorher „Migration fehlt: Datenbank auf 0003, Programm erwartet 0004“; `fever.backup`, `alembic upgrade head` („Running upgrade 0003 -> 0004“), `alembic current` „0004 (head)“, `fever.score` 24 s, `fever.validate` 0,8 s. Ohne Reihe `spx` (vor ihrem ersten Abruf) meldet die Validierung für Rückgänge und Bärenmärkte „keine auswertbaren Tage“.
+- Browser (Entwicklungsumgebung, 390 px hell und 1280 px dunkel): alle drei Ereignisse ohne Konsolenfehler, kein waagrechtes Scrollen; Legenden der Charts in eigenen Zeilen unter dem Titel, Achsentitel über den Datierungszeilen.
+
+**Ergebnisse** (Entwicklungsdatenbank, Scores vom 29.09.2026, S&P 500 ab 02.01.1975 bis 28.09.2026, VIX bis 25.09.2026; Auswertung ab 03.01.2000; Intervalle 90 %; Momentaufnahme, die Ansicht zeigt den jeweils aktuellen Stand):
+
+| Ereignis | Tage (mit Ereignis) | Ereignisse seit 1975 (mit ganzem Vorlauf ab 2000) | AUC Stress | AUC VIX-Perzentil | Unterschied | Urteil |
+|---|---|---|---|---|---|---|
+| Rückgang ab 10 %, Beginn in 63 Tagen | 6.630 bis 13.05.2026 (21 %) | 41 (22) | 0,67 (0,56–0,76) | 0,64 (0,54–0,73) | +0,03 (−0,05 bis +0,10) | nicht unterscheidbar |
+| VIX über 30 in 21 Tagen | 6.736 bis 27.08.2026 (21 %) | 35 (29) | 0,81 (0,75–0,87) | 0,90 (0,86–0,93) | −0,08 (−0,13 bis −0,05) | schlechter |
+| Bärenmarkt ab 20 %, Beginn in 63 Tagen | 6.630 bis 13.05.2026 (6 %) | 8 (5) | 0,60 (0,35–0,81) | 0,71 (0,54–0,85) | −0,12 (−0,26 bis −0,01) | schlechter |
+
+AUC der übrigen Signale: Ampelstufe 0,68 / 0,80 / 0,65, Fallhöhe 0,55 / 0,41 / 0,56 (Rückgang / VIX / Bärenmarkt). Die Fallhöhe misst die mögliche Tiefe, nicht den Zeitpunkt; vor VIX-Spitzen war sie eher niedrig.
+
+Precision je Stufe gegen den VIX-Filter mit dem Alarmanteil der Stufe (Prozent; Unterschied in Prozentpunkten mit Intervall):
+
+| Stufe | Alarm an: Ampel / VIX-Filter | Rückgang | VIX über 30 | Bärenmarkt |
+|---|---|---|---|---|
+| mindestens Gelb | 44 / 47 % | 33 / 27: +6 (+3 bis +12), besser | 40 / 40: −1 (−5 bis +5), nicht unterscheidbar | 9 / 9: −1 (−1 bis +2), nicht unterscheidbar |
+| mindestens Orange | 22 / 15 % | 40 / 34: +7 (−5 bis +16), nicht unterscheidbar | 53 / 81: −28 (−39 bis −17), schlechter | 12 / 10: +2 (−5 bis +6), nicht unterscheidbar |
+| Rot | 12 / 8 % | 34 / 43: −9 (−24 bis +2), nicht unterscheidbar | 64 / 93: −29 (−41 bis −18), schlechter | 14 / 17: −3 (−12 bis +4), nicht unterscheidbar |
+
+- Rückgänge (22 mit ganzem Vorlauf): gewarnt Gelb 19, Orange 14, Rot 14 (VIX-Filter 20, 14, 11); Vorlauf im Median 63, 63 und 50 Handelstage, das heißt meist war der Alarm schon zu Beginn des Vorlaufs an; Fehlalarm-Phasen je Jahr Ampel 0,9 / 0,9 / 1,0 gegen VIX-Filter 2,3 / 1,3 / 0,9. Von Gelb verpasst: die Rückgänge ab den Hochs vom 29.04.2011, 21.05.2015 und 19.02.2020 (Covid); VIX-Spitzen ab 04.08.2011 und 24.08.2015.
+- Stabilität (AUC Stress / VIX-Perzentil, Rückgang): 1993–1999 0,66 / 0,82; 2000–2009 0,83 / 0,80; 2010–2019 0,43 / 0,43; 2020–2026 0,50 / 0,48. VIX über 30: 0,87 / 0,93; 0,85 / 0,92; 0,80 / 0,81; 0,65 / 0,87. Bärenmarkt: 2000–2009 0,69 / 0,78; 2020–2026 0,10 / 0,41 (Covid 2020 und 2022 aus ruhiger Lage).
+- Schwellen des VIX-Filters (Perzentil): 2000 Gelb 44,7, Orange und Rot 99,2 (bis dahin kaum Orange); 2026 Gelb 55,1, Orange 86,0, Rot 92,0.
+- Einordnung: Nach dem Maßstab des Berichts („Schlägt der Composite den naiven VIX-Filter nicht, ist er Ballast“) schlägt die Ampel den VIX-Filter in dieser Stichprobe nur bei der Precision von Gelb vor Rückgängen belastbar; vor VIX-Spitzen ist der VIX-Filter belastbar besser (erwartbar, er misst dieselbe Größe), bei Rückgängen und Bärenmärkten ist der Rest nicht unterscheidbar oder schlechter. Die Trennschärfe hängt stark am Jahrzehnt 2000–2009; seit 2010 liegen beide Signale vor Rückgängen nahe am Zufall. Nichts davon ändert Scores oder Parameter (`CLAUDE.md`); was daraus folgt (etwa Aggregation Stufe 2 in Phase 2 nur mit besserem Ergebnis hier, E-89), entscheidet der Nutzer.
+
 ### O-1: Recherche Ausweichquellen (28.09.2026, 10:36–11:30 UTC)
 
 Anlass: Der Block „Breite“ und die Top-10-Konzentration haben keine Datenquelle. Geprüft: Indexanbieter, ETF-Emittenten, Kurs-APIs. Datenstand der FRED-Reihen: letzte Beobachtung 25.09.2026.
@@ -1079,7 +1151,8 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 | Datenordner im Git-Arbeitsverzeichnis (E-28) | `git clean -fdx` löscht Datenbank und Backups zugleich | Warnung in `docs/einrichtung.md` und `CLAUDE.md`; optional TrueNAS-Snapshots des Datasets `data` |
 | Shiller-Download über wechselnden Link (E-43) | Umbau der Seite oder neuer Dateiname stoppt CAPE und Excess CAPE Yield | sichtbarer Fehler im Datenstand; Parser in `fever/sources/shiller.py` anpassen |
 | Betrieb direkt vom Entwicklungsbranch (E-30) | ein ungeprüfter Push landet beim nächsten Update im Betrieb | nur geprüften Stand pushen; Update nur auf Anweisung in `docs/einrichtung.md` |
-| Rezessionsregeln ohne Hysterese (E-80, E-91) | Sahm-Gelb hält bis weit in Erholungen an; an der 200-Tage-Linie wechselt Orange/Gelb öfter | Wirkung dokumentiert (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); Prüfung in M10 |
+| Rezessionsregeln ohne Hysterese (E-80, E-91) | Sahm-Gelb hält bis weit in Erholungen an; an der 200-Tage-Linie wechselt Orange/Gelb öfter | Wirkung dokumentiert (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); M10 prüft die Ampel als Ganzes, nicht jede Regel einzeln |
+| Validierung auf derselben Stichprobe (M10, E-93) | Ergebnisse überschätzen die Güte; Versuchung, Schwellen nachzuziehen | Nur Auswertung ohne Rückwirkung; Parameter nur auf Anweisung (`CLAUDE.md`); Grenzen in der Ansicht und auf der Erklärseite |
 | y-Achsen-Skript nutzt Plotly-Interna (`_fullLayout`, E-88) | nach einem Plotly-Update passt sich die y-Achse nicht mehr an (Daten bleiben richtig) | nach jedem Update von Dash/Plotly Zoom im Browser prüfen (Abschnitt 10) |
 
 ---
@@ -1087,13 +1160,14 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 ## 9. Übergabe an die nächste Sitzung
 
 - **Stand (29.09.2026):**
-  - M0 bis M8 erledigt; Entscheidungsrunde 29.09.2026 umgesetzt und in der Entwicklungsumgebung geprüft (E-80 bis E-92; Abschnitt 4, „Entscheidungsrunde 29.09.2026“, mit Vorher/Nachher der Ampel). 465 Tests grün.
-  - Auf TrueNAS noch nicht eingespielt. Ob TrueNAS schon vom Branch `claude-raramo` läuft (E-76), ist nicht bestätigt.
-  - `data-dev/` enthält die zehn neuen Reihen und Scores nach neuem Stand (Abruf 29.09.2026).
-  - Entscheidungen bis E-92.
+  - M0 bis M8 erledigt; Entscheidungsrunde 29.09.2026 umgesetzt und in der Entwicklungsumgebung geprüft (E-80 bis E-92; Abschnitt 4, „Entscheidungsrunde 29.09.2026“, mit Vorher/Nachher der Ampel).
+  - M10 (Validierung, E-89, E-93) umgesetzt und in der Entwicklungsumgebung geprüft: Berechnung, Migration 0004, Worker, Ansicht 8, Erklärseite; Ergebnisse in Abschnitt 4, M10. Migrationsprobe 0003 → 0004 mit dem gebauten Image bestanden. 484 Tests grün.
+  - Auf TrueNAS beides noch nicht eingespielt. Ob TrueNAS schon vom Branch `claude-raramo` läuft (E-76), ist nicht bestätigt.
+  - `data-dev/` steht auf 0004, mit Scores und Validierungsbericht vom 29.09.2026.
+  - Entscheidungen bis E-93; E-93 sind eigene Festlegungen im freigegebenen Plan, die Bestätigung durch den Nutzer steht aus.
 - **Nächster Schritt:**
-  1. TrueNAS: falls noch nicht geschehen, Update „schnellere Seiten und Branch `claude-raramo`“, dann „Entscheidungsrunde 29.09.2026“ (`docs/einrichtung.md`, Abschnitt 9): `git pull`, Build, „Deploy“, Sofort-Abruf, `fever.score`. Keine Migration.
-  2. M10 (Validierung, E-89): Plan vorlegen (Daten: Scores ab 1990 und S&P 500 von Cboe; Walk-forward, Treffer und Fehlalarme je Stufe, Vorlauf, Vergleich mit reinem VIX-Filter; Einordnung der Nebenwirkungen aus Abschnitt 4) und freigeben lassen.
+  1. TrueNAS: falls noch nicht geschehen, Update „schnellere Seiten und Branch `claude-raramo`“, dann „Entscheidungsrunde 29.09.2026 und Validierung (M10)“ (`docs/einrichtung.md`, Abschnitt 9): Probe der Migration an einer Backup-Kopie, Stack stoppen, Backup, `alembic upgrade head` (0004), „Deploy“, Sofort-Abruf, `fever.score`, `fever.validate`.
+  2. Nutzer: Ergebnisse von M10 in der Ansicht „Validierung“ ansehen, E-93 bestätigen oder ändern; Folgerungen (etwa für Aggregation Stufe 2 in Phase 2, E-89) entscheidet der Nutzer.
   3. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9); für `iursa` und die Z.1-Reihen neu.
   4. M9 (Abnahme Phase 1).
 - **Hinweise:**

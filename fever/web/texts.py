@@ -13,6 +13,7 @@ from pathlib import Path
 
 from fever.config import (
     FREQUENCY_DAYS, RULE_ONLY, STRESS_BLOCKS, VULNERABILITY, Indicator, indicator_catalog, scoring_config, series_catalog,
+    validation_config,
 )
 from fever.scoring.composite import (
     CREDIT_CHANGE_INDICATOR, RULE_INDICATORS, SAHM_INDICATOR, SOS_INDICATOR, TREND_INDICATOR, VIX_RATIO_INDICATOR,
@@ -44,7 +45,7 @@ GROUPS = {
     "concepts": "Begriffe",
 }
 SCORES = ("traffic_light", "stress", "vulnerability", "confidence", "diffusion") + tuple(f"block_{b}" for b in STRESS_BLOCKS)
-CONCEPTS = ("percentile", "staleness", "recessions")
+CONCEPTS = ("percentile", "staleness", "recessions", "validation")
 # Display-only Kennzahlen of the views (M7, E-49): raw series shown as they are, never in a score.
 DISPLAYS = {
     "vix_term": ("vix9d", "vix", "vix3m", "vix6m", *(f"cfe_vx{n}" for n in range(1, 9))),
@@ -358,6 +359,19 @@ def thresholds(kennzahl_id: str) -> list[str]:
         return ["Farbige Fläche: 10 Jahre minus 3 Monate unter null (Inversion); keine Schwelle, kein Score."]
     if kennzahl_id in DISPLAYS:
         return ["Keine Schwelle und keine Farbe: reine Anzeige, geht in keinen Score ein."]
+    if kennzahl_id == "validation":
+        v = validation_config()
+        return [
+            f"Ereignis Rückgang: Der S&P 500 fällt um mindestens {_n(v.drawdown)} % vom laufenden Hoch, Beginn in den "
+            f"nächsten {v.drawdown_horizon} Handelstagen.",
+            f"Ereignis VIX: ein Schlusskurs über {_n(v.vix_level)} in den nächsten {v.vix_horizon} Handelstagen.",
+            f"Ereignis Bärenmarkt: ein Rückgang um mindestens {_n(v.bear)} %, Beginn in den nächsten {v.bear_horizon} Handelstagen.",
+            f"Auswertung ab {v.walk_forward_start}; die Schwelle des VIX-Filters entsteht jedes Jahr neu aus den Jahren davor.",
+            f"Alarmtage mit höchstens {v.episode_gap} Handelstagen Abstand bilden eine Alarmphase.",
+            f"Intervalle: {_n(v.confidence)} %, Block-Bootstrap mit Blöcken von {v.bootstrap_block} Handelstagen und "
+            f"{v.bootstrap_samples:,} Ziehungen.".replace(",", "."),
+            "Keine Farbe und keine Rückwirkung: Nichts aus der Validierung ändert Stress, Fallhöhe oder Ampel.",
+        ]
     if kennzahl_id == "staleness":
         return [f"{FREQUENCY_NAMES[f]}: veraltet nach mehr als {FREQUENCY_DAYS[f]} Tagen plus Toleranz der Reihe seit der erwarteten Veröffentlichung." for f in FREQUENCY_DAYS]
     if kennzahl_id.startswith("block_"):

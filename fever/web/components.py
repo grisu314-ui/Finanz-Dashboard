@@ -6,12 +6,25 @@ Every value is plain text (Dash escapes it); nothing is rendered as HTML.
 from datetime import date, datetime
 
 from dash import dcc, html
+from sqlalchemy.exc import SQLAlchemyError
+
+from fever.store.db import DataDirError
 
 from fever.web import format as fmt
 from fever.web import texts
 from fever.web.figures import PERCENTILE_RAMP, Chart, time_series
 
 LEVEL_CLASSES = ("level-green", "level-yellow", "level-orange", "level-red")
+
+
+def guarded(render):
+    """Show a notice instead of an error page when the database cannot be read."""
+    def wrapper(*args, **kwargs):
+        try:
+            return render(*args, **kwargs)
+        except (DataDirError, SQLAlchemyError) as exc:
+            return [html.Div(f"Datenbank nicht lesbar: {exc}", className="banner banner-alert", role="alert")]
+    return wrapper
 
 
 def kennzahl_head(kennzahl_id: str, *, tag=html.H2) -> html.Div:
