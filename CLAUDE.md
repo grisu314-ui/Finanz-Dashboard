@@ -31,7 +31,7 @@ Zweck ist Regime- und Risikoanzeige, keine Crash-Prognose. Ziel ist genau die hi
    - Scoring nach Bericht 4.3, Schritte 1–6, Aggregation nur Stufe 1.
    - Ansichten 1–7 aus Bericht 6.3, soweit Daten vorhanden, dazu „Datenstand".
    - Kurzinfo und Erklärseite je Kennzahl, Chart-Bedienung (Zoom, Zeitraum, Bildexport, Vollbild, Druck), Auto-Aktualisierung; Doku für KI und Anwender.
-   - Validierung nach Bericht 4.3, Schritt 7 (Walk-forward, ROC, Vorlauf, Vergleich mit reinem VIX-Filter), vorgezogen als Meilenstein M10 (Nutzer 29.09.2026, E-89); umgesetzt 29.09.2026 als Ansicht 8 (E-93). Nur Auswertung, nie Rückwirkung auf Scores.
+   - Validierung nach Bericht 4.3, Schritt 7 (Walk-forward, ROC, Vorlauf, Vergleich mit reinem VIX-Filter), vorgezogen als Meilenstein M10 (Nutzer 29.09.2026, E-89); umgesetzt 29.09.2026 als Ansicht 8 (E-93). Dazu der Walk-forward-Test geschätzter Stress-Gewichte (M11, E-94; Logit aus Phase 3 als reine Auswertung vorgezogen). Nur Auswertung, nie Rückwirkung auf Scores.
 2. Alerts, AAII, Aggregation Stufe 2 (korrelationsgewichtet; nur, wenn sie in der Validierung besser abschneidet, E-89), revisionsgenaue Rückrechnung.
 3. Optionsdaten (ThetaData/IBKR: Termstruktur, Skew, GEX), Logit-Modell (Stufe 3).
 
@@ -83,7 +83,7 @@ fever/store/       Tabellen (SQLAlchemy Core), Lese- und Schreibfunktionen
 fever/scoring/     reine Berechnung, importiert nichts aus web/ oder store/
 fever/worker.py    Abrufschleife, Heartbeat, stößt den Scoring-Lauf an
 fever/score.py     Scoring-Lauf: Werte lesen, fever/scoring rechnen lassen, Score-Tabellen ersetzen; vom Worker und direkt aufrufbar
-fever/validation.py  Backtest der Ampel (M10, E-93): reine Berechnung, importiert nichts aus web/ oder store/
+fever/validation.py  Backtest der Ampel und Walk-forward-Logit (M10, M11; E-93, E-94): reine Berechnung, importiert nichts aus web/ oder store/
 fever/validate.py  Validierungslauf nach dem Scoring: Scores und Kurse lesen, Bericht in validation_report ersetzen; vom Worker und direkt aufrufbar
 fever/release.py   geschätzte Veröffentlichung einer Beobachtung (E-14), für Abruf, Worker und Scoring
 fever/backup.py    VACUUM INTO und Aufbewahrung; vom Worker und direkt aufrufbar
@@ -108,7 +108,7 @@ Ein Assistent ergänzt diese Dinge erfahrungsgemäß ungefragt. Hier nicht. Bei 
 - Kein Abruf, Import oder Speichern der FINRA-Margin-Statistik, auch nicht per manuellem Download: Die Nutzungsbedingungen untersagen Speichern und Datenbanken ohne schriftliche Zustimmung (entschieden 26.09.2026, E-42).
 - Keine Konto-, Positions- oder Orderfunktionen, auch nicht über IBKR. Nur Marktdaten.
 - Keine Handelssignale, keine Renditeprognosen, keine „Crash-Wahrscheinlichkeit" ohne validiertes Modell.
-- Kein Machine Learning. Im Backtest optimierte Gewichte oder Schwellen gehen nie automatisch in den Produktivscore; bei so wenigen Krisen wäre das Overfitting. Einziges geschätztes Modell ist das Logit in Phase 3.
+- Kein Machine Learning. Im Backtest optimierte Gewichte oder Schwellen gehen nie automatisch in den Produktivscore; bei so wenigen Krisen wäre das Overfitting. Einziges geschätztes Modell ist das Logit: bis Phase 3 nur als Auswertung in der Validierung (M11, E-94), ohne Wahrscheinlichkeiten und ohne Rückwirkung auf Scores.
 - Keine Intraday-Daten, kein Streaming, keine WebSockets.
 - Kein Celery, kein Redis, keine Queue, kein asyncio. Kein Caching-Layer außer dem Lesepuffer im Web-Prozess je Datenstand (E-78, `fever/web/db.py`; Nutzer 28.09.2026: nur, weil gemessen nützlich).
 - Kein Postgres, keine DuckDB, keine Abstraktion für einen Datenbankwechsel.

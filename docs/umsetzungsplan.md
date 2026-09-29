@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 29.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92); M10 Validierung in der Entwicklungsumgebung umgesetzt (E-93); Fallhöhe-Streifen in der Regime-Zeitleiste (E-96); Plan M11 vorgelegt (E-94)** · Nächster Schritt: Freigabe und Umsetzung von M11, Update auf TrueNAS mit Migration 0004 (Abschnitt 9), danach M9 (Abnahme)
+Stand: 29.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92); M10 Validierung in der Entwicklungsumgebung umgesetzt (E-93); Fallhöhe-Streifen in der Regime-Zeitleiste (E-96); M11 Walk-forward-Test geschätzter Gewichte in der Entwicklungsumgebung umgesetzt (E-94)** · Nächster Schritt: Entscheidung E-95, Update auf TrueNAS mit Migration 0004 (Abschnitt 9), danach M9 (Abnahme)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -27,7 +27,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M8 | Erklärtexte je Kennzahl | ☑ 28.09.2026: alle Texte und die Krisendaten in `config/episodes.toml` vom Nutzer freigegeben | parallel zu M6/M7 | erteilt 28.09.2026 |
 | R-29.09 | Entscheidungsrunde 29.09.2026: Sahm-Regel mit Trendbedingung und SOS-Regel, Rollen-Marken, Mindesthistorie 3 Jahre, Cboe-SPX, Re-Steepening-Hinweis, Kreditspread-Enge und Aktienquote in der Fallhöhe, Geldmarktfonds, y-Achse, HY-OAS-Niveau (E-80 bis E-92) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); auf TrueNAS ⏳ | M8 | erteilt 29.09.2026 |
 | M10 | Validierung (Bericht 4.3, Schritt 7): Walk-forward, Treffer und Fehlalarme je Ampelstufe, Vorlauf, Vergleich mit reinem VIX-Filter; vorgezogen aus Phase 2 (E-89) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M10, „Ergebnisse“); auf TrueNAS ⏳ (Migration 0004) | R-29.09 | erteilt 29.09.2026 (Plan ohne Rückfrage) |
-| M11 | Walk-forward-Test geschätzter Stress-Gewichte (Logit auf den Stress-Blöcken, jährlich nur mit Daten davor geschätzt; nur Auswertung, E-94) | ☐ Plan vorgelegt 29.09.2026 (Abschnitt 4, M11) | M10 | Plan vorgelegt |
+| M11 | Walk-forward-Test geschätzter Stress-Gewichte (Logit auf den Stress-Blöcken, jährlich nur mit Daten davor geschätzt; nur Auswertung, E-94) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M11, „Ergebnisse“); auf TrueNAS ⏳ | M10 | erteilt 29.09.2026 |
 | M9 | Abnahme Phase 1 | ☐ | M0–M8, M10 | – |
 
 **Warum diese Reihenfolge:** FRED liefert die ICE-BofA-Spreads seit April 2026 nur noch für drei Jahre (Bericht, TL;DR). Jeder Tag ohne laufenden Worker verschiebt den Anfang des lokalen Archivs um einen Tag nach hinten. Deshalb geht ein minimaler Worker mit FRED und Cboe (M0–M3) in Betrieb, bevor Scoring und Oberfläche entstehen.
@@ -949,6 +949,31 @@ Fragen des Nutzers nach M10, beantwortet mit der Entwicklungsdatenbank (Auswertu
 
 **Schritte:** Freigabe → Parameter → Berechnung mit Tests → Bericht und Ansicht → Lauf auf `data-dev/`, Browser → Ergebnisse, Doku, Commit, Push → Entscheidung E-95 mit dem Nutzer.
 
+**Umsetzung (29.09.2026, Plan freigegeben):**
+- `scoring.toml`, `[validation]`: `fit_blocks` (Volatilität, Kredit, Makro) und `fit_ridge = 1.0`, geprüft in `fever/config.py` (bekannte Blöcke, Liste ohne Wiederholung).
+- `fever/validation.py`: `labels_known_at` (Ereignisse aus den Kursen vor dem Stichtag), `fit_logit` (Newton-Verfahren, Ridge nur auf den Steigungen), `fit_year`, Klasse `Fit`, Walk-forward in `_fitted`; `_evaluate` rechnet jetzt beliebige Vergleichspaare (M10 unverändert: Stress gegen VIX, Stufe gegen VIX-Filter). Teil `fitted` im Bericht für Rückgänge und VIX-Spitzen, ohne Migration.
+- `fever/validate.py`: liest die Blöcke und glättet sie mit `fever.scoring.composite.ewma_series` (neu, dieselbe Glättung wie der Composite; Volatilität nach ihrer eigenen Glättung, dann alle mit der Halbwertszeit des Stress).
+- Ansicht 8: Abschnitt „Geschätzte Gewichte (Walk-forward)“ mit Vergleichen, den zwei Entscheidungsregeln (`validation_view.fitted_rules`), ROC, Treffer und Fehlalarmen bei den Alarmanteilen der Stufen und den Gewichten je Jahr; Erklärseite ergänzt.
+- **Abweichung vom Plan:** Ausgewertet wird nicht der lineare Prädiktor, sondern das mit den geschätzten Gewichten gebildete Mittel der Blöcke (Skala 0–100 wie der Stress). Grund: Der Achsenabschnitt verschiebt sich mit jedem Jahresmodell, die AUC über alle Jahre hätte dann Skalen verschiedener Jahre gemischt. So unterscheidet sich das Signal vom gleichgewichteten Mittel nur in den Gewichten, und genau das war die Frage.
+- Tests (6 neue, dazu die erweiterte Parameterprüfung): Newton-Schätzung trifft bekannte Koeffizienten, Ridge zieht nur die Steigungen; Glättung wie im Composite; Ereignisse zum Stichtag ohne einen erst später bestätigten Rückgang; **Pflichttest ohne Blick in die Zukunft:** Gewichte für 2000 gleich mit und ohne Daten ab 01.01.2000, obwohl ein Rückgang im Dezember 1999 beginnt und erst im Januar 2000 bestätigt ist; Bericht mit Teil `fitted`; Parameterprüfung; Ansicht mit und ohne Teil `fitted`. 490 Tests grün.
+- Browser (Entwicklungsumgebung, 390 px hell und 1280 px dunkel): Abschnitt vollständig, keine Konsolenfehler, kein waagrechtes Scrollen. Laufzeit der Validierung 4,5 statt 2,6 s.
+
+**Ergebnisse** (Entwicklungsdatenbank, Scores vom 29.09.2026; Auswertung ab 03.01.2000 wie M10; Intervalle 90 %; Momentaufnahme):
+
+| Vergleich (AUC) | Rückgang ab 10 % | VIX über 30 |
+|---|---|---|
+| Geschätzte Gewichte | 0,50 (0,42–0,60) | 0,76 (0,69–0,82) |
+| Geschätzt mit Fallhöhe | 0,53 (0,45–0,63) | 0,76 (0,70–0,82) |
+| Gleiche Gewichte (Volatilität, Kredit, Makro) | 0,65 (0,54–0,74) | 0,81 (0,74–0,86) |
+| geschätzt − gleich | −0,15 (−0,24 bis −0,04): schlechter | −0,05 (−0,10 bis +0,00): nicht unterscheidbar |
+| mit Fallhöhe − ohne | +0,03 (−0,00 bis +0,06): nicht unterscheidbar | +0,00 (−0,02 bis +0,03): nicht unterscheidbar |
+| geschätzt − Stress | −0,17 (−0,25 bis −0,06): schlechter | −0,05 (−0,10 bis −0,00): schlechter |
+
+- **Regel 1 nicht erfüllt:** Geschätzte Gewichte sind außerhalb der Stichprobe vor Rückgängen belastbar schlechter als gleiche; die gleichen Gewichte bleiben. Bei den Alarmanteilen der Stufen: Precision 26 statt 33 % (wie Gelb, −7 Prozentpunkte, belastbar schlechter), 32 statt 40 % (wie Orange) und 37 statt 34 % (wie Rot), beide nicht unterscheidbar; weniger Fehlalarm-Phasen (0,6 / 0,5 / 0,3 je Jahr statt 0,9 / 0,9 / 1,0), aber weniger gewarnte Rückgänge (18, 10, 7 statt 19, 14, 14 von 22).
+- **Ursache sichtbar in den Gewichten je Jahr:** Bis 2012 gab die Schätzung dem Makro-Block ein negatives Gewicht (2000 −39 %, 2003 −24 %, 2012 −21 %), weil hoher Makro-Stress in den 1990ern selten vor Rückgängen stand; ab 2013 kippt es ins Positive. Die Volatilität trägt 34 bis 69 %. Instabile Gewichte bei wenigen Ereignissen, wie nach dem Forecast-Combination-Puzzle erwartet.
+- **Regel 2 (E-95):** Die Fallhöhe hebt die AUC vor Rückgängen um 0,03, das Intervall reicht knapp unter null: kein belastbarer Beitrag. Ihr Gewicht im Modell B ist in 26 von 27 Jahren positiv (2003 −10 %) und liegt seit 2013 bei 20 bis 40 %. Nach der vorab festgelegten Regel bleibt die Gelb-Regel eine Abwägung; die Entscheidung liegt beim Nutzer.
+
+
 ### O-1: Recherche Ausweichquellen (28.09.2026, 10:36–11:30 UTC)
 
 Anlass: Der Block „Breite“ und die Top-10-Konzentration haben keine Datenquelle. Geprüft: Indexanbieter, ETF-Emittenten, Kurs-APIs. Datenstand der FRED-Reihen: letzte Beobachtung 25.09.2026.
@@ -1210,7 +1235,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
   - Entscheidungen bis E-96; die Festlegungen der Validierung (E-93) hat der Nutzer nach Vorlage der Ergebnisse bestätigt.
 - **Nächster Schritt:**
   1. TrueNAS: falls noch nicht geschehen, Update „schnellere Seiten und Branch `claude-raramo`“, dann „Entscheidungsrunde 29.09.2026 und Validierung (M10)“ (`docs/einrichtung.md`, Abschnitt 9): Probe der Migration an einer Backup-Kopie, Stack stoppen, Backup, `alembic upgrade head` (0004), „Deploy“, Sofort-Abruf, `fever.score`, `fever.validate`.
-  2. M11 (Abschnitt 4): Plan freigeben lassen, umsetzen, danach E-95 mit dem Nutzer entscheiden. Folgerungen aus M10 und M11 (etwa für Aggregation Stufe 2 in Phase 2, E-89) entscheidet der Nutzer.
+  2. E-95 (Gelb aus der Fallhöhe) mit dem Nutzer entscheiden; Grundlage: Abschnitt 4, M11, „Ergebnisse“ (Regel 1 nicht erfüllt, Regel 2 ohne belastbaren Beitrag). Folgerungen aus M10 und M11 (etwa für Aggregation Stufe 2 in Phase 2, E-89) entscheidet der Nutzer.
   3. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9); für `iursa` und die Z.1-Reihen neu.
   4. M9 (Abnahme Phase 1).
 - **Hinweise:**

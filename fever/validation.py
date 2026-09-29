@@ -20,8 +20,15 @@ vulnerability, level and VIX percentile. Benchmarks: a VIX percentile filter wit
 of alarm days as a level, its threshold recalibrated every year from `walk_forward_start` with the
 earlier years only (no outcomes needed, so no look-ahead); the VIX percentile above the "erhöht"
 mark; "always alarm", i.e. the base rate. Confidence intervals: moving-block bootstrap.
+
+Estimated weights (M11, E-94; evaluation only, the scores keep their equal weights): per year from
+`walk_forward_start` a logit on the smoothed stress blocks `fit_blocks` (A) and on them plus the
+vulnerability (B), fitted on the earlier days whose outcome was known at the start of the year, the
+outcomes taken from the closes before that day. Compared with the equal-weight mean of the same
+blocks, the stress and the VIX percentile, and at the alarm shares of the levels with the levels.
 """
 
+import copy
 import math
 from dataclasses import asdict, dataclass
 from datetime import date
@@ -37,6 +44,16 @@ SIGNALS = ("stress", "vulnerability", "level", "vix")  # continuous; high = more
 TRADING_DAYS_PER_YEAR = 252
 ROC_POINTS = 150  # points of a stored ROC curve
 SEED = 20260929  # fixed: the same data give the same intervals
+FITTED_EVENTS = ("drawdown", "vix")  # bear markets: too few events to estimate weights (M11)
+FITTED_SIGNALS = ("fitted", "fitted_vulnerability", "equal", "stress", "vix")
+VULNERABILITY_FEATURE = "vulnerability"
+NEWTON_STEPS = 50
+# Comparisons: M10 stress against VIX percentile and each level against its VIX filter; M11 the estimated
+# weights against equal weights, stress and VIX percentile, B against A, each fitted filter against its level.
+M10_AUC_PAIRS = (("stress", "vix"),)
+M10_PRECISION_PAIRS = {f"level{k}": f"vix{k}" for k in LEVELS}
+FITTED_AUC_PAIRS = (("fitted", "equal"), ("fitted_vulnerability", "fitted"), ("fitted", "stress"), ("fitted", "vix"))
+FITTED_PRECISION_PAIRS = {f"fitted{k}": f"level{k}" for k in LEVELS}
 
 
 @dataclass(frozen=True)
@@ -156,6 +173,112 @@ def walk_forward_thresholds(days: list[date], level: np.ndarray, vix: np.ndarray
     return thresholds
 
 
+def labels_known_at(event: str, spx: pd.Series, vix: pd.Series, cutoff: date, config: ValidationConfig) -> pd.Series:
+    """Outcomes of an event as they were known on `cutoff`: from the closes before it only, so a decline that
+    reaches its threshold on or after the cutoff does not exist yet (its days stay without outcome)."""
+    if event == "vix":
+        return level_labels(vix[vix.index < cutoff], config.vix_level, config.vix_horizon)
+    threshold, horizon = ((config.drawdown, config.drawdown_horizon) if event == "drawdown"
+                          else (config.bear, config.bear_horizon))
+    prices = spx[spx.index < cutoff]
+    found, pending = declines(prices, threshold)
+    return start_labels(list(prices.index), [d.start for d in found], horizon, pending)
+
+
+def fit_logit(x: np.ndarray, y: np.ndarray, ridge: float) -> np.ndarray:
+    """Logistic regression by Newton's method: intercept and slopes maximising the log-likelihood minus
+    ridge / 2 times the sum of the squared slopes (x: days x features, y: 0/1 with both present)."""
+    design = np.column_stack([np.ones(len(x)), x])
+    penalty = np.full(design.shape[1], float(ridge))
+    penalty[0] = 0.0
+    beta = np.zeros(design.shape[1])
+    for _ in range(NEWTON_STEPS):
+        p = 0.5 * (1.0 + np.tanh(0.5 * (design @ beta)))  # the logistic function without overflow
+        gradient = design.T @ (y - p) - penalty * beta
+        hessian = (design * (p * (1.0 - p))[:, None]).T @ design + np.diag(penalty)
+        step = np.linalg.solve(hessian, gradient)
+        beta = beta + step
+        if np.max(np.abs(step)) < 1e-10:
+            break
+    return beta
+
+
+@dataclass(frozen=True)
+class Fit:
+    """The logit of one year: standardisation and coefficients from the earlier days only."""
+
+    year: int
+    features: tuple[str, ...]
+    mean: np.ndarray
+    scale: np.ndarray
+    beta: np.ndarray  # intercept first, then one slope per standardised feature
+    days: int  # training days
+    positives: int  # of them followed by the event
+
+    def weights(self) -> np.ndarray:
+        """Weight of each feature on its own 0-100 scale, the absolute weights summing to 1 (equal weights:
+        1 / number of features each); a negative weight means the feature counts against. NaN if all are 0."""
+        raw = self.beta[1:] / self.scale
+        total = float(np.abs(raw).sum())
+        return raw / total if total else np.full(len(raw), np.nan)
+
+    def signal(self, x: np.ndarray) -> np.ndarray:
+        """The features weighted with these weights, on the 0-100 scale of the blocks like the stress. Without
+        the intercept: it moves with every yearly fit and would mix the scales of the years; so the signal
+        differs from the equal-weight mean in the weights alone. A ranking, never a probability (CLAUDE.md)."""
+        return x @ self.weights()
+
+    def shares(self) -> dict[str, float | None]:
+        """The weights in percent."""
+        return {name: _round(100.0 * w, 1) for name, w in zip(self.features, self.weights())}
+
+
+def fit_year(year: int, x: np.ndarray, known: np.ndarray, years: np.ndarray, names: tuple[str, ...],
+             ridge: float) -> Fit | None:
+    """The logit for `year` from the days before it with every feature and a known outcome (`known`: the
+    outcomes as known at the start of the year); None without both outcomes among them."""
+    train = (years < year) & ~np.isnan(x).any(axis=1) & ~np.isnan(known)
+    y = known[train]
+    if not 0 < y.sum() < len(y):
+        return None
+    mean, scale = x[train].mean(axis=0), x[train].std(axis=0)
+    scale = np.where(scale > 0, scale, 1.0)
+    beta = fit_logit((x[train] - mean) / scale, y, ridge)
+    return Fit(year, names, mean, scale, beta, int(train.sum()), int(y.sum()))
+
+
+def _fitted(event, spx, vix, days, years, features: pd.DataFrame, level, config):
+    """Walk-forward logits of one event: the signals A and B per day, the alarm flags of A at the alarm
+    shares the levels had in the earlier years (like the VIX filter), and per year the fits."""
+    variants = {"fitted": tuple(config.fit_blocks), "fitted_vulnerability": (*config.fit_blocks, VULNERABILITY_FEATURE)}
+    n = len(days)
+    signals = {key: np.full(n, np.nan) for key in variants}
+    flags = {f"fitted{k}": np.zeros(n, dtype=bool) for k in LEVELS}
+    per_year = []
+    last_year = days[-1].year if days else config.walk_forward_start
+    for year in range(config.walk_forward_start, last_year + 1):
+        known = labels_known_at(event, spx, vix, date(year, 1, 1), config).reindex(days).to_numpy(dtype=float)
+        entry = {"year": year}
+        for key, names in variants.items():
+            x = features[list(names)].to_numpy(dtype=float)
+            fit = fit_year(year, x, known, years, names, config.fit_ridge)
+            if fit is None:
+                continue
+            complete = ~np.isnan(x).any(axis=1)
+            scored = (years == year) & complete
+            signals[key][scored] = fit.signal(x[scored])
+            entry[key] = {"shares": fit.shares(), "days": fit.days, "positives": fit.positives}
+            if key == "fitted":
+                reference = (years < year) & complete & ~np.isnan(level)
+                past = fit.signal(x[reference])
+                for k in LEVELS:
+                    share = float(np.mean(level[reference] >= k)) if reference.any() else 0.0
+                    threshold = math.inf if share == 0.0 else float(np.quantile(past, 1.0 - share))
+                    flags[f"fitted{k}"][scored] = signals[key][scored] >= threshold
+        per_year.append(entry)
+    return signals, flags, per_year
+
+
 class _Ranked:
     """AUC of one continuous signal against 0/1 outcomes, for any day weights (bootstrap).
 
@@ -241,12 +364,13 @@ def _round(value, digits: int = 4):
 
 
 def validate(spx: pd.Series, vix: pd.Series, scores: pd.DataFrame, vix_percentile: pd.Series,
-             config: ValidationConfig, elevated: float) -> dict:
+             config: ValidationConfig, elevated: float, blocks: pd.DataFrame | None = None) -> dict:
     """The report stored in validation_report (JSON-ready dict).
 
     scores: stored composite per score day, columns level, stress, vulnerability (NaN where missing);
     vix_percentile: stored percentile of the VIX indicator on the days it was valid;
-    elevated: the "erhöht" mark (scoring.toml yellow_diffusion_percentile).
+    elevated: the "erhöht" mark (scoring.toml yellow_diffusion_percentile);
+    blocks: the stress blocks `fit_blocks` smoothed like the composite, per score day (M11); None: no M11 part.
     """
     scores = scores.sort_index()
     days = list(scores.index)
@@ -260,7 +384,20 @@ def validate(spx: pd.Series, vix: pd.Series, scores: pd.DataFrame, vix_percentil
     events = {}
     for event in EVENTS:
         labels, occurrences, horizon = _event(event, spx, vix, days, config)
-        events[event] = _evaluate(days, years, signals, flags, labels, occurrences, horizon, config)
+        result = _evaluate(days, years, signals, flags, labels, occurrences, horizon, config,
+                           auc_pairs=M10_AUC_PAIRS, precision_pairs=M10_PRECISION_PAIRS)
+        result["auc_difference"] = result.pop("auc_differences").get("stress-vix")
+        if blocks is not None and event in FITTED_EVENTS:
+            features = blocks.reindex(days).join(scores["vulnerability"].rename(VULNERABILITY_FEATURE))
+            fitted, fitted_flags, per_year = _fitted(event, spx, vix, days, years, features, level, config)
+            equal = features[list(config.fit_blocks)].mean(axis=1, skipna=False).to_numpy(dtype=float)
+            result["fitted"] = _evaluate(
+                days, years, {**fitted, "equal": equal, "stress": signals["stress"], "vix": signals["vix"]},
+                {**{f"level{k}": flags[f"level{k}"] for k in LEVELS}, **fitted_flags}, labels,
+                copy.deepcopy(occurrences), horizon, config, auc_pairs=FITTED_AUC_PAIRS,
+                precision_pairs=FITTED_PRECISION_PAIRS, details=False)
+            result["fitted"]["years"] = per_year
+        events[event] = result
     return {
         "config": asdict(config),
         "elevated": elevated,
@@ -298,8 +435,12 @@ def _filters(years, level, vix, thresholds, elevated, first_year) -> dict[str, n
     return flags
 
 
-def _evaluate(days, years, signals, flags, labels, occurrences, horizon, config) -> dict:
-    """All metrics of one event over the days from walk_forward_start with a known outcome and every signal."""
+def _evaluate(days, years, signals, flags, labels, occurrences, horizon, config, *, auc_pairs, precision_pairs,
+              details=True) -> dict:
+    """All metrics of one event over the days from walk_forward_start with a known outcome and every signal:
+    AUC per signal and the AUC differences of `auc_pairs`; per alarm filter precision, recall, leads and
+    false alarms, with the precision difference against its partner in `precision_pairs`. `details` adds
+    the occurrences with their leads and the periods (M10 only)."""
     known = ~np.isnan(labels) & np.all([~np.isnan(values) for values in signals.values()], axis=0)
     mask = known & (years >= config.walk_forward_start)
     chosen = np.flatnonzero(mask)
@@ -309,7 +450,9 @@ def _evaluate(days, years, signals, flags, labels, occurrences, horizon, config)
               "last": days[chosen[-1]].isoformat() if len(chosen) else None,
               "base_rate": _round(np.mean(outcomes == 1)) if len(chosen) else None}
     if len(chosen) == 0 or result["positives"] == 0 or result["positives"] == len(chosen):
-        result.update(auc={}, roc={}, auc_difference=None, filters=[], occurrences=occurrences, periods=[])
+        result.update(auc={}, roc={}, auc_differences={}, filters=[])
+        if details:
+            result.update(occurrences=occurrences, periods=[])
         return result
 
     ranked = {name: _Ranked(values[chosen], outcomes) for name, values in signals.items()}
@@ -318,23 +461,28 @@ def _evaluate(days, years, signals, flags, labels, occurrences, horizon, config)
     estimates = {name: r.auc(ones) for name, r in ranked.items()}
     point = {name: precision_recall(flag, outcomes, ones) for name, flag in chosen_flags.items()}
     samples = {name: [] for name in ranked}
-    samples_difference, samples_pr = [], {name: ([], []) for name in chosen_flags}
-    samples_precision_difference = {k: [] for k in LEVELS}
+    samples_difference = {pair: [] for pair in auc_pairs}
+    samples_pr = {name: ([], []) for name in chosen_flags}
+    samples_precision_difference = {name: [] for name in precision_pairs}
     for w in block_weights(len(chosen), config.bootstrap_block, config.bootstrap_samples):
         aucs = {name: r.auc(w) for name, r in ranked.items()}
         for name, value in aucs.items():
             samples[name].append(value)
-        samples_difference.append(aucs["stress"] - aucs["vix"])
+        for a, b in auc_pairs:
+            samples_difference[(a, b)].append(aucs[a] - aucs[b])
         prs = {name: precision_recall(flag, outcomes, w) for name, flag in chosen_flags.items()}
         for name, (p, r) in prs.items():
             samples_pr[name][0].append(p)
             samples_pr[name][1].append(r)
-        for k in LEVELS:
-            samples_precision_difference[k].append(prs[f"level{k}"][0] - prs[f"vix{k}"][0])
+        for name, other in precision_pairs.items():
+            samples_precision_difference[name].append(prs[name][0] - prs[other][0])
 
     confidence = config.confidence
-    difference = interval(samples_difference, estimates["stress"] - estimates["vix"], confidence)
-    difference["verdict"] = verdict(difference)
+    differences = {}
+    for a, b in auc_pairs:
+        difference = interval(samples_difference[(a, b)], estimates[a] - estimates[b], confidence)
+        difference["verdict"] = verdict(difference)
+        differences[f"{a}-{b}"] = difference
     starts = _start_positions(days, occurrences)
     usable = [(i, s) for i, s in enumerate(starts) if s is not None and s - horizon >= chosen[0]]
     filters = []
@@ -353,22 +501,23 @@ def _evaluate(days, years, signals, flags, labels, occurrences, horizon, config)
             "false_alarms": [[days[first].isoformat(), days[last].isoformat()] for first, last in false_alarms],
             "false_per_year": _round(len(false_alarms) / (len(chosen) / TRADING_DAYS_PER_YEAR), 2),
         }
-        if name.startswith("level"):
-            k = int(name[-1])
-            comparison = interval(samples_precision_difference[k], precision_value - point[f"vix{k}"][0], confidence)
+        if name in precision_pairs:
+            other = precision_pairs[name]
+            comparison = interval(samples_precision_difference[name], precision_value - point[other][0], confidence)
             comparison["verdict"] = verdict(comparison)
             entry["precision_difference"] = comparison
         filters.append(entry)
-    for position, (index, start) in enumerate(usable):
-        occurrences[index]["leads"] = {entry["id"]: entry["leads"][position] for entry in filters}
     result.update(
         auc={name: interval(samples[name], estimates[name], confidence) for name in ranked},
         roc={name: r.roc() for name, r in ranked.items()},
-        auc_difference=difference,
+        auc_differences=differences,
         filters=filters,
-        occurrences=occurrences,
-        periods=_periods(years, signals, labels, known, occurrences, config.walk_forward_start),
     )
+    if details:
+        for position, (index, start) in enumerate(usable):
+            occurrences[index]["leads"] = {entry["id"]: entry["leads"][position] for entry in filters}
+        result.update(occurrences=occurrences,
+                      periods=_periods(years, signals, labels, known, occurrences, config.walk_forward_start))
     return result
 
 

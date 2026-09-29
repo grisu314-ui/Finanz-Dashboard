@@ -63,3 +63,7 @@ episode_gap = 5            # alarm days at most this many trading days apart for
 bootstrap_block = 126      # block bootstrap: blocks of this many trading days, twice the horizon ...
 bootstrap_samples = 1000   # ... this many resamples ...
 confidence = 90            # ... intervals of this width in percent (own choices)
+# Walk-forward test of estimated stress weights (M11, E-94): a logit on these stress blocks, fitted every
+# year on the earlier years only; evaluation only, the scores keep their equal weights.
+fit_blocks = ["volatility", "credit", "macro"]  # the blocks with history since the 1990s (breadth from 2014)
+fit_ridge = 1.0            # L2 term on standardised features, negligible against thousands of days (stability only)

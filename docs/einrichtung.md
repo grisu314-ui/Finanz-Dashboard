@@ -242,7 +242,7 @@ Dockge zeigt `web` nach rund einer Minute als „healthy“.
 
 ✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ⏳ TrueNAS. Prüfung der Migration beim Start (E-70): ✅ Entwicklungsumgebung 28.09.2026 mit dem gebauten Image auf einer Datenbank mit Stand 0002 (Worker und `fever.score` melden „Migration fehlt“ und starten nicht, `/health` 503, Banner im Browser; `fever.backup` läuft; nach `alembic upgrade head` normaler Start); ⏳ TrueNAS.
 
-**Update auf die Entscheidungsrunde 29.09.2026 und die Validierung (E-80 bis E-93, mit Migration 0004, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 29.09.2026 (Abruf der zehn neuen Reihen, Scoring, Validierung, Browser; Migrationsprobe mit dem gebauten Image als 568:568 auf einer Kopie mit Stand 0003); ⏳ TrueNAS. Voraussetzung: TrueNAS läuft schon vom Branch `claude-raramo` (sonst zuerst der nächste Block). Neu sind zehn Reihen (S&P 500 von Cboe, versicherte Arbeitslosenquote, acht Z.1-Reihen), fünf Indikatoren, geänderte Ampelregeln (die Ampel ändert sich auch rückwirkend, `docs/umsetzungsplan.md`, Abschnitt 4, „Entscheidungsrunde 29.09.2026“) und die Ansicht „Validierung“ mit der neuen Tabelle `validation_report` (M10). Das neue Programm startet erst nach der Migration.
+**Update auf die Entscheidungsrunde 29.09.2026 und die Validierung (E-80 bis E-96, mit Migration 0004, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 29.09.2026 (Abruf der zehn neuen Reihen, Scoring, Validierung mit geschätzten Gewichten (M11), Fallhöhe-Streifen, Browser; Migrationsprobe mit dem gebauten Image als 568:568 auf einer Kopie mit Stand 0003); ⏳ TrueNAS. Voraussetzung: TrueNAS läuft schon vom Branch `claude-raramo` (sonst zuerst der nächste Block). Neu sind zehn Reihen (S&P 500 von Cboe, versicherte Arbeitslosenquote, acht Z.1-Reihen), fünf Indikatoren, geänderte Ampelregeln (die Ampel ändert sich auch rückwirkend, `docs/umsetzungsplan.md`, Abschnitt 4, „Entscheidungsrunde 29.09.2026“) und die Ansicht „Validierung“ mit der neuen Tabelle `validation_report` (M10). Das neue Programm startet erst nach der Migration.
 
 ```bash
 cd /mnt/Daten-Z1/apps/feewer
@@ -266,7 +266,8 @@ sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
 sudo docker exec finanz-dashboard-worker-1 python -m fever.score
 #   erwartet: INFO __main__: Scores berechnet: 9… Tage ab 02.01.1990, zuletzt <letzter Handelstag>: … (rund 20 bis 30 s)
 sudo docker exec finanz-dashboard-worker-1 python -m fever.validate
-#   erwartet: INFO __main__: Validierung berechnet: Rückgang: AUC Stress …, VIX … (…); VIX-Spitze: …; Bärenmarkt: … (… s)
+#   erwartet: INFO __main__: Validierung berechnet: Rückgang: AUC Stress …, VIX … (…), geschätzte Gewichte … gegen gleiche … (…);
+#             VIX-Spitze: …; Bärenmarkt: … (rund 5 s)
 #   „keine auswertbaren Tage“ bei Rückgang und Bärenmarkt: Der S&P 500 (spx) fehlt noch, Sofort-Abruf prüfen
 ```
 

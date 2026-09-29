@@ -434,14 +434,17 @@ def _checked_values(data: dict, table: str, keys: dict) -> dict:
         value = entries[key]
         if kind is str:
             ok = isinstance(value, str)
+        elif kind is list:  # a non-empty list of texts without repetition
+            ok = isinstance(value, list) and bool(value) and all(isinstance(v, str) for v in value) and len(set(value)) == len(value)
         elif kind is int:
             ok = _is_int(value) and value > 0
         else:
             ok = isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
         if not ok:
-            expected = {str: "ein Text", int: "eine ganze Zahl > 0", float: "eine Zahl > 0"}[kind]
+            expected = {str: "ein Text", list: "eine Liste verschiedener Texte", int: "eine ganze Zahl > 0",
+                        float: "eine Zahl > 0"}[kind]
             raise ConfigError(f"scoring.{table}.{key} muss {expected} sein")
-        values[key] = float(value) if kind is float else value
+        values[key] = float(value) if kind is float else tuple(value) if kind is list else value
     return values
 
 
@@ -450,7 +453,7 @@ def _checked_values(data: dict, table: str, keys: dict) -> dict:
 _VALIDATION_KEYS = {
     "drawdown": float, "drawdown_horizon": int, "vix_level": float, "vix_horizon": int, "bear": float,
     "bear_horizon": int, "walk_forward_start": int, "episode_gap": int, "bootstrap_block": int,
-    "bootstrap_samples": int, "confidence": float,
+    "bootstrap_samples": int, "confidence": float, "fit_blocks": list, "fit_ridge": float,
 }
 
 
@@ -469,6 +472,8 @@ class ValidationConfig:
     bootstrap_block: int  # trading days
     bootstrap_samples: int
     confidence: float  # percent
+    fit_blocks: tuple[str, ...]  # stress blocks of the walk-forward logit (M11, E-94)
+    fit_ridge: float  # L2 term of the logit on standardised features, only for numerical stability
 
 
 def validation_config(config_dir: Path = CONFIG_DIR) -> ValidationConfig:
@@ -484,6 +489,10 @@ def _validation_config(config_dir: Path, content: bytes) -> ValidationConfig:
             raise ConfigError(f"scoring.validation.{key}: unter 100 (Prozent)")
     if not 1900 <= config.walk_forward_start <= 2100:
         raise ConfigError("scoring.validation.walk_forward_start: eine Jahreszahl")
+    unknown = [block for block in config.fit_blocks if block not in STRESS_BLOCKS]
+    if unknown:
+        raise ConfigError(f"scoring.validation.fit_blocks: unbekannte Blöcke {', '.join(unknown)} "
+                          f"(erlaubt: {', '.join(STRESS_BLOCKS)})")
     return config
 
 

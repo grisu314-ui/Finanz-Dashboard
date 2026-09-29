@@ -751,6 +751,37 @@ def test_validation_view_without_and_with_a_report(data):
     assert "Zu wenige Ereignisse" in rendered(validation_view.content("bear", "light", NOW))  # 14 % is no bear market
 
 
+def test_validation_view_shows_the_estimated_weights(data):
+    """M11 (E-94): the section with the walk-forward logit, the decision rules and the weights per year."""
+    from dataclasses import replace as replace_config
+    from fever.config import validation_config
+    from fever.store.validation import replace_report
+    from fever.validation import validate
+    from fever.web import validation_view
+    from tests.test_validation import constructed, features_of
+    store_constructed_report(data, NOW)  # an older report without the M11 part
+    assert "Noch nicht berechnet" in rendered(validation_view.content("drawdown", "light", NOW))
+    spx, vix, scores, vix_percentile, days = constructed()
+    config = replace_config(validation_config(), walk_forward_start=1997, bootstrap_samples=30)
+    report = validate(spx, vix, scores, vix_percentile, config, 80.0, features_of(scores, days))
+    with make_engine(data).begin() as conn:
+        replace_report(conn, report, computed_at=NOW, score_computed_at=NOW, config_hash="x")
+    page = validation_view.content("drawdown", "dark", NOW)
+    text = rendered(page)
+    for part in ("Geschätzte Gewichte (Walk-forward)", "Volatilität, Kredit, Makro", "Geschätzte gegen gleiche Gewichte",
+                 "Mit Fallhöhe gegen ohne", "Regel 1", "Regel 2 (E-95)", "Geschätzt, Alarmanteil wie Orange",
+                 "Gewichte je Jahr", "Precision gegen Ampel"):
+        assert part in text, part
+    graphs = {c.id: c for c in _walk_components(page) if type(c).__name__ == "Graph"}
+    validated(graphs["validation-roc-fitted"].figure)
+    assert len(graphs["validation-roc-fitted"].figure["data"]) == 6  # the diagonal and five signals
+    # bear markets: the constructed history has none (the view stops before); the section itself says why
+    bear = validation_view._fitted_section(report, "bear", ("B", "B"), date(2001, 7, 3), NOW, "light")
+    assert "zu wenige Ereignisse für eine Schätzung" in rendered(bear)
+    rules = validation_view.fitted_rules(report)
+    assert rules[0].startswith("Regel 1") and rules[1].startswith("Regel 2")
+
+
 def test_validation_view_names_missing_closes(data):
     """Before the first retrieval of spx (Cboe) the declines have no day to evaluate: say so, not "too few"."""
     from dataclasses import replace as replace_config

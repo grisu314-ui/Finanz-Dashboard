@@ -19,6 +19,7 @@ from sqlalchemy.engine import Connection, Engine
 
 from fever import log
 from fever.config import CONFIG_DIR, ConfigError, scoring_config, validation_config
+from fever.scoring.composite import ewma_series
 from fever.store.db import DataDirError, data_dir, make_engine
 from fever.store.observations import latest_pairs
 from fever.store.schema import SchemaError, require_current
@@ -75,7 +76,7 @@ def run(engine: Engine, *, clock=_utcnow, config_dir: Path = CONFIG_DIR) -> Summ
     """Validate the stored scores and replace the report."""
     started, start = clock(), time.monotonic()
     config = validation_config(config_dir)
-    elevated = scoring_config(config_dir).yellow_diffusion_percentile
+    scoring = scoring_config(config_dir)
     digest = config_hash(config_dir)
     with engine.begin() as conn:
         record_attempt(conn, SOURCE, started)
@@ -86,7 +87,8 @@ def run(engine: Engine, *, clock=_utcnow, config_dir: Path = CONFIG_DIR) -> Summ
         scores = _scores(conn)
         vix_percentile = _vix_percentile(conn)
         spx, vix = _series(conn, PRICE_SERIES), _series(conn, VIX_SERIES)
-    report = validate(spx, vix, scores, vix_percentile, config, elevated)
+        blocks = _blocks(conn, config.fit_blocks, scoring.fast_block, scoring.stress_half_life)
+    report = validate(spx, vix, scores, vix_percentile, config, scoring.yellow_diffusion_percentile, blocks)
     with engine.begin() as conn:
         replace_report(conn, report, computed_at=started, score_computed_at=state[0], config_hash=digest)
         record_success(conn, SOURCE, clock())
@@ -104,8 +106,14 @@ def describe(summary: Summary) -> str:
         if not difference:  # no closes (e.g. spx before its first retrieval) or no scores: no day to evaluate
             parts.append(f"{EVENT_NAMES[event]}: {'zu wenige Ereignisse' if result.get('days') else 'keine auswertbaren Tage'}")
             continue
-        parts.append(f"{EVENT_NAMES[event]}: AUC Stress {number(auc['stress']['value'])}, VIX {number(auc['vix']['value'])} "
-                     f"({VERDICTS[difference['verdict']]})")
+        text = (f"{EVENT_NAMES[event]}: AUC Stress {number(auc['stress']['value'])}, VIX {number(auc['vix']['value'])} "
+                f"({VERDICTS[difference['verdict']]})")
+        fitted = (result.get("fitted") or {}).get("auc_differences", {}).get("fitted-equal")
+        if fitted:  # M11: estimated against equal weights
+            aucs = result["fitted"]["auc"]
+            text += (f", geschätzte Gewichte {number(aucs['fitted']['value'])} gegen gleiche {number(aucs['equal']['value'])} "
+                     f"({VERDICTS[fitted['verdict']]})")
+        parts.append(text)
     return f"Validierung berechnet: {'; '.join(parts)} ({number(summary.seconds)} s)"
 
 
@@ -121,6 +129,17 @@ def _vix_percentile(conn: Connection) -> pd.Series:
                         .where(indicator_score.c.indicator_id == VIX_INDICATOR, indicator_score.c.status == "ok")
                         .order_by(indicator_score.c.score_date)).all()
     return pd.Series([row[1] for row in rows], index=[row[0] for row in rows], dtype=float)
+
+
+def _blocks(conn: Connection, names: tuple[str, ...], fast_block: str, half_life: float) -> pd.DataFrame:
+    """The stress blocks of the walk-forward logit (M11) per score day, smoothed like the composite: the fast
+    block as stored after its own smoothing, then every block with the half-life of the stress."""
+    columns = [composite_score.c.fast_block_smoothed if name == fast_block else composite_score.c[f"block_{name}"]
+               for name in names]
+    rows = conn.execute(select(composite_score.c.score_date, *columns).order_by(composite_score.c.score_date)).all()
+    days = [row[0] for row in rows]
+    return pd.DataFrame({name: ewma_series([row[i + 1] for row in rows], half_life) for i, name in enumerate(names)},
+                        index=days, dtype=float)
 
 
 def _series(conn: Connection, series_id: str) -> pd.Series:

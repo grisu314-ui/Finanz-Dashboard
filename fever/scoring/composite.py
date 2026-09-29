@@ -237,6 +237,16 @@ def _ewma(previous: float | None, value: float | None, half_life: float) -> floa
     return alpha * value + (1.0 - alpha) * previous
 
 
+def ewma_series(values: list[float | None], half_life: float) -> list[float | None]:
+    """_ewma over a whole series, as compute() smooths a value day by day (restarts after a gap); used by
+    the validation (M11) to smooth the stress blocks exactly like the composite."""
+    smoothed, previous = [], None
+    for value in values:
+        previous = _ewma(previous, value, half_life)
+        smoothed.append(previous)
+    return smoothed
+
+
 def _median(values: list[float]) -> float | None:
     return statistics.median(values) if values else None
 

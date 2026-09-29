@@ -1,8 +1,9 @@
-"""View 8 of report 6.3: backtest and validation (M10, report 4.3 step 7, E-93).
+"""View 8 of report 6.3: backtest and validation (M10, report 4.3 step 7, E-93), with the walk-forward
+test of estimated stress weights (M11, E-94).
 
-Shows the report the worker stores (fever.validate); nothing is computed here beyond formatting and
-the bins of the lead histogram. A look back: no probability for today, no trading signal, and
-nothing here feeds back into the traffic light.
+Shows the report the worker stores (fever.validate); nothing is computed here beyond formatting, the
+bins of the lead histogram and the decision rules of the plan M11. A look back: no probability for
+today, no trading signal, and nothing here feeds back into the traffic light.
 """
 
 import math
@@ -15,6 +16,7 @@ from fever.web import components as ui
 from fever.web import db
 from fever.web import format as fmt
 from fever.web.figures import Bars, Roc, bars, roc
+from fever.web.texts import AREA_SHORT
 
 SOURCE = "eigene Berechnung (Validierung)"
 EVENT_ORDER = ("drawdown", "vix", "bear")
@@ -28,6 +30,21 @@ FILTER_NAMES = {
 }
 LEAD_FILTERS = ("level1", "vix1", "level2", "vix2", "level3", "vix3")
 VERDICTS = {"better": "besser", "same": "nicht unterscheidbar", "worse": "schlechter"}
+# M11 (E-94): estimated stress weights
+FITTED_EVENTS = ("drawdown", "vix")
+FITTED_NAMES = {"fitted": "Geschätzte Gewichte", "fitted_vulnerability": "Geschätzt mit Fallhöhe",
+                "equal": "Gleiche Gewichte", "stress": "Stress", "vix": "VIX-Perzentil"}
+FITTED_FILTERS = ("level1", "fitted1", "level2", "fitted2", "level3", "fitted3")
+FITTED_FILTER_NAMES = {
+    "level1": "Ampel mindestens Gelb", "fitted1": "Geschätzt, Alarmanteil wie Gelb",
+    "level2": "Ampel mindestens Orange", "fitted2": "Geschätzt, Alarmanteil wie Orange",
+    "level3": "Ampel Rot", "fitted3": "Geschätzt, Alarmanteil wie Rot",
+}
+DIFFERENCES = {"fitted-equal": ("fitted", "equal", "Geschätzte gegen gleiche Gewichte"),
+               "fitted_vulnerability-fitted": ("fitted_vulnerability", "fitted", "Mit Fallhöhe gegen ohne"),
+               "fitted-stress": ("fitted", "stress", "Geschätzte Gewichte gegen Stress"),
+               "fitted-vix": ("fitted", "vix", "Geschätzte Gewichte gegen VIX-Perzentil")}
+FEATURE_NAMES = {**AREA_SHORT, "vulnerability": "Fallhöhe"}
 LIMITS = [
     "Wenige Ereignisse: Die Intervalle sind breit, einzelne Krisen entscheiden viel.",
     "Überlappende Zeiträume: Benachbarte Tage haben fast dasselbe Ergebnis; deshalb Block-Bootstrap statt einfacher Intervalle.",
@@ -107,6 +124,7 @@ def content(event: str | None, theme: str, now: datetime) -> list:
         _leads(event, result, filters, names, observed, stored.computed_at, theme),
         _false_alarms(filters),
         _stability(result, report["thresholds"]),
+        _fitted_section(report, event, names, observed, stored.computed_at, theme),
         html.Section(className="card card-wide", children=[html.H2("Grenzen"), html.Ul([html.Li(t) for t in LIMITS])]),
     ]
 
@@ -284,7 +302,8 @@ def _stability(result: dict, thresholds: dict) -> html.Section:
     return html.Section(className="card card-wide", children=[
         html.H2("Stabilität über die Zeit"),
         ui.note("AUC je Zeitraum, nur wenn darin ein Ereignis beginnt; die Jahre vor der Auswertung ab dem ersten "
-                "VIX-Perzentil. Gewichte gibt es nicht zu prüfen: Die Blöcke zählen gleich, geschätzt wird nichts."),
+                "VIX-Perzentil. Der Stress zählt die Blöcke gleich; geschätzte Gewichte und ihre Stabilität zeigt der "
+                "Abschnitt „Geschätzte Gewichte“."),
         html.Div(className="table-scroll", children=html.Table(className="table", children=[
             html.Thead(html.Tr([html.Th(t) for t in ("Zeitraum", "Handelstage", "Ereignisse", "AUC Stress", "AUC VIX-Perzentil")])),
             html.Tbody(rows),
@@ -295,6 +314,120 @@ def _stability(result: dict, thresholds: dict) -> html.Section:
                           html.Tbody(years),
                       ]))]),
     ])
+
+
+# --- M11: estimated stress weights (E-94) ---------------------------------------------------------------
+
+
+def fitted_rules(report: dict) -> list[str] | None:
+    """The decision rules fixed in the plan M11 before the results (E-94, E-95); None without both events."""
+    def difference(event, key):
+        return (((report["events"].get(event) or {}).get("fitted") or {}).get("auc_differences") or {}).get(key)
+
+    main, guard = difference("drawdown", "fitted-equal"), difference("vix", "fitted-equal")
+    vulnerability = difference("drawdown", "fitted_vulnerability-fitted")
+    if not (main and guard and vulnerability):
+        return None
+    if main["verdict"] == "better" and guard["verdict"] != "worse":
+        weights = ("Regel 1 erfüllt: Geschätzte Gewichte sind vor Rückgängen belastbar besser als gleiche und vor "
+                   "VIX-Spitzen nicht schlechter. Übernommen wird nur auf Anweisung (E-89, E-94).")
+    else:
+        weights = ("Regel 1 nicht erfüllt: Geschätzte Gewichte sind nicht belastbar besser als gleiche; die gleichen "
+                   "Gewichte bleiben.")
+    vulnerability_rule = {
+        "better": "Regel 2 (E-95): Die Fallhöhe trägt vor Rückgängen über den Stress hinaus Information über den "
+                  "Zeitpunkt; das spricht für die Gelb-Regel der Fallhöhe.",
+        "worse": "Regel 2 (E-95): Mit der Fallhöhe trennt das Modell vor Rückgängen schlechter; das spricht fürs "
+                 "Streichen der Gelb-Regel der Fallhöhe.",
+        "same": "Regel 2 (E-95): Kein belastbarer Beitrag der Fallhöhe zum Zeitpunkt; die Gelb-Regel bleibt eine "
+                "Abwägung, denn sie zeigt ein Regime, keinen Zeitpunkt.",
+    }[vulnerability["verdict"]]
+    return [weights, vulnerability_rule]
+
+
+def _fitted_section(report, event, names, observed, computed_at, theme) -> html.Section:
+    config = report["config"]
+    blocks = ", ".join(FEATURE_NAMES.get(block, block) for block in config.get("fit_blocks", ()))
+    children = [
+        html.H2("Geschätzte Gewichte (Walk-forward)"),
+        ui.note(f"Logit auf den Blöcken {blocks}: jedes Jahr ab {config['walk_forward_start']} nur mit Tagen geschätzt, "
+                "deren Ergebnis zu Jahresbeginn feststand; ausgewertet wird das mit diesen Gewichten gewichtete Mittel "
+                "der Blöcke. Nur Auswertung: Stress und Ampel behalten gleiche Gewichte (E-94)."),
+    ]
+    fitted = report["events"][event].get("fitted")
+    if event not in FITTED_EVENTS:
+        return _card(children + [ui.note("Für Bärenmärkte gibt es zu wenige Ereignisse für eine Schätzung.")])
+    if fitted is None:
+        return _card(children + [ui.note("Noch nicht berechnet: Der Worker rechnet den Bericht beim nächsten Lauf neu.")])
+    if not fitted["filters"]:
+        return _card(children + [ui.note("Keine Schätzung: zu wenige Ereignisse oder Blöcke ohne Werte.")])
+    aucs = fitted["auc"]
+    lines = [f"{title} (AUC): {_auc(aucs[a])} gegen {_auc(aucs[b])}; Unterschied "
+             f"{_signed(fitted['auc_differences'][key], 2)}: {VERDICTS[fitted['auc_differences'][key]['verdict']]}."
+             for key, (a, b, title) in DIFFERENCES.items()]
+    rules = fitted_rules(report)
+    name, label = names
+    curves = [(FITTED_NAMES[signal], *fitted["roc"][signal]) for signal in FITTED_NAMES]
+    chart = Roc("validation-roc-fitted", f"ROC (geschätzt): {name}", SOURCE, curves, observed=observed,
+                retrieved=computed_at, note=f"{label}<br>AUC: " + " · ".join(
+                    f"{FITTED_NAMES[signal]} {_auc(aucs[signal], interval=False)}" for signal in FITTED_NAMES))
+    children += [
+        html.Ul([html.Li(line) for line in lines]),
+        *([html.P(html.Strong("Entscheidungsregeln aus dem Plan (vorab festgelegt)")), html.Ul([html.Li(r) for r in rules])]
+          if rules else []),
+        ui.figure_card("validation-roc-fitted", *roc(chart, theme), box="chart-box chart-box-tall"),
+        _fitted_table(fitted),
+        html.Details([html.Summary("Gewichte je Jahr (Anteil am Signal; gleiche Gewichte je Block gleich)"),
+                      _weights_table(fitted, config)]),
+    ]
+    return _card(children)
+
+
+def _card(children: list) -> html.Section:
+    return html.Section(className="card card-wide", children=children)
+
+
+def _fitted_table(fitted: dict) -> html.Div:
+    filters = {entry["id"]: entry for entry in fitted["filters"]}
+    rows = []
+    for key in FITTED_FILTERS:
+        entry = filters[key]
+        gap = entry.get("precision_difference")
+        rows.append(html.Tr([
+            html.Td(FITTED_FILTER_NAMES[key]), html.Td(_percent(entry["share"])), html.Td(_with_interval(entry["precision"])),
+            html.Td(_with_interval(entry["recall"])), html.Td(f"{entry['warned']} von {entry['events']}"),
+            html.Td(fmt.number(entry["false_per_year"], 1)),
+            html.Td(fmt.DASH if gap is None else
+                    f"{_signed(gap, 0, scale=100, unit=' Prozentpunkte')}: {VERDICTS[gap['verdict']]}"),
+        ]))
+    return html.Div(className="table-scroll", children=html.Table(className="table", children=[
+        html.Thead(html.Tr([html.Th(t) for t in ("Signal", "Alarm an", "Precision", "Recall", "Ereignisse gewarnt",
+                                                  "Fehlalarme je Jahr", "Precision gegen Ampel")])),
+        html.Tbody(rows),
+    ]))
+
+
+def _weights_table(fitted: dict, config: dict) -> html.Div:
+    blocks = list(config.get("fit_blocks", ()))
+    head = (["Jahr"] + [f"{FEATURE_NAMES.get(b, b)}" for b in blocks]
+            + [f"{FEATURE_NAMES.get(b, b)} (mit Fallhöhe)" for b in blocks] + ["Fallhöhe (mit Fallhöhe)", "Trainingstage",
+                                                                                "davon vor einem Ereignis"])
+
+    def share(entry, key, feature):
+        value = (entry.get(key) or {}).get("shares", {}).get(feature)
+        return fmt.DASH if value is None else f"{fmt.number(value, 0)} %"
+
+    rows = []
+    for entry in fitted["years"]:
+        a = entry.get("fitted") or {}
+        rows.append(html.Tr([html.Td(str(entry["year"]))]
+                            + [html.Td(share(entry, "fitted", b)) for b in blocks]
+                            + [html.Td(share(entry, "fitted_vulnerability", b)) for b in [*blocks, "vulnerability"]]
+                            + [html.Td(fmt.number(a["days"], 0) if a else fmt.DASH),
+                               html.Td(fmt.number(a["positives"], 0) if a else fmt.DASH)]))
+    return html.Div(className="table-scroll", children=html.Table(className="table", children=[
+        html.Thead(html.Tr([html.Th(t) for t in head])), html.Tbody(rows),
+    ]))
 
 
 def _percent(value: float | None) -> str:

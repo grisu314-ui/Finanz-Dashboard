@@ -16,8 +16,8 @@ from fever.store.observations import NewObservation, append_observations
 from fever.store.status import read_status
 from fever.store.validation import read_report
 from fever.validation import (
-    _Ranked, alarm_episodes, auc, block_weights, declines, interval, lead, level_episodes, level_labels,
-    precision_recall, start_labels, validate as backtest, verdict, walk_forward_thresholds,
+    _Ranked, alarm_episodes, auc, block_weights, declines, fit_logit, fit_year, interval, labels_known_at, lead,
+    level_episodes, level_labels, precision_recall, start_labels, validate as backtest, verdict, walk_forward_thresholds,
 )
 
 CONFIG = validation_config()
@@ -163,13 +163,100 @@ def test_report_on_a_constructed_history():
     assert set(report["thresholds"]) == {str(year) for year in range(1997, days[-1].year + 1)}
 
 
+# --- estimated weights (M11, E-94) ----------------------------------------------------------------------
+
+
+def features_of(scores, days, seed=7):
+    """Blocks for the logit: volatility carries the constructed stress, the others are noise."""
+    rng = np.random.default_rng(seed)
+    n = len(days)
+    return pd.DataFrame({"volatility": scores["stress"].to_numpy() + rng.normal(0, 5, n), "credit": rng.normal(50, 10, n),
+                         "macro": rng.normal(50, 10, n)}, index=days)
+
+
+def test_fit_logit_recovers_known_coefficients():
+    rng = np.random.default_rng(1)
+    x = rng.normal(size=(20000, 2))
+    true = np.array([-1.0, 1.5, -0.5])
+    y = (rng.random(20000) < 1 / (1 + np.exp(-(true[0] + x @ true[1:])))).astype(float)
+    assert np.allclose(fit_logit(x, y, 1e-6), true, atol=0.08)
+    strong = fit_logit(x, y, 1e8)  # the ridge term pulls the slopes to zero, never the intercept
+    assert np.all(np.abs(strong[1:]) < 1e-3) and strong[0] == pytest.approx(np.log(y.mean() / (1 - y.mean())), abs=1e-3)
+
+
+def test_ewma_series_smooths_like_the_composite():
+    from fever.scoring.composite import ewma_series
+    alpha = 1 - 0.5 ** (1 / 2)
+    assert ewma_series([10.0, None, 20.0, 30.0], 2) == [10.0, None, 20.0, pytest.approx(alpha * 30 + (1 - alpha) * 20)]
+
+
+def test_labels_known_at_leave_a_decline_confirmed_later_open():
+    prices = series([100, 110, 120, 115, 107, 100, 105, 99])  # high 120 on d2, -10 % first reached on d4
+    d = list(prices.index)
+    config = replace(CONFIG, drawdown_horizon=2)
+    final = labels_known_at("drawdown", prices, prices, d[7] + timedelta(days=1), config)
+    assert final.tolist()[:3] == [0.0, 1.0, 1.0]  # the decline begins on d3
+    known = labels_known_at("drawdown", prices, prices, d[4], config)  # closes before d4: not a decline yet
+    assert list(known.index) == d[:4] and known.iloc[0] == 0.0 and known.iloc[1:].isna().all()
+
+
+def test_the_fit_of_a_year_ignores_later_data():
+    """Mandatory test against look-ahead: the coefficients of 2000 are the same with and without the data from
+    01.01.2000 on, although a decline begins in December 1999 and is confirmed only in January 2000."""
+    days = business_days(date(1996, 1, 1), 1500)
+    first_2000 = next(i for i, day in enumerate(days) if day.year == 2000)
+    spx, vix, scores, _, days = constructed(peaks=(700, first_2000 - 3))
+    config = replace(CONFIG, walk_forward_start=1997)
+    years = np.array([day.year for day in days])
+    x = features_of(scores, days).to_numpy()
+    names = ("volatility", "credit", "macro")
+    cutoff, before = date(2000, 1, 1), [day < date(2000, 1, 1) for day in days]
+    known = labels_known_at("drawdown", spx, vix, cutoff, config).reindex(days).to_numpy()
+    known_cut = labels_known_at("drawdown", spx[before], vix[before], cutoff, config).reindex(days).to_numpy()
+    assert np.array_equal(known, known_cut, equal_nan=True)
+    x_cut = x.copy()
+    x_cut[years >= 2000] = np.nan
+    full, cut = fit_year(2000, x, known, years, names, 1.0), fit_year(2000, x_cut, known_cut, years, names, 1.0)
+    assert np.array_equal(full.beta, cut.beta) and np.array_equal(full.mean, cut.mean) and full.days == cut.days
+    # the final outcomes know the decline of December 1999; the fit of 2000 must not
+    final = labels_known_at("drawdown", spx, vix, date(2030, 1, 1), config).reindex(days).to_numpy()
+    assert final[first_2000 - 10] == 1.0 and np.isnan(known[first_2000 - 10])
+
+
+def test_report_with_estimated_weights():
+    spx, vix, scores, vix_percentile, days = constructed()
+    config = replace(CONFIG, walk_forward_start=1997, bootstrap_samples=50)
+    report = backtest(spx, vix, scores, vix_percentile, config, 80.0, features_of(scores, days))
+    json.dumps(report, allow_nan=False)
+    fitted = report["events"]["drawdown"]["fitted"]
+    assert set(fitted["auc"]) == {"fitted", "fitted_vulnerability", "equal", "stress", "vix"}
+    assert set(fitted["auc_differences"]) == {"fitted-equal", "fitted_vulnerability-fitted", "fitted-stress", "fitted-vix"}
+    assert {f["id"] for f in fitted["filters"]} == {"level1", "level2", "level3", "fitted1", "fitted2", "fitted3"}
+    assert all("precision_difference" in f for f in fitted["filters"] if f["id"].startswith("fitted"))
+    assert "occurrences" not in fitted and "periods" not in fitted  # only the M10 part lists them
+    by_year = {entry["year"]: entry for entry in fitted["years"]}
+    assert set(by_year) == {1997, 1998, 1999, 2000, 2001} and "fitted" not in by_year[1997]  # no event before 1997
+    shares = by_year[2000]["fitted"]["shares"]
+    assert shares["volatility"] > 50 and sum(abs(v) for v in shares.values()) == pytest.approx(100, abs=0.2)
+    # the informative block carries the weight; the constant vulnerability adds nothing
+    assert fitted["auc"]["fitted"]["value"] > 0.65 and by_year[2000]["fitted_vulnerability"]["shares"]["vulnerability"] == 0.0
+    assert fitted["auc_differences"]["fitted_vulnerability-fitted"]["value"] == 0.0
+    assert "fitted" in report["events"]["vix"] and "fitted" not in report["events"]["bear"]
+    assert json.loads(json.dumps(report["config"]))["fit_blocks"] == ["volatility", "credit", "macro"]  # as stored
+    assert "fitted" not in backtest(spx, vix, scores, vix_percentile, config, 80.0)["events"]["drawdown"]  # without blocks
+
+
 def test_the_config_is_checked(tmp_path):
     from tests.test_config import SCORING, write
     assert (CONFIG.drawdown, CONFIG.drawdown_horizon, CONFIG.vix_level, CONFIG.vix_horizon) == (10, 63, 30, 21)  # report
     assert (CONFIG.bear, CONFIG.walk_forward_start, CONFIG.confidence) == (20, 2000, 90)
+    assert CONFIG.fit_blocks == ("volatility", "credit", "macro")
     for old, new, message in (("bear = 20 ", "bear = 120 ", "bear: unter 100"),
                               ("walk_forward_start = 2000", "walk_forward_start = 20", "Jahreszahl"),
-                              ("episode_gap = 5 ", "", "Parameter fehlen: episode_gap")):
+                              ("episode_gap = 5 ", "", "Parameter fehlen: episode_gap"),
+                              ('fit_blocks = ["volatility", "credit", "macro"]', 'fit_blocks = ["volatility", "mood"]',
+                               "unbekannte Blöcke mood"),
+                              ('fit_blocks = ["volatility", "credit", "macro"]', 'fit_blocks = "volatility"', "Liste")):
         assert SCORING.count(old) == 1
         with pytest.raises(ConfigError, match=message):
             validation_config(write(tmp_path, "scoring", SCORING.replace(old, new)))

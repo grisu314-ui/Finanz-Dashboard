@@ -103,6 +103,7 @@ Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar 
    - *Treffer und Fehlalarme:* je Ampelstufe und je Vergleichsfilter, wie oft Alarm war, wie viele Alarmtage vor einem Ereignis lagen (Precision), wie viele Tage vor einem Ereignis Alarm hatten (Recall), wie viele Ereignisse gewarnt wurden und wie viele Fehlalarm-Phasen es je Jahr gab. Der Vergleichsfilter gibt etwa so oft Alarm wie die Stufe in den Jahren davor.
    - *Vorlauf:* wie viele Handelstage vor dem Beginn die Ampel zuerst Alarm gab; „≥ Horizont“ heißt, der Alarm war schon vorher an. Die Tabelle darunter nennt jedes Ereignis.
    - *Fehlalarme, Stabilität, Grenzen:* die Fehlalarm-Phasen als Listen, die Trennschärfe je Jahrzehnt und was die Auswertung nicht kann.
+   - *Geschätzte Gewichte (seit M11):* ob anders gewichtete Stress-Blöcke besser gewarnt hätten als die gleichen Gewichte des Stress. Die Gewichte werden jedes Jahr nur aus den Jahren davor geschätzt. Oben stehen die Vergleiche und die zwei vorab festgelegten Entscheidungsregeln, darunter ROC-Kurven, Treffer und Fehlalarme bei gleichem Alarmanteil wie die Ampelstufen und aufklappbar die Gewichte je Jahr. Die Variante „mit Fallhöhe“ zeigt, ob die Fallhöhe über den Stress hinaus etwas über den Zeitpunkt sagt. Für Bärenmärkte gibt es zu wenige Ereignisse.
    - Nur ein Rückblick: keine Wahrscheinlichkeit für heute, kein Handelssignal, und nichts davon verändert die Ampel. Einzelheiten auf der Erklärseite „Validierung“.
 9. **Datenstand** und **Erklärungen.**
 

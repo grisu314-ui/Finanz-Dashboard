@@ -370,6 +370,10 @@ def thresholds(kennzahl_id: str) -> list[str]:
             f"Alarmtage mit höchstens {v.episode_gap} Handelstagen Abstand bilden eine Alarmphase.",
             f"Intervalle: {_n(v.confidence)} %, Block-Bootstrap mit Blöcken von {v.bootstrap_block} Handelstagen und "
             f"{v.bootstrap_samples:,} Ziehungen.".replace(",", "."),
+            f"Geschätzte Gewichte: logistische Regression auf den Blöcken "
+            f"{', '.join(AREA_SHORT.get(block, block) for block in v.fit_blocks)}, jedes Jahr ab {v.walk_forward_start} "
+            f"neu, nur mit Tagen, deren Ergebnis zu Jahresbeginn feststand; Ridge-Term {_n(v.fit_ridge)} auf "
+            "standardisierten Blöcken, nur für die numerische Stabilität. Nicht für Bärenmärkte (zu wenige Ereignisse).",
             "Keine Farbe und keine Rückwirkung: Nichts aus der Validierung ändert Stress, Fallhöhe oder Ampel.",
         ]
     if kennzahl_id == "staleness":
