@@ -423,8 +423,112 @@ def test_small_values_keep_two_significant_digits():
 
 
 def test_display_pages_link_their_view(data):
-    page = rendered(views.kennzahl("hy_oas", "light", NOW))
+    page = rendered(views.kennzahl("ccc_bb", "light", NOW))
     assert "/ansicht/makro" in page and "nur Anzeige" in page
+
+
+# --- decisions of 29.09.2026 (E-80 to E-90) ----------------------------------------------------------------
+
+
+def test_role_marks_name_every_role_of_a_value():
+    """E-81: blue stress with its area, violet vulnerability, grey display, outlined rule; both roles of one value."""
+    both = [("Stress · Kredit", "stress"), ("Fallhöhe", "vulnerability")]
+    assert texts.roles("credit_spread_level") == both and texts.roles("credit_spread_tight") == both  # E-85
+    assert texts.roles("credit_spread_change") == [("Stress · Kredit", "stress"), ("Ampelregel", "rule")]
+    assert texts.roles("sahm") == [("Stress · Makro", "stress"), ("Ampelregel", "rule")]
+    assert texts.roles("sos") == [("Ampelregel", "rule")]
+    assert texts.roles("ecy") == [("Fallhöhe", "vulnerability")] and texts.roles("vix") == [("Stress · Volatilität", "stress")]
+    assert texts.roles("money_market") == [("nur Anzeige", "display")] and texts.roles("stress") == []
+    from fever.web.components import kennzahl_head
+    head = rendered(kennzahl_head("credit_spread_tight"))
+    assert '"role role-stress"' in head and '"role role-vulnerability"' in head and "Fallhöhe" in head
+
+
+def test_views_show_the_new_kennzahlen(data):
+    macro = rendered(views.view("makro", "light", NOW))
+    for kennzahl in ("sahm", "sos", "hy_oas"):
+        assert f"/kennzahl/{kennzahl}" in macro
+    assert "Lizenz ICE Data Indices" in macro and "Re-Steepening" not in macro  # no curve data in the fixture
+    vulnerability = rendered(views.view("fallhoehe", "light", NOW))
+    for kennzahl in ("equity_allocation", "credit_spread_tight", "money_market"):
+        assert f"/kennzahl/{kennzahl}" in vulnerability
+    assert not any("fünf Jahre" in text for text in views.PLACEHOLDERS)
+
+
+def test_rule_periods_come_from_the_stored_traffic_light(monkeypatch):
+    """The violet days are the days the scoring stored the rule as active; the web recomputes nothing."""
+    days = [date(2026, 1, d) for d in range(1, 6)]
+    stored = ["", "orange_sahm", "orange_sahm,yellow_sos", "yellow_diffusion", "orange_sahm"]
+    monkeypatch.setattr(web_db, "composite_history", lambda *columns: [
+        {"score_date": d, "active_rules": rules} for d, rules in zip(days, stored)])
+    periods, label = views.rule_periods("sahm")
+    assert periods == ((days[1], days[3]), (days[4], days[4] + timedelta(days=1)))
+    assert label == "Violett: Ampelregel aktiv (Orange: Sahm-Regel mindestens 0,50)"
+    periods, label = views.rule_periods("sos")
+    assert periods == ((days[2], days[3]),) and "SOS-Indikator über 0,20" in label
+    assert views.rule_periods("vix") == ((), "")
+
+
+def test_resteepening_note():
+    d = [date(2025, 10, 15), date(2025, 10, 16), date(2025, 10, 17), date(2025, 10, 20)]
+    assert views.resteepening(list(zip(d, [0.1, -0.05, 0.0, 0.2]))) == (
+        "Letztes Re-Steepening: 17.10.2025 (erster Wert ab null nach dem letzten Tag der Inversion am 16.10.2025). "
+        "Keine Wirkung auf die Ampel (E-84).")
+    assert "invertiert seit 16.10.2025" in views.resteepening(list(zip(d, [0.1, -0.05, -0.1, -0.2])))
+    assert "nie invertiert" in views.resteepening(list(zip(d, [0.1, 0.0, 0.3, 0.2])))
+
+
+def test_money_market_share_uses_common_quarters():
+    q = [date(2026, 1, 1), date(2026, 4, 1), date(2026, 7, 1)]
+    funds = list(zip(q, [10.0, 20.0, 30.0]))
+    nonfinancial = list(zip(q, [80.0, 0.0, 100.0]))
+    financial = list(zip(q[::2], [20.0, 50.0]))
+    assert views.money_market_share(funds, nonfinancial, financial) == [(q[0], 10.0), (q[2], 20.0)]
+
+
+def test_generated_texts_name_the_recession_rules():
+    lines = " ".join(texts.thresholds("traffic_light"))
+    assert "Sahm-Regel mindestens 0,50 (ohne Hysterese)" in lines and "SOS-Indikator über 0,20 (ohne Hysterese)" in lines
+    assert texts.rule_text("orange_sahm") == "Orange: Sahm-Regel mindestens 0,50"
+    assert texts.rule_text("yellow_sos") == "Gelb: SOS-Indikator über 0,20"
+    sos = " ".join(texts.contribution("sos"))
+    assert "nicht in Stress, Fallhöhe, Konfidenz oder Diffusionsindex" in sos and "mindestens Gelb" in sos
+    assert dict(texts.steckbrief("sos"))["Gewicht in der Konfidenz"].startswith("keins")
+    assert any("mindestens Orange" in line for line in texts.contribution("sahm"))
+    assert any("Derselbe Wert zählt zusätzlich im Bereich Fallhöhe" in line for line in texts.contribution("credit_spread_level"))
+    assert "Nur Ampelregel" in rendered(views.explanations())
+
+
+def test_time_series_fit_the_y_axis_to_the_visible_part():
+    """E-88: first view fitted on the server; the browser script keeps it so after zoom and refresh."""
+    from fever.web import figures
+    days = [date(2020, 1, 1), date(2021, 6, 1), date(2024, 1, 1), date(2026, 9, 25)]
+    chart = Chart("vix", "VIX", "Cboe", [Line("VIX", days, [80.0, 20.0, 10.0, 30.0])], "Punkte")
+    layout = validated(time_series(chart, "light")[0]).layout
+    # window from 25.09.2021: 20 (last before), 10, 30 -> span 20, padding 1 each side
+    assert layout.xaxis.range == ("2021-09-25", "2026-09-25") and layout.yaxis.range == (9.0, 31.0)
+    assert layout.meta == {"autoY": True}
+    fixed = validated(time_series(replace(chart, y_range=(0, 100)), "light")[0]).layout
+    assert fixed.yaxis.range == (0, 100) and fixed.meta is None
+    whole = validated(time_series(replace(chart, full_history=True), "light")[0]).layout
+    assert whole.yaxis.range == (6.5, 83.5)
+    assert figures.fitted_range([(days, [5.0, None, 5.0, 5.0])], "2021-01-01", "2026-12-31") == [4.75, 5.25]
+    assert figures.fitted_range([(days, [None] * 4)], "2021-01-01", "2026-12-31") is None
+    script = (REPO / "assets" / "autoscale.js").read_text(encoding="utf-8")
+    assert f"const PADDING = {figures.Y_PADDING};" in script and "meta.autoY" in script
+
+
+def test_heatmap_rows_carry_their_roles():
+    from fever.web.figures import Heatmap, heatmap
+    days = [date(2026, 9, 24), date(2026, 9, 25)]
+    chart = Heatmap("heatmap", "H", "x", ["Kreditspread Baa (Niveau)"], days, [[10.0, 20.0]],
+                    roles=[(("Stress · Kredit", "stress"), ("Fallhöhe", "vulnerability"))])
+    figure = validated(heatmap(chart, "light")[0])
+    assert figure.data[0].y == ("Kreditspread Baa (Niveau) · Stress · Kredit · Fallhöhe",)  # shown in the hover
+    tick = figure.layout.yaxis.ticktext[0]
+    assert tick.count("■") == 2 and tick.endswith(" Kreditspread Baa (Niveau)") and "#4a3aa7" in tick
+    stamp = figure.layout.annotations[-1].text
+    assert "■</span> Stress · " in stamp and "■</span> Fallhöhe (Bereich im Hover)" in stamp and "Ampelregel" not in stamp
 
 
 # --- load time (28.09.2026): lean queries and plain figures -----------------------------------------------

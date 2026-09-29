@@ -242,6 +242,30 @@ Dockge zeigt `web` nach rund einer Minute als „healthy“.
 
 ✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ⏳ TrueNAS. Prüfung der Migration beim Start (E-70): ✅ Entwicklungsumgebung 28.09.2026 mit dem gebauten Image auf einer Datenbank mit Stand 0002 (Worker und `fever.score` melden „Migration fehlt“ und starten nicht, `/health` 503, Banner im Browser; `fever.backup` läuft; nach `alembic upgrade head` normaler Start); ⏳ TrueNAS.
 
+**Update auf die Entscheidungsrunde 29.09.2026 (E-80 bis E-90, ohne Migration, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 29.09.2026 (Abruf der zehn neuen Reihen, Scoring, Browser); ⏳ TrueNAS. Voraussetzung: TrueNAS läuft schon vom Branch `claude-raramo` (sonst zuerst der nächste Block). Neu sind zehn Reihen (S&P 500 von Cboe, versicherte Arbeitslosenquote, acht Z.1-Reihen), vier Indikatoren und geänderte Ampelregeln; die Ampel ändert sich auch rückwirkend (`docs/umsetzungsplan.md`, Abschnitt 4, „Entscheidungsrunde 29.09.2026“).
+
+```bash
+cd /mnt/Daten-Z1/apps/feewer
+git pull
+git diff --stat HEAD@{1} -- compose.dockge.yaml .env.example migrations/    # erwartet: keine Ausgabe
+sudo docker compose build
+```
+
+1. In Dockge beim Stack `finanz-dashboard` „Deploy“ (nicht „Neustart“: nur „Deploy“ startet die Container mit dem neuen Image).
+2. Die neuen Reihen sofort holen und die Scores neu rechnen (sonst holt der Worker sie am nächsten New-Yorker Werktag ab ihrer Veröffentlichungszeit):
+
+```bash
+sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
+#   erwartet u. a.: INFO __main__: spx: 130… neue Zeilen (Erstabruf)
+#                   INFO __main__: iursa: 29… neue Zeilen (Erstabruf)
+#                   INFO __main__: ncbeilq027s: 305 neue Zeilen (Erstabruf)   (ebenso die sieben übrigen Z.1-Reihen)
+#   am Ende: INFO __main__: Sofort-Abruf beendet: 82 Reihen, 0 mit Problemen
+sudo docker exec finanz-dashboard-worker-1 python -m fever.score
+#   erwartet: INFO __main__: Scores berechnet: 9… Tage ab 02.01.1990, zuletzt <letzter Handelstag>: … (rund 20 bis 30 s)
+```
+
+Danach im Dashboard: Marken neben den Namen (blau Stress mit Bereich, violett Fallhöhe, grau nur Anzeige, umrandet Ampelregel), in der Ansicht Makro Sahm-Regel und SOS-Indikator mit violetten Flächen für aktive Regeln und das Datum des letzten Re-Steepening, in der Ansicht Fallhöhe Aktienquote, Geldmarktfonds und Kreditspread-Enge. Die y-Achse passt sich nach Zoom und Zeitraum-Knopf an (`docs/bedienung.md`).
+
 **Update auf schnellere Seiten und Branch `claude-raramo` (28.09.2026, E-76 bis E-78, ohne Migration):** ⏳ TrueNAS. Einmal den Branch wechseln; danach gilt wieder der Standardablauf unten mit `git pull`.
 
 ```bash

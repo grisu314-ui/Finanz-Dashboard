@@ -113,6 +113,31 @@ def _relative_change(inputs, config):
     return ratio - ratio.shift(config.relative_change_window)
 
 
+def _sos(inputs, config):
+    """SOS indicator of the Richmond Fed, the Sahm rule's construction on weekly data (E-80).
+
+    Mean over the last `sos_average_window` observations minus the lowest such mean in the
+    `sos_low_window` observations before, in the unit of the series (percentage points). Rounded
+    to 10 decimals, so float noise of the means never decides a threshold.
+    """
+    series = inputs[0]
+    average = series.rolling(config.sos_average_window).mean()
+    low = average.shift(1).rolling(config.sos_low_window).min()
+    return (average - low).round(10)
+
+
+def _equity_share(inputs, config):
+    """Investors' equity allocation in percent (Livermore 2013, E-86).
+
+    Market value of the corporate equities (first two inputs) divided by the equities plus the debt
+    securities and loans of the real-economy borrowers (the other inputs), on the dates with all inputs.
+    """
+    values = _aligned(inputs)
+    equities = values[0] + values[1]
+    total = equities + sum(values[2:])
+    return 100 * equities / total.where(total > 0)
+
+
 def _aligned(inputs):
     frame = pd.concat(inputs, axis=1, join="inner")
     return [frame.iloc[:, index] for index in range(frame.shape[1])]
@@ -138,4 +163,6 @@ _TRANSFORMS = {
     "cot_net_short": _cot_net_short,
     "relative_change": _relative_change,
     "change": _change,
+    "sos": _sos,
+    "equity_share": _equity_share,
 }

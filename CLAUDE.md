@@ -31,7 +31,8 @@ Zweck ist Regime- und Risikoanzeige, keine Crash-Prognose. Ziel ist genau die hi
    - Scoring nach Bericht 4.3, Schritte 1–6, Aggregation nur Stufe 1.
    - Ansichten 1–7 aus Bericht 6.3, soweit Daten vorhanden, dazu „Datenstand".
    - Kurzinfo und Erklärseite je Kennzahl, Chart-Bedienung (Zoom, Zeitraum, Bildexport, Vollbild, Druck), Auto-Aktualisierung; Doku für KI und Anwender.
-2. Validierungsansicht (Schritt 7: Walk-forward, ROC, Vorlauf, Vergleich mit reinem VIX-Filter), Alerts, AAII, Aggregation Stufe 2 (korrelationsgewichtet), revisionsgenaue Rückrechnung.
+   - Validierung nach Bericht 4.3, Schritt 7 (Walk-forward, ROC, Vorlauf, Vergleich mit reinem VIX-Filter), vorgezogen als nächster Meilenstein M10 (Nutzer 29.09.2026, E-89); Umfang vor Beginn planen und freigeben lassen.
+2. Alerts, AAII, Aggregation Stufe 2 (korrelationsgewichtet; nur, wenn sie in der Validierung besser abschneidet, E-89), revisionsgenaue Rückrechnung.
 3. Optionsdaten (ThetaData/IBKR: Termstruktur, Skew, GEX), Logit-Modell (Stufe 3).
 
 ## Stack (festgelegt)
@@ -52,6 +53,7 @@ Bewusste Abweichungen vom Bericht:
 - SQLite statt DuckDB: `web` und `worker` sind getrennte Prozesse, DuckDB erlaubt aber nur einen schreibenden Prozess oder mehrere nur lesende, nicht beides zugleich.
 - Kein Prefect, Grafana oder Streamlit: zu schwer oder doppelt.
 - Shiller-CAPE und Margin Debt schon in Phase 1, sonst bleibt die Fallhöhe-Achse leer. Margin Debt kommt aus der Fed-Statistik Z.1 (FRED `BOGZ1FL663067003Q`, quartalsweise), nicht von FINRA (E-42).
+- Entscheidungsrunde 29.09.2026 (E-80 bis E-90): Mindesthistorie 3 statt 5 Jahre; Sahm-Regel und SOS-Indikator als feste Ampelregeln; Aktienquote der Anleger (Z.1) und umgedrehter Kreditspread Baa in der Fallhöhe; S&P 500 für VRP und Aktien-Anleihen-Korrelation von Cboe statt FRED.
 
 Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `assets/`. Alternative Stacks schlägst du nicht vor.
 
@@ -99,7 +101,7 @@ migrations/  tests/  tests/fixtures/  docs/
 Ein Assistent ergänzt diese Dinge erfahrungsgemäß ungefragt. Hier nicht. Bei zwingendem Grund: erst fragen, nicht bauen.
 
 - Kein Login, keine Benutzerverwaltung, keine Sessions. Zugangsschutz ist Infrastruktur (O-3), nie Anwendungscode.
-- Kein CSV-Export von Chartdaten, keine eigene Ampel und keine absoluten Schwellen je Einzelkennzahl (entschieden 25.09.2026).
+- Kein CSV-Export von Chartdaten, keine eigene Ampel und keine absoluten Schwellen je Einzelkennzahl (entschieden 25.09.2026). Das betrifft die Einfärbung einzelner Kennzahlen; Regeln der Gesamtampel auf einzelnen Werten (VIX/VIX3M, Sahm-Regel, SOS-Indikator) sind entschieden (E-48, E-80).
 - Kein Abruf, Import oder Speichern der FINRA-Margin-Statistik, auch nicht per manuellem Download: Die Nutzungsbedingungen untersagen Speichern und Datenbanken ohne schriftliche Zustimmung (entschieden 26.09.2026, E-42).
 - Keine Konto-, Positions- oder Orderfunktionen, auch nicht über IBKR. Nur Marktdaten.
 - Keine Handelssignale, keine Renditeprognosen, keine „Crash-Wahrscheinlichkeit" ohne validiertes Modell.
@@ -208,6 +210,6 @@ Vor der Umsetzung des betroffenen Teils klären; Entschiedenes hier mit Antwort 
 | O-2 | Zielsystem, RAM, Speichermedium, Pfad des Datenordners | **Entschieden 26.09.2026 (E-21, E-28, E-29):** TrueNAS 25.10.7 statt Pi (Pi: CM4 mit 1,8 GiB RAM, SD-Karte mit 2,6 GB frei). Projekt `/mnt/Daten-Z1/apps/feewer`, Datenordner Kind-Dataset `data/`, Container als `apps` 568:568, Dockge-Stack `finanz-dashboard` (E-34), Betrieb vom Branch `claude-raramo` (E-76, vorher `claude-testing`, E-30); Worker läuft seit 26.09.2026 |
 | O-3 | Zugang: nur Heimnetz oder Tailscale, ggf. mit Basic-Auth-Pforte | **Entschieden 25.09.2026:** nur Heimnetz, kein Passwort; Port an `0.0.0.0`; keine Portweiterleitung im Router |
 | O-4 | Backup-Ziel außerhalb des Servers | **Entschieden 26.09.2026 (E-22):** Backups bleiben im Datenordner auf TrueNAS, kein weiteres Ziel; Aufwand für Backups gering halten |
-| O-5 | ICE-Spreads: drei Jahre Historie bei fünf Jahren Mindesthistorie; betrifft Kreditblock und Rot-Regel. Optionen: BAA10Y (FRED, täglich ab 1986, Moody's-Lizenz) als langer Ersatz, Lizenz direkt bei ICE, befristete Ausnahme mit Kennzeichnung | **Entschieden 28.09.2026 (E-75):** `BAA10Y` über FRED als Ersatz im Kreditblock (Niveau und 20-Tage-Anstieg) und für die Rot-Regel, umgesetzt; Moody's-Lizenz wie ICE nur privat. HY-OAS weiter archivieren und anzeigen, nicht in den Score, bis die lokale Historie fünf Jahre hat |
+| O-5 | ICE-Spreads: drei Jahre Historie bei fünf Jahren Mindesthistorie; betrifft Kreditblock und Rot-Regel. Optionen: BAA10Y (FRED, täglich ab 1986, Moody's-Lizenz) als langer Ersatz, Lizenz direkt bei ICE, befristete Ausnahme mit Kennzeichnung | **Entschieden 28.09.2026 (E-75):** `BAA10Y` über FRED als Ersatz im Kreditblock (Niveau und 20-Tage-Anstieg) und für die Rot-Regel, umgesetzt; Moody's-Lizenz wie ICE nur privat. **Ergänzt 29.09.2026:** Mindesthistorie 3 Jahre (E-82), HY-OAS-Niveau zusätzlich im Kreditblock (E-90); 20-Tage-Anstieg, Rot-Regel und die Enge in der Fallhöhe (E-85) bleiben auf `BAA10Y`; HY-OAS weiter archivieren |
 | O-6 | Alert-Kanal (ntfy, Telegram, E-Mail), Phase 2 | – |
 | O-7 | FRED-Bedingungen verbieten das Speichern von FRED-Daten in einer Datenbank ohne schriftliche Zustimmung (W-11) | **Entschieden 28.09.2026 (E-79):** Zustimmung der St. Louis Fed liegt vor (Nutzer). Reihen Dritter über FRED (ICE, S&P, Nasdaq, Moody's) bleiben private Nutzung ohne Weitergabe (E-69) |

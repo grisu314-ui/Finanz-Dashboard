@@ -7,11 +7,12 @@ Rendite von US-Unternehmensanleihen der Ratingstufe Baa minus Rendite zehnjähri
 FRED berechnet die Reihe als Differenz zwischen der Rendite von Moody's Seasoned Baa Corporate Bonds und der Rendite zehnjähriger US-Staatsanleihen mit konstanter Laufzeit (FRED, Reihe BAA10Y, Notes). Baa ist die unterste Stufe von Investment Grade, also Unternehmen mit noch gutem, aber schwächstem Anlage-Rating. Der Abstand ist der Aufschlag, den Anleger für das Ausfallrisiko und die geringere Handelbarkeit dieser Anleihen verlangen.
 
 ## Warum sie für Marktstress oder Fallhöhe zählt
-Kreditspreads sind im Bericht einer der stärksten Stressindikatoren; dort steht der Risikoaufschlag für Hochzinsanleihen (HY-OAS) auf Rang 2 (docs/recherche.md, Abschn. 2). Weil FRED die ICE-Reihen nur noch für drei Jahre liefert, reicht deren Historie nicht für ein Perzentil. Als langer Ersatz mit Historie ab 1986 ist BAA10Y im offenen Punkt O-5 der Projektvorgaben genannt (CLAUDE.md); das Projekt nutzt ihn im Kreditblock, bis die ICE-Reihen fünf Jahre Historie haben (Entscheidung E-75).
+Kreditspreads sind im Bericht einer der stärksten Stressindikatoren; dort steht der Risikoaufschlag für Hochzinsanleihen (HY-OAS) auf Rang 2 (docs/recherche.md, Abschn. 2). Weil FRED die ICE-Reihen nur noch für drei Jahre liefert, reicht deren Historie nicht für ein Perzentil. Als langer Ersatz mit Historie ab 1986 ist BAA10Y im offenen Punkt O-5 der Projektvorgaben genannt (CLAUDE.md); das Projekt nutzt ihn im Kreditblock (Entscheidung E-75), seit dem 29.09.2026 neben dem Niveau des HY-OAS (E-90). Derselbe Wert zählt umgedreht auch in der Fallhöhe: Ein sehr enger Spread gilt dort als Selbstgefälligkeit (Kennzahl „Kreditspread Baa: Enge“, E-85).
 
 ## So liest du sie
 - Ein hohes Perzentil heißt: Der Aufschlag ist gemessen an den letzten Jahren ungewöhnlich weit.
 - Das Niveau zeigt anhaltende Anspannung; wie schnell sie zunimmt, zeigt die Kennzahl „Kreditspread Baa: Anstieg“.
+- Zwei Rollen, zwei Marken: Als Stress zählt ein weiter Spread, in der Fallhöhe ein enger. Ein niedriges Perzentil hier ist deshalb zugleich ein hohes in der Fallhöhe.
 
 ## Grenzen und Fallstricke
 - Investment Grade statt Hochzins: Der Spread schwankt weniger als der HY-OAS und reagiert auf Ausfallsorgen schwächer.
@@ -22,4 +23,4 @@ Kreditspreads sind im Bericht einer der stärksten Stressindikatoren; dort steht
 - FRED, St. Louis Fed: Reihe BAA10Y, Notes und Copyright-Hinweis, abgerufen 28.09.2026
 - docs/recherche.md, Abschnitt 2 (Stand 25.09.2026)
 - CLAUDE.md, offener Punkt O-5
-- docs/umsetzungsplan.md, Entscheidung E-75 (28.09.2026)
+- docs/umsetzungsplan.md, Entscheidungen E-75 (28.09.2026), E-85 und E-90 (29.09.2026)

@@ -46,8 +46,8 @@ def test_run_stores_scores_and_records_success(engine):
         days = conn.execute(select(func.count()).select_from(composite_score)).scalar()
         indicators = conn.execute(select(func.count(func.distinct(indicator_score.c.indicator_id)))).scalar()
         status = next(row for row in read_status(conn) if row["source"] == "scoring")
-    assert summary.days == days > 0 and indicators == 27
-    assert summary.first == date(2020, 1, 1)  # first VIX 01.01.2015: five years of history on 01.01.2020
+    assert summary.days == days > 0 and indicators == 31
+    assert summary.first == date(2018, 1, 1)  # first VIX 01.01.2015: three years of history on 01.01.2018 (E-82)
     assert summary.last.stress is None  # one block only
     assert status["last_success_at"] == AT and status["last_error_at"] is None
     text = score.describe(summary)

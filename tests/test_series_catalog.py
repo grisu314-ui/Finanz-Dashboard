@@ -26,6 +26,10 @@ EXPECTED_IDS = {
     "nasdaqnqus500lc", "nasdaqnqus500lce", "nasdaqnquss", "nasdaqnqusl", "nasdaqnqusb", "nasdaqsox", "nasdaqabaq",
     "nasdaqnqusb40", "nasdaqnqusb45", "sec_spy_top10",
     "baa10y",  # credit spread until HY-OAS has five years (E-75)
+    "spx",  # Cboe S&P 500 for VRP and the stock-bond correlation (E-83)
+    "iursa",  # SOS indicator (E-80)
+    # Z.1: equity allocation (E-86) and money market funds (display)
+    "ncbeilq027s", "fbcellq027s", "fgsdodns", "cmdebt", "bcnsdodns", "dodffswcmi", "slgsdodns", "mmmffaq027s",
 }
 
 VALID = """
@@ -68,7 +72,8 @@ def test_repository_special_cases_are_configured():
     assert catalog["vvix"].start == date(2007, 1, 3)  # E-24
     assert catalog["iorb"].lead_days == 7  # E-25
     assert all(s.lead_days == 0 for s in catalog.values() if s.id != "iorb")
-    for series_id in ("bamlh0a0hym2", "bamlh0a1hybb", "bamlh0a3hyc", "bamlc0a0cm", "bamlc0a4cbbb", "sp500", "shiller_cape", "shiller_ecy"):
+    for series_id in ("bamlh0a0hym2", "bamlh0a1hybb", "bamlh0a3hyc", "bamlc0a0cm", "bamlc0a4cbbb", "sp500", "spx",
+                      "shiller_cape", "shiller_ecy"):
         assert "keine Weitergabe" in catalog[series_id].license
     assert all("Nasdaq" in s.license and "keine Weitergabe" in s.license for s in catalog.values() if s.id.startswith("nasdaq"))
 

@@ -74,7 +74,10 @@ SCORING = (CONFIG_DIR / "scoring.toml").read_text(encoding="utf-8")
         ("red_stress = 90", "red_stress = 190", "red_stress: höchstens 100"),
         ("red_stress = 90", 'red_stress = "90"', "red_stress muss eine Zahl > 0 sein"),
         ('fast_block = "volatility"', 'fast_block = "vola"', "unbekannter Block 'vola'"),
-        ("min_history_years = 5 ", "min_history_years = 11 ", "display_window_years < min_history_years <= window_years"),
+        ("min_history_years = 3 ", "min_history_years = 11 ", "display_window_years <= min_history_years <= window_years"),
+        ("min_history_years = 3 ", "min_history_years = 2 ", "display_window_years <= min_history_years <= window_years"),
+        ("yellow_sos = 0.2 ", "yellow_sos = 0 ", "yellow_sos muss eine Zahl > 0 sein"),
+        ("sos_low_window = 52 ", "", "scoring.transforms: Parameter fehlen: sos_low_window"),
     ],
 )
 def test_scoring_parameters_are_checked(tmp_path, old, new, message):
@@ -85,7 +88,10 @@ def test_scoring_parameters_are_checked(tmp_path, old, new, message):
 
 def test_repository_scoring_parameters():
     config = scoring_config()
-    assert (config.window_years, config.min_history_years, config.min_blocks, config.hysteresis) == (10, 5, 3, 5.0)
+    assert (config.window_years, config.min_history_years, config.min_blocks, config.hysteresis) == (10, 3, 3, 5.0)
+    assert (config.display_window_years, config.min_history_years) == (3, 3)  # E-82: the user lowered 5 to 3
+    # E-80: Sahm and SOS on their own values, in percentage points
+    assert (config.orange_sahm, config.yellow_sos, config.sos_average_window, config.sos_low_window) == (0.5, 0.2, 26, 52)
 
 
 SERIES = (CONFIG_DIR / "series.toml").read_text(encoding="utf-8")
@@ -103,6 +109,10 @@ SERIES = (CONFIG_DIR / "series.toml").read_text(encoding="utf-8")
         ('block = "credit"\nv_score = 4', 'block = "credit"\nv_score = 6', "'v_score' muss eine ganze Zahl von 1 bis 5"),
         ("display_window = true", 'display_window = "ja"', "'display_window' muss true oder false"),
         ('v_score = 4\n', 'v_score = 4\nweight = 2\n', "unbekannte Felder: weight"),
+        ('block = "credit"\nv_score = 4', 'block = "credit"', "'v_score' muss eine ganze Zahl von 1 bis 5"),
+        ('transform = "sos"\norientation = "high"\nblock = "rule"\n', 'transform = "sos"\norientation = "high"\n'
+         'block = "rule"\nv_score = 3\n', "'v_score' ohne Wirkung"),
+        ('transform = "sos"', 'transform = "equity_share"', "'equity_share' braucht 7 Reihe"),
     ],
 )
 def test_indicators_are_checked(tmp_path, old, new, message):

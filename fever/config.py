@@ -231,13 +231,16 @@ def _is_int(value) -> bool:
 TRANSFORMS = {
     "level": 1, "ratio": 2, "difference": 2, "vrp": 2, "stock_bond_corr": 2,
     "above_low": 1, "fx_change": 2, "fx_vol": 2, "yoy": 1, "cot_net_short": 3, "relative_change": 2, "change": 1,
+    "sos": 1, "equity_share": 7,
 }
 STRESS_BLOCKS = ("volatility", "credit", "macro", "breadth", "positioning")  # report 4.3, step 2
 VULNERABILITY = "vulnerability"
+# Read only by a traffic light rule (E-80): in no block, not in the confidence or the diffusion.
+RULE_ONLY = "rule"
 # Calendar days per period; with the tolerance this gives E-10's limits 4 / 10 / 41 (quarterly 102).
 FREQUENCY_DAYS = {"daily": 1, "weekly": 7, "monthly": 31, "quarterly": 92}
-_INDICATOR_REQUIRED = {"name", "series", "transform", "orientation", "block", "v_score"}
-_INDICATOR_OPTIONAL = {"display_window"}
+_INDICATOR_REQUIRED = {"name", "series", "transform", "orientation", "block"}
+_INDICATOR_OPTIONAL = {"v_score", "display_window"}
 
 
 @dataclass(frozen=True)
@@ -249,8 +252,8 @@ class Indicator:
     series: tuple[Series, ...]
     transform: str
     orientation: str  # "high" or "low"
-    block: str  # a stress block or VULNERABILITY
-    v_score: int
+    block: str  # a stress block, VULNERABILITY or RULE_ONLY
+    v_score: int  # 0 for RULE_ONLY: no weight in the confidence
     display_window: bool = False
 
     @property
@@ -307,9 +310,13 @@ def _indicator(indicator_id: str, entry: dict, catalog: dict[str, Series]) -> In
         raise fail("alle Reihen eines Indikators müssen dieselbe Frequenz haben")
     if entry["orientation"] not in ("high", "low"):
         raise fail("'orientation' muss \"high\" oder \"low\" sein")
-    if entry["block"] not in (*STRESS_BLOCKS, VULNERABILITY):
-        raise fail(f"unbekannter Block {entry['block']!r} (erlaubt: {', '.join((*STRESS_BLOCKS, VULNERABILITY))})")
-    if not (_is_int(entry["v_score"]) and 1 <= entry["v_score"] <= 5):
+    blocks = (*STRESS_BLOCKS, VULNERABILITY, RULE_ONLY)
+    if entry["block"] not in blocks:
+        raise fail(f"unbekannter Block {entry['block']!r} (erlaubt: {', '.join(blocks)})")
+    if entry["block"] == RULE_ONLY:
+        if "v_score" in entry:
+            raise fail(f"'v_score' ohne Wirkung: Block {RULE_ONLY!r} zählt nicht in der Konfidenz")
+    elif not (_is_int(entry.get("v_score")) and 1 <= entry["v_score"] <= 5):
         raise fail("'v_score' muss eine ganze Zahl von 1 bis 5 sein (Bericht, Tabelle 2)")
     if "display_window" in entry and not isinstance(entry["display_window"], bool):
         raise fail("'display_window' muss true oder false sein")
@@ -320,7 +327,7 @@ def _indicator(indicator_id: str, entry: dict, catalog: dict[str, Series]) -> In
         transform=entry["transform"],
         orientation=entry["orientation"],
         block=entry["block"],
-        v_score=entry["v_score"],
+        v_score=entry.get("v_score", 0),
         display_window=entry.get("display_window", False),
     )
 
@@ -334,6 +341,7 @@ _SCORING_KEYS = {
     "transforms": {
         "realized_vol_window": int, "correlation_window": int, "low_window": int,
         "fx_change_window": int, "fx_vol_window": int, "relative_change_window": int, "change_window": int,
+        "sos_average_window": int, "sos_low_window": int,
     },
     "composite": {"min_blocks": int, "min_vulnerability": int},
     "smoothing": {
@@ -344,7 +352,7 @@ _SCORING_KEYS = {
         "red_stress": float, "red_vix_ratio": float, "red_vix_ratio_days": int, "orange_stress": float,
         "orange_stress_with_vulnerability": float, "orange_vulnerability": float,
         "yellow_vulnerability": float, "yellow_diffusion_share": float, "yellow_diffusion_percentile": float,
-        "hysteresis": float, "red_credit_change": float,
+        "hysteresis": float, "red_credit_change": float, "orange_sahm": float, "yellow_sos": float,
     },
 }
 
@@ -363,6 +371,8 @@ class ScoringConfig:
     fx_vol_window: int
     relative_change_window: int
     change_window: int
+    sos_average_window: int
+    sos_low_window: int
     min_blocks: int
     min_vulnerability: int
     fast_block: str
@@ -380,6 +390,8 @@ class ScoringConfig:
     yellow_diffusion_percentile: float
     hysteresis: float
     red_credit_change: float
+    orange_sahm: float  # percentage points of the Sahm rule, not a percentile
+    yellow_sos: float  # percentage points of the SOS indicator, not a percentile
 
 
 def scoring_config(config_dir: Path = CONFIG_DIR) -> ScoringConfig:
@@ -414,8 +426,8 @@ def _scoring_config(config_dir: Path, content: bytes) -> ScoringConfig:
     config = ScoringConfig(**values)
     if config.fast_block not in STRESS_BLOCKS:
         raise ConfigError(f"scoring.smoothing.fast_block: unbekannter Block {config.fast_block!r}")
-    if not config.display_window_years < config.min_history_years <= config.window_years:
-        raise ConfigError("scoring.percentile: erwartet display_window_years < min_history_years <= window_years")
+    if not config.display_window_years <= config.min_history_years <= config.window_years:
+        raise ConfigError("scoring.percentile: erwartet display_window_years <= min_history_years <= window_years")
     if config.min_blocks > len(STRESS_BLOCKS):
         raise ConfigError(f"scoring.composite.min_blocks: höchstens {len(STRESS_BLOCKS)} Blöcke")
     for key in ("red_stress", "orange_stress", "orange_stress_with_vulnerability", "orange_vulnerability",

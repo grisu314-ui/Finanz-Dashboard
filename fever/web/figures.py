@@ -13,6 +13,7 @@ plotly.graph_objects with their validation and deep copies cost most of the time
 plotly.graph_objects, so a misspelt property still fails there.
 """
 
+import math
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 
@@ -53,6 +54,7 @@ DATE_FORMATS = [
     {"dtickrange": ["M12", None], "value": "%Y"},
 ]
 INITIAL_YEARS = 5
+Y_PADDING = 0.05  # share of the visible span added below and above (E-88; assets/autoscale.js uses the same)
 
 
 def _template(mode: str) -> dict:
@@ -186,6 +188,10 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[di
     yaxis = {"title": {"text": chart.y_title}, "fixedrange": False}
     if chart.y_range is not None:
         yaxis["range"] = list(chart.y_range)
+    elif "range" in xaxis:  # fitted to the visible part; assets/autoscale.js keeps it so after zoom and refresh
+        fitted = fitted_range([(line.x, line.y) for line in chart.lines] + _band_series(chart.band), *xaxis["range"])
+        if fitted is not None:
+            yaxis["range"] = fitted
     if chart.y_ticks:
         yaxis.update(tickmode="array", tickvals=list(chart.y_ticks), ticktext=list(chart.y_ticks.values()))
     layout = {
@@ -198,6 +204,7 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[di
         # own row between title and range buttons, so it never covers them on a narrow screen
         "legend": {"orientation": "h", "x": 0, "xanchor": "left", "y": 1.15, "yanchor": "bottom"},
         "xaxis": xaxis, "yaxis": yaxis, "shapes": shapes,
+        **({"meta": {"autoY": True}} if chart.y_range is None else {}),  # fixed scales (0-100, levels) stay fixed
         **({"yaxis2": {"overlaying": "y", "range": [0, 1.03], "visible": False, "fixedrange": True}} if chart.episodes else {}),
         "annotations": [*labels, stamp_annotation(
             stamp(chart.source, chart.observed, chart.retrieved, recessions=bool(chart.recessions))
@@ -205,6 +212,39 @@ def time_series(chart: Chart, theme: str, today: date | None = None) -> tuple[di
             + ("<br>Balken oben: Krisen, S&P 500 vom Hoch bis zum Tief" if chart.episodes else ""), mode)],
     }
     return {"data": data, "layout": layout}, graph_config(chart.kennzahl_id, today)
+
+
+def fitted_range(series: list[tuple[list[date], list[float | None]]], x0: str, x1: str) -> list[float] | None:
+    """y range showing everything drawn between the ISO days x0 and x1, with Y_PADDING (E-88).
+
+    Per series the values inside the window count, plus the last one before and the first one after
+    it: the line runs to them across the edge. assets/autoscale.js computes the same in the browser;
+    keep both in step, or the browser redraws every chart once after loading.
+    """
+    low, high = math.inf, -math.inf
+    for xs, ys in series:
+        before = None
+        for x, y in zip(xs, ys):
+            if y is None or math.isnan(y):
+                continue
+            day = x.isoformat()
+            if day < x0:
+                before = y
+                continue
+            low, high = min(low, y), max(high, y)
+            if day > x1:
+                break
+        if before is not None:
+            low, high = min(low, before), max(high, before)
+    if low == math.inf:
+        return None
+    span = high - low
+    pad = span * Y_PADDING if span > 0 else (abs(high) * Y_PADDING or 1.0)
+    return [low - pad, high + pad]
+
+
+def _band_series(band: Band | None) -> list[tuple[list[date], list[float | None]]]:
+    return [] if band is None else [(band.x, band.low), (band.x, band.mid), (band.x, band.high)]
 
 
 def graph_config(chart_id: str, today: date | None = None) -> dict:
@@ -358,25 +398,45 @@ class Heatmap:
     observed: date | None = None
     retrieved: datetime | None = None
     note: str = ""
+    roles: list[tuple[tuple[str, str], ...]] = field(default_factory=list)  # role marks per row (text, kind), E-81
+
+
+ROLE_NAMES = {"stress": "Stress", "vulnerability": "Fallhöhe", "rule": "Ampelregel", "display": "nur Anzeige"}
+
+
+def role_colours(mode: str) -> dict[str, str]:
+    """Colours of the role marks in charts, as in assets/base.css (E-81): blue stress, violet vulnerability."""
+    p = PALETTE[mode]
+    return {"stress": p["series"][0], "vulnerability": p["series"][6], "rule": p["secondary"], "display": p["muted"]}
 
 
 def heatmap(chart: Heatmap, theme: str, today: date | None = None) -> tuple[dict, dict]:
     mode = theme if theme in PALETTE else "light"
     steps = len(PERCENTILE_RAMP) - 1
     scale = [[i / steps, colour] for i, colour in enumerate(PERCENTILE_RAMP)]
+    roles = chart.roles or [()] * len(chart.rows)
+    # The row name carries the role as text for the hover; the tick label shows it as coloured squares.
+    names = [" · ".join([row, *(text for text, _ in marks)]) for row, marks in zip(chart.rows, roles)]
+    colours = role_colours(mode)
+    ticks = ["".join(f'<span style="color:{colours[kind]}">■</span>' for _, kind in marks) + f" {row}"
+             for row, marks in zip(chart.rows, roles)]
     data = [{
-        "type": "heatmap", "x": _iso(chart.x), "y": list(chart.rows), "z": [list(row) for row in chart.z], "zmin": 0,
+        "type": "heatmap", "x": _iso(chart.x), "y": names, "z": [list(row) for row in chart.z], "zmin": 0,
         "zmax": 100, "colorscale": scale, "hoverongaps": False,
         "colorbar": {"title": {"text": "Perzentil"}, "thickness": 10, "len": 0.8},
         "hovertemplate": "%{y}<br>%{x|%d.%m.%Y}: Perzentil %{z:.0f}<extra></extra>",
     }]
-    text = stamp(chart.source, chart.observed, chart.retrieved) + (f"<br>{chart.note}" if chart.note else "")
+    kinds = {kind for marks in roles for _, kind in marks}
+    legend = " · ".join(f'<span style="color:{colours[kind]}">■</span> {name}' for kind, name in ROLE_NAMES.items() if kind in kinds)
+    legend = f"<br>{legend} (Bereich im Hover)" if legend else ""
+    text = stamp(chart.source, chart.observed, chart.retrieved) + (f"<br>{chart.note}" if chart.note else "") + legend
     layout = {
         "template": TEMPLATES[mode], "separators": ",.", "uirevision": chart.chart_id,
         "title": {"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
-        "margin": {"l": 8, "r": 8, "t": 56, "b": 62 + 14 * (4 + chart.note.count("<br>"))},
+        "margin": {"l": 8, "r": 8, "t": 56, "b": 62 + 14 * (4 + chart.note.count("<br>") + bool(legend))},
         "xaxis": {"type": "date", "tickformatstops": DATE_FORMATS, "tickangle": 0},
-        "yaxis": {"autorange": "reversed", "automargin": True, "tickfont": {"size": 11}},
+        "yaxis": {"autorange": "reversed", "automargin": True, "tickfont": {"size": 11},
+                  "tickmode": "array", "tickvals": names, "ticktext": ticks},
         "annotations": [stamp_annotation(text, mode)],
     }
     return {"data": data, "layout": layout}, graph_config(chart.chart_id, today)

@@ -13,6 +13,7 @@ Details, Begründungen und Entscheidungsprotokoll (E-1 bis E-7): `docs/umsetzung
 - Die Texte liegen in `fever/web/texts/<id>.md` nach `docs/leitfaden-erklaertexte.md`. Ohne Text erscheint keine Kennzahl in der Oberfläche; ein Test erzwingt das.
 - Steckbrief und „Schwellen und Farben“ werden aus `series.toml` bzw. `scoring.toml` erzeugt. Schwellenzahlen stehen nie im Freitext.
 - Einzelkennzahlen: neutrale Perzentil-Farbskala plus Markierung „erhöht“ ab der Diffusionsschwelle aus `scoring.toml`. Die Ampelfarben Grün, Gelb, Orange und Rot sind der Gesamtampel vorbehalten und stehen immer mit Text, nie als Farbe allein.
+- Rollen-Marken neben dem Namen (E-81, `texts.roles`, `components.role_marks`): blau „Stress · Bereich“, violett „Fallhöhe“, grau „nur Anzeige“, umrandet „Ampelregel“; ein Wert mit zwei Rollen (gleiche Reihen und Transformation) trägt beide. Farben als CSS-Variablen in `assets/base.css` (hell, dunkel, Druck); in der Heatmap als farbige Quadrate mit der Rolle im Hover.
 
 ## Charts
 - Jeder Chart entsteht über die Fabrikfunktion in `fever/web/figures.py`, als einfaches Dict im plotly.js-Format (Datum als ISO-Text), nie als `go.Figure`: dessen Prüfung und Kopien kosteten rund 70 % der Seitenzeit (28.09.2026). Die Tests prüfen jede Figur mit `go.Figure`.
@@ -25,13 +26,14 @@ Details, Begründungen und Entscheidungsprotokoll (E-1 bis E-7): `docs/umsetzung
 - Vollbild per CSS-Overlay (ohne Fullscreen-API), Druck/PDF per `assets/print.css`, immer hell druckbar.
 - `uirevision` fest setzen, damit die 5-Minuten-Aktualisierung den Zoom nicht zurücksetzt.
 - `connectgaps=False`; veraltete Abschnitte sichtbar absetzen, nie interpolieren.
+- y-Achse (E-88): Zeitreihen ohne feste Skala tragen `layout.meta.autoY` und zeigen den sichtbaren Ausschnitt mit 5 % Rand; die erste Ansicht rechnet `figures.fitted_range`, danach `assets/autoscale.js` nach Zoom, Zeitraum-Knopf, Doppelklick und Aktualisierung. Beide rechnen gleich; weichen sie ab, zeichnet der Browser jeden Chart nach dem Laden ein zweites Mal. Feste Skalen (Perzentil, Stress, Fallhöhe 0–100, Ampelstufe) bleiben fest.
 - `separators=",."` und numerische Datumsformate (`%d.%m.%Y`).
 - In Plotly-Titeln, Annotationen und Hovertexten nur Texte aus der Konfiguration und selbst formatierte Werte, nie Rohtexte aus Quellen (Plotly interpretiert eine HTML-Teilmenge).
 
 ## Übersicht und Ansichten (Bericht 6.3; eine Version seit E-67)
 - `/` ist die Übersicht (Ansicht 1: Karten, Ampelmatrix, Quellen); `/ansicht/<name>` die Ansichten 2–7; Navigation in einer Zeile. Die alte Adresse `/uebersicht-b` leitet auf `/` um.
 - Reine Anzeigereihen sind Kennzahlen in `texts.DISPLAYS`: mit Text, Steckbrief und „nur Anzeige, kein Score“; nie in einem Score.
-- Linienfarben in der Reihenfolge der Referenzpalette; ab drei Linien Endbeschriftungen. Violett = markierte Phasen (Backwardation, Inversion), Grau = Rezessionen, Statusfarben nur für die Ampel und die Ampelmatrix.
+- Linienfarben in der Reihenfolge der Referenzpalette; ab drei Linien Endbeschriftungen. Violett = markierte Phasen im Chart (Backwardation, Inversion, Tage mit aktiver Ampelregel) und als Marke die Fallhöhe, Grau = Rezessionen, Statusfarben nur für die Ampel und die Ampelmatrix.
 - Verläufe der Ansichten starten mit der ganzen Historie ab dem ersten Wert; die Erklärseiten mit 5 Jahren.
 - Ansicht 7 ist ein statischer Rahmen mit eigenen Callbacks; Schalter und Auswahl tragen `persistence`, damit die Aktualisierung sie nicht zurücksetzt. Perzentilbänder kommen aus dem Scoring (Spalten `band_p10/p50/p90`), die Oberfläche rechnet sie nie selbst.
 - „So fließt der Wert in den Bereich ein“ auf der Erklärseite jedes Indikators wird aus `series.toml` und `scoring.toml` erzeugt (`texts.contribution`); die heutige Rolle kommt aus den gespeicherten Scores.

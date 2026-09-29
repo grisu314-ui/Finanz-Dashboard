@@ -13,6 +13,7 @@
   --link: #1c5cab;
   --hatch: rgba(11, 11, 11, 0.08);
   --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --role-stress-bg: #dbe8fa; --role-stress-ink: #104281; --role-vulnerability-bg: #e3e0f3; --role-vulnerability-ink: #3d2f8f;
   --font: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
@@ -28,6 +29,7 @@
     --border: rgba(255, 255, 255, 0.10);
     --link: #86b6ef;
     --hatch: rgba(255, 255, 255, 0.08);
+    --role-stress-bg: #1b3350; --role-stress-ink: #b7d3f6; --role-vulnerability-bg: #2d2750; --role-vulnerability-ink: #cbc4f6;
   }
 }
 
@@ -61,10 +63,20 @@ h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
 .lead { font-size: 1rem; }
 .rules { margin: 0.25rem 0 0.5rem; padding-left: 1.1rem; }
 
-.k-head { display: flex; align-items: baseline; gap: 0.4rem; }
+.k-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.4rem; }
 .k-head h2, .k-head h3 { margin: 0; }
 .k-name { text-decoration: none; }
 .k-name:hover, .k-name:focus { text-decoration: underline; }
+
+/* Role marks (E-81): where a value counts, as colour plus text. Blue = stress with its area,
+   violet = vulnerability, grey = display only, outlined = read by a traffic light rule. */
+.role { display: inline-block; padding: 0.05rem 0.45rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;
+  line-height: 1.4; white-space: nowrap; border: 1px solid transparent; }
+.role-stress { background: var(--role-stress-bg); color: var(--role-stress-ink); }
+.role-vulnerability { background: var(--role-vulnerability-bg); color: var(--role-vulnerability-ink); }
+.role-display { background: var(--grid); color: var(--ink-2); }
+.role-rule { border-color: var(--axis); color: var(--ink-2); }
+.roles { display: flex; flex-wrap: wrap; gap: 0.25rem 0.4rem; margin: -0.4rem 0 0.5rem; }
 
 .freshness { font-size: 0.8rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; align-items: center; margin-top: 0.5rem; }
 .badge { display: inline-block; padding: 0.05rem 0.45rem; border-radius: 999px; border: 1px solid var(--axis); font-size: 0.8rem; color: var(--ink-2); }
