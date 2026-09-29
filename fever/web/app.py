@@ -5,10 +5,12 @@ serves plotly.js and its own scripts from the Python packages (serve_locally=Tru
 JS of the project come from assets/. The web process only reads (PRAGMA query_only).
 """
 
+import gzip
 from pathlib import Path
 
 import dash
 from dash import Input, Output, State, clientside_callback, dcc, html
+from flask import request
 from sqlalchemy.exc import SQLAlchemyError
 
 from fever.store.db import DataDirError
@@ -19,6 +21,7 @@ from fever.web import format as fmt
 ASSETS = Path(__file__).resolve().parents[2] / "assets"
 REFRESH_MS = 5 * 60 * 1000  # E-7
 WATCHDOG_MS = 30 * 1000
+GZIP_MIN_BYTES = 2048  # smaller answers gain nothing noticeable
 # One row (E-67): the views of report 6.3, then data status and explanations.
 NAVIGATION = [("/", "Übersicht"), ("/ansicht/signale", "Signale"), ("/ansicht/breite", "Breite"),
               ("/ansicht/positionierung", "Positionierung"), ("/ansicht/makro", "Makro"), ("/ansicht/fallhoehe", "Fallhöhe"),
@@ -93,6 +96,21 @@ def status(_n, _path):
         banners.append(html.Div(f"Worker ohne Lebenszeichen seit {since}, Werte werden nicht aktualisiert.",
                                 className="banner banner-alert", role="alert"))
     return line, banners or None
+
+
+@server.after_request
+def compress(response):
+    """gzip for JSON answers (a view sends several MB of chart data; level 1 shrinks it about fourfold in
+    a few ms, measured 28.09.2026). The JavaScript bundles stay as they are: the browser caches them."""
+    if (response.status_code != 200 or response.direct_passthrough or response.mimetype != "application/json"
+            or "Content-Encoding" in response.headers or request.accept_encodings.quality("gzip") <= 0):
+        return response
+    body = response.get_data()
+    if len(body) >= GZIP_MIN_BYTES:
+        response.set_data(gzip.compress(body, compresslevel=1))
+        response.headers["Content-Encoding"] = "gzip"
+        response.vary.add("Accept-Encoding")
+    return response
 
 
 @server.route("/health")

@@ -15,7 +15,7 @@ LEVEL_CLASSES = ("level-green", "level-yellow", "level-orange", "level-red")
 
 
 def kennzahl_head(kennzahl_id: str, *, tag=html.H2) -> html.Div:
-    """Name as link to /kennzahl/<id> plus info symbol with the short info as a CSS tooltip.
+    """Name as link to /kennzahl/<id>, info symbol with the short info as a CSS tooltip, role marks.
 
     Raises TextError without a text file: a Kennzahl without text is never displayed.
     """
@@ -23,7 +23,13 @@ def kennzahl_head(kennzahl_id: str, *, tag=html.H2) -> html.Div:
     return html.Div(className="k-head", children=[
         tag(dcc.Link(text.title, href=f"/kennzahl/{kennzahl_id}", className="k-name")),
         html.Span("ⓘ", className="tip", tabIndex=0, role="note", **{"data-tip": text.short, "aria-label": text.short}),
+        *role_marks(kennzahl_id),
     ])
+
+
+def role_marks(kennzahl_id: str) -> list[html.Span]:
+    """Where the value counts (E-81): colour plus text, never colour alone."""
+    return [html.Span(label, className=f"role role-{kind}") for label, kind in texts.roles(kennzahl_id)]
 
 
 def freshness(observed: date | None, retrieved: datetime | None, *, stale: bool, now: datetime,

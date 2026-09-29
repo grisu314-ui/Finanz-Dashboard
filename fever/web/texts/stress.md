@@ -19,7 +19,7 @@ Einzelne Stresssignale widersprechen sich oft oder messen dasselbe mehrfach. Der
 - Perzentile sind relativ: Ein ruhiges Jahrzehnt im Fenster lässt mittlere Anspannung hoch aussehen und umgekehrt.
 - Die Glättung verzögert: Schnelle Schocks erscheinen erst nach einigen Tagen voll im Wert.
 - Langsame Makro- und Kreditreihen halten den Stress nach Krisen länger hoch, als die Märkte es zeigen.
-- In Phase 1 fehlen die Blöcke Breite (keine Kursquelle, O-1) und Positionierung (erst Phase 2).
+- In Phase 1 fehlt der Block Positionierung (erst Phase 2); im Block Breite fehlt der Anteil der Aktien über ihrer 50- bzw. 200-Tage-Linie (E-72).
 - Revisionen: In Phase 1 zählt je Beobachtung der neueste Stand; frühere Werte können sich dadurch leicht ändern (CLAUDE.md, fachliche Korrektheit).
 
 ## Quellen

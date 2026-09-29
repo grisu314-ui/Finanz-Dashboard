@@ -3,6 +3,10 @@
 load() checks the top-level structure of any file; series_catalog() checks the raw
 series in series.toml (M2), indicator_catalog() the derived indicators and
 scoring_config() the parameters in scoring.toml (M5, docs/umsetzungsplan.md).
+
+The checked catalogues are built once per file content (the file is read on every call, the
+TOML is parsed again only after a change): the web process asks for them many times per page.
+Callers get their own dict; the entries are frozen dataclasses.
 """
 
 import math
@@ -10,6 +14,7 @@ import re
 import tomllib
 from dataclasses import dataclass
 from datetime import date, time
+from functools import lru_cache
 from pathlib import Path
 
 CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
@@ -30,14 +35,23 @@ class ConfigError(Exception):
 
 def load(name: str, config_dir: Path = CONFIG_DIR) -> dict:
     """Read config/<name>.toml and check its top-level structure."""
+    return _parse(name, config_dir, _read(name, config_dir))
+
+
+def _read(name: str, config_dir: Path) -> bytes:
     if name not in _ALLOWED_TABLES:
         raise ConfigError(f"Unbekannte Konfigurationsdatei: {name}.toml")
     path = config_dir / f"{name}.toml"
     try:
-        with path.open("rb") as fh:
-            data = tomllib.load(fh)
+        return path.read_bytes()
     except FileNotFoundError:
         raise ConfigError(f"Konfigurationsdatei fehlt: {path}") from None
+
+
+def _parse(name: str, config_dir: Path, content: bytes) -> dict:
+    path = config_dir / f"{name}.toml"
+    try:
+        data = tomllib.loads(content.decode())
     except tomllib.TOMLDecodeError as exc:
         raise ConfigError(f"Ungültiges TOML in {path}: {exc}") from exc
 
@@ -100,7 +114,12 @@ class Series:
 
 def series_catalog(config_dir: Path = CONFIG_DIR) -> dict[str, Series]:
     """All raw series from series.toml, checked; any error names the entry."""
-    data = load("series", config_dir)
+    return dict(_series_catalog(config_dir, _read("series", config_dir)))
+
+
+@lru_cache(maxsize=8)
+def _series_catalog(config_dir: Path, content: bytes) -> dict[str, Series]:
+    data = _parse("series", config_dir, content)
     catalog = {series_id: _series(series_id, entry) for series_id, entry in data.get("series", {}).items()}
     for group, members in group_members(catalog).items():
         first = members[0]
@@ -212,13 +231,16 @@ def _is_int(value) -> bool:
 TRANSFORMS = {
     "level": 1, "ratio": 2, "difference": 2, "vrp": 2, "stock_bond_corr": 2,
     "above_low": 1, "fx_change": 2, "fx_vol": 2, "yoy": 1, "cot_net_short": 3, "relative_change": 2, "change": 1,
+    "sos": 1, "equity_share": 7, "trend_gap": 1,
 }
 STRESS_BLOCKS = ("volatility", "credit", "macro", "breadth", "positioning")  # report 4.3, step 2
 VULNERABILITY = "vulnerability"
+# Read only by a traffic light rule (E-80): in no block, not in the confidence or the diffusion.
+RULE_ONLY = "rule"
 # Calendar days per period; with the tolerance this gives E-10's limits 4 / 10 / 41 (quarterly 102).
 FREQUENCY_DAYS = {"daily": 1, "weekly": 7, "monthly": 31, "quarterly": 92}
-_INDICATOR_REQUIRED = {"name", "series", "transform", "orientation", "block", "v_score"}
-_INDICATOR_OPTIONAL = {"display_window"}
+_INDICATOR_REQUIRED = {"name", "series", "transform", "orientation", "block"}
+_INDICATOR_OPTIONAL = {"v_score", "display_window"}
 
 
 @dataclass(frozen=True)
@@ -230,8 +252,8 @@ class Indicator:
     series: tuple[Series, ...]
     transform: str
     orientation: str  # "high" or "low"
-    block: str  # a stress block or VULNERABILITY
-    v_score: int
+    block: str  # a stress block, VULNERABILITY or RULE_ONLY
+    v_score: int  # 0 for RULE_ONLY: no weight in the confidence
     display_window: bool = False
 
     @property
@@ -249,8 +271,13 @@ class Indicator:
 
 def indicator_catalog(config_dir: Path = CONFIG_DIR) -> dict[str, Indicator]:
     """All derived indicators from series.toml, checked against the raw series."""
-    catalog = series_catalog(config_dir)
-    entries = load("series", config_dir).get("indicator", {})
+    return dict(_indicator_catalog(config_dir, _read("series", config_dir)))
+
+
+@lru_cache(maxsize=8)
+def _indicator_catalog(config_dir: Path, content: bytes) -> dict[str, Indicator]:
+    catalog = _series_catalog(config_dir, content)
+    entries = _parse("series", config_dir, content).get("indicator", {})
     return {indicator_id: _indicator(indicator_id, entry, catalog) for indicator_id, entry in entries.items()}
 
 
@@ -283,9 +310,13 @@ def _indicator(indicator_id: str, entry: dict, catalog: dict[str, Series]) -> In
         raise fail("alle Reihen eines Indikators müssen dieselbe Frequenz haben")
     if entry["orientation"] not in ("high", "low"):
         raise fail("'orientation' muss \"high\" oder \"low\" sein")
-    if entry["block"] not in (*STRESS_BLOCKS, VULNERABILITY):
-        raise fail(f"unbekannter Block {entry['block']!r} (erlaubt: {', '.join((*STRESS_BLOCKS, VULNERABILITY))})")
-    if not (_is_int(entry["v_score"]) and 1 <= entry["v_score"] <= 5):
+    blocks = (*STRESS_BLOCKS, VULNERABILITY, RULE_ONLY)
+    if entry["block"] not in blocks:
+        raise fail(f"unbekannter Block {entry['block']!r} (erlaubt: {', '.join(blocks)})")
+    if entry["block"] == RULE_ONLY:
+        if "v_score" in entry:
+            raise fail(f"'v_score' ohne Wirkung: Block {RULE_ONLY!r} zählt nicht in der Konfidenz")
+    elif not (_is_int(entry.get("v_score")) and 1 <= entry["v_score"] <= 5):
         raise fail("'v_score' muss eine ganze Zahl von 1 bis 5 sein (Bericht, Tabelle 2)")
     if "display_window" in entry and not isinstance(entry["display_window"], bool):
         raise fail("'display_window' muss true oder false sein")
@@ -296,7 +327,7 @@ def _indicator(indicator_id: str, entry: dict, catalog: dict[str, Series]) -> In
         transform=entry["transform"],
         orientation=entry["orientation"],
         block=entry["block"],
-        v_score=entry["v_score"],
+        v_score=entry.get("v_score", 0),
         display_window=entry.get("display_window", False),
     )
 
@@ -310,6 +341,7 @@ _SCORING_KEYS = {
     "transforms": {
         "realized_vol_window": int, "correlation_window": int, "low_window": int,
         "fx_change_window": int, "fx_vol_window": int, "relative_change_window": int, "change_window": int,
+        "sos_average_window": int, "sos_low_window": int, "trend_window": int,
     },
     "composite": {"min_blocks": int, "min_vulnerability": int},
     "smoothing": {
@@ -320,7 +352,7 @@ _SCORING_KEYS = {
         "red_stress": float, "red_vix_ratio": float, "red_vix_ratio_days": int, "orange_stress": float,
         "orange_stress_with_vulnerability": float, "orange_vulnerability": float,
         "yellow_vulnerability": float, "yellow_diffusion_share": float, "yellow_diffusion_percentile": float,
-        "hysteresis": float, "red_credit_change": float,
+        "hysteresis": float, "red_credit_change": float, "yellow_sahm": float, "yellow_sos": float,
     },
 }
 
@@ -339,6 +371,9 @@ class ScoringConfig:
     fx_vol_window: int
     relative_change_window: int
     change_window: int
+    sos_average_window: int
+    sos_low_window: int
+    trend_window: int
     min_blocks: int
     min_vulnerability: int
     fast_block: str
@@ -356,11 +391,18 @@ class ScoringConfig:
     yellow_diffusion_percentile: float
     hysteresis: float
     red_credit_change: float
+    yellow_sahm: float  # percentage points of the Sahm rule, not a percentile
+    yellow_sos: float  # percentage points of the SOS indicator, not a percentile
 
 
 def scoring_config(config_dir: Path = CONFIG_DIR) -> ScoringConfig:
     """All parameters from scoring.toml, checked for completeness, type and range."""
-    data = load("scoring", config_dir)
+    return _scoring_config(config_dir, _read("scoring", config_dir))
+
+
+@lru_cache(maxsize=8)
+def _scoring_config(config_dir: Path, content: bytes) -> ScoringConfig:
+    data = _parse("scoring", config_dir, content)
     values = {}
     for table, keys in _SCORING_KEYS.items():
         entries = data.get(table, {})
@@ -385,8 +427,8 @@ def scoring_config(config_dir: Path = CONFIG_DIR) -> ScoringConfig:
     config = ScoringConfig(**values)
     if config.fast_block not in STRESS_BLOCKS:
         raise ConfigError(f"scoring.smoothing.fast_block: unbekannter Block {config.fast_block!r}")
-    if not config.display_window_years < config.min_history_years <= config.window_years:
-        raise ConfigError("scoring.percentile: erwartet display_window_years < min_history_years <= window_years")
+    if not config.display_window_years <= config.min_history_years <= config.window_years:
+        raise ConfigError("scoring.percentile: erwartet display_window_years <= min_history_years <= window_years")
     if config.min_blocks > len(STRESS_BLOCKS):
         raise ConfigError(f"scoring.composite.min_blocks: höchstens {len(STRESS_BLOCKS)} Blöcke")
     for key in ("red_stress", "orange_stress", "orange_stress_with_vulnerability", "orange_vulnerability",
@@ -409,8 +451,13 @@ class Episode:
 
 def crisis_episodes(config_dir: Path = CONFIG_DIR) -> tuple[Episode, ...]:
     """config/episodes.toml, sorted by start; every field is required and start <= end."""
+    return _crisis_episodes(config_dir, _read("episodes", config_dir))
+
+
+@lru_cache(maxsize=8)
+def _crisis_episodes(config_dir: Path, content: bytes) -> tuple[Episode, ...]:
     episodes = []
-    for episode_id, entry in load("episodes", config_dir).get("episode", {}).items():
+    for episode_id, entry in _parse("episodes", config_dir, content).get("episode", {}).items():
         fields = {"label", "start", "end", "source"}
         if set(entry) != fields:
             raise ConfigError(f"episode.{episode_id}: Felder müssen genau {', '.join(sorted(fields))} sein")

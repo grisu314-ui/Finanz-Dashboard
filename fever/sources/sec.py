@@ -40,11 +40,30 @@ _CONTACT = re.compile(r"\S+@\S+\.\S+")
 
 
 def contact_agent() -> str:
-    """User-Agent with the contact from FEVER_SEC_CONTACT; a SourceError if it is missing."""
-    contact = " ".join(os.environ.get("FEVER_SEC_CONTACT", "").split())
+    """User-Agent with the contact from FEVER_SEC_CONTACT; a SourceError says what is wrong."""
+    raw = os.environ.get("FEVER_SEC_CONTACT")
+    problem = contact_problem(raw)
+    if problem:
+        raise SourceError(problem)
+    return f"{USER_AGENT} {' '.join(raw.split())}"
+
+
+def contact_problem(raw: str | None) -> str | None:
+    """Why the contact cannot be used, None if it can; the message never contains the value (E-74).
+
+    The Dockge stack passes the variable as ${FEVER_SEC_CONTACT:-}: absent means a compose.yaml
+    without that line, empty means a .env without the value when the stack was last deployed.
+    """
+    if raw is None:
+        return ("FEVER_SEC_CONTACT kommt nicht im Container an: compose.yaml des Dockge-Stacks aus "
+                "compose.dockge.yaml erneuern, dann Deploy (docs/einrichtung.md, Abschnitt 11)")
+    contact = " ".join(raw.split())
+    if not contact:
+        return ("FEVER_SEC_CONTACT ist im Container leer: in der .env des Dockge-Stacks eintragen, dann Deploy "
+                "(docs/einrichtung.md, Abschnitt 11)")
     if not _CONTACT.search(contact):
-        raise SourceError("FEVER_SEC_CONTACT fehlt oder enthält keine E-Mail-Adresse (.env, docs/einrichtung.md)")
-    return f"{USER_AGENT} {contact}"
+        return "FEVER_SEC_CONTACT enthält keine E-Mail-Adresse (erwartet: Name und E-Mail, docs/einrichtung.md, Abschnitt 7)"
+    return None
 
 
 def fetch(client: HttpClient, series: Series, since: date | None = None) -> Fetched:

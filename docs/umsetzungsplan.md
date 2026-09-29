@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 28.09.2026 · Status: **M0 bis M7 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74). Auf TrueNAS fehlen noch Migration 0003 und dieser Stand** · Nächster Schritt: Update auf TrueNAS (Abschnitt 9), Anfrage an FRED (O-7), Texte prüfen (M8)
+Stand: 29.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92)** · Nächster Schritt: Update auf TrueNAS (Abschnitt 9), danach M10 (Validierung, E-89) und M9 (Abnahme)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -24,8 +24,10 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026) | M4, L-1 bis L-12 | erteilt 26.09.2026 |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026; Nachtrag Rezessionsbalken E-56 dort ⏳) | M1 (Lesen), M3 (Heartbeat) | erteilt 26.09.2026 |
 | M7 | Ansichten 1–7 | ☑ 27.09.2026: Übersicht (vormals Übersicht B) und Ansichten 2–6 (E-62, E-65, E-67), Perzentilbänder (E-64, Migration 0003) und Ansicht 7 (E-63, E-66); die Variante M7a ist wieder entfernt (E-67); auf TrueNAS ⏳; Ansicht Breite und Top-10-Konzentration mit Daten seit 28.09.2026 (E-68, E-71 bis E-74) | M5, M6, L-13 | M7a erteilt 26.09.2026, M7 erteilt 27.09.2026 |
-| M8 | Erklärtexte je Kennzahl | ◐ 29 Texte (alle 19 Indikatoren, 3 Blöcke, 4 Scores, 3 Begriffe); Prüfung durch den Nutzer ausstehend | parallel zu M6/M7 | ja (Texte prüfen) |
-| M9 | Abnahme Phase 1 | ☐ | M0–M8 | – |
+| M8 | Erklärtexte je Kennzahl | ☑ 28.09.2026: alle Texte und die Krisendaten in `config/episodes.toml` vom Nutzer freigegeben | parallel zu M6/M7 | erteilt 28.09.2026 |
+| R-29.09 | Entscheidungsrunde 29.09.2026: Sahm-Regel mit Trendbedingung und SOS-Regel, Rollen-Marken, Mindesthistorie 3 Jahre, Cboe-SPX, Re-Steepening-Hinweis, Kreditspread-Enge und Aktienquote in der Fallhöhe, Geldmarktfonds, y-Achse, HY-OAS-Niveau (E-80 bis E-92) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); auf TrueNAS ⏳ | M8 | erteilt 29.09.2026 |
+| M10 | Validierung (Bericht 4.3, Schritt 7): Walk-forward, Treffer und Fehlalarme je Ampelstufe, Vorlauf, Vergleich mit reinem VIX-Filter; vorgezogen aus Phase 2 (E-89) | ☐ nächster Meilenstein | R-29.09 auf TrueNAS | Plan vorlegen |
+| M9 | Abnahme Phase 1 | ☐ | M0–M8, M10 | – |
 
 **Warum diese Reihenfolge:** FRED liefert die ICE-BofA-Spreads seit April 2026 nur noch für drei Jahre (Bericht, TL;DR). Jeder Tag ohne laufenden Worker verschiebt den Anfang des lokalen Archivs um einen Tag nach hinten. Deshalb geht ein minimaler Worker mit FRED und Cboe (M0–M3) in Betrieb, bevor Scoring und Oberfläche entstehen.
 
@@ -110,6 +112,23 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | 28.09.2026 | E-73 | Zykliker/Defensive (E-68) | `NASDAQNQUSB40`/`NASDAQNQUSB45` (Nicht-Basiskonsum gegen Basiskonsum) wie XLY/XLP im Bericht | Historie ab 22.09.2020: Mindesthistorie erfüllt, Fenster anfangs rund 6 statt 10 Jahre |
 | 28.09.2026 | E-74 | Festlegungen für Breite und Top-10 (E-68, E-71) | Relative Stärke = Log-Veränderung des Verhältnisses über 63 Handelstage (`scoring.toml`), Orientierung „niedrig = mehr Stress“ (Bericht 4.3); alle fünf Verhältnisse zählen im Block Breite, V = 3 für gleich- gegen kapitalgewichtet (Bericht, Tabelle 2), V = 2 für die übrigen vier; Top-10 je Emittent (Aktiengattungen mit demselben LEI zusammen), V = 1; Kontakt für den SEC-User-Agent als nicht geheime Variable in der `.env` des Stacks, ohne sie kein SEC-Abruf und eine Meldung im Datenstand | Umsetzung erst nach Freigabe des Plans |
 | 28.09.2026 | E-75 | Kreditspread bis HY-OAS 5 Jahre Historie hat (O-5) | FRED `BAA10Y` (Moody's Baa minus 10J-Treasury, täglich ab 02.01.1986, FRED-Status „Copyrighted: Citation required“) als Ersatz im Kreditblock und für die Rot-Regel; HY-OAS bleibt Anzeige. Zwei Indikatoren: Niveau und Veränderung über 20 Handelstage (Bericht 4.3, Schritt 1); die Rot-Regel nutzt das Perzentil der Veränderung (Schwelle aus Bericht 4.3, Schritt 5). Lizenz: Moody's untersagt laut FRED-Hinweis Kopieren und Speichern ohne Zustimmung; der Nutzer lässt BAA10Y wie die ICE-Reihen nur privat nutzen | Umgesetzt 28.09.2026 (Ergebnis unter W-4). V = 3 für beide Indikatoren wie HY-OAS im Bericht (Tabelle 2) |
+| 28.09.2026 | E-76 | Betriebs-Branch (Diese Sitzung arbeitet auf `claude-raramo`, TrueNAS holte von `claude-testing`) | `claude-raramo` direkt (Empfehlung war `main` per PR) | Ersetzt E-30. TrueNAS wechselt einmal den Branch (`docs/einrichtung.md`, Abschnitt 9); danach ist jeder Push auf `claude-raramo` beim nächsten `git pull` im Betrieb: nur geprüften Stand pushen |
+| 28.09.2026 | E-77 | gunicorn-Threads (Nachtrag zu E-54, technisch nach Messung im Rahmen der Freigabe vom 28.09.2026) | 1 Prozess mit 1 Thread (`gthread`) statt 4 Threads | Parallele Callbacks bremsten sich über den GIL gegenseitig (sqlite3 gibt ihn je Zeile ab): Ansicht Visualisierung 5 Callbacks je 1,4–2,7 s parallel, zusammen 0,65 s nacheinander. Anfragen laufen jetzt nacheinander; eine langsame hält die übrigen höchstens rund 1 s auf |
+| 28.09.2026 | E-78 | Server-Cache (CLAUDE.md verbot einen Caching-Layer) | Nutzer: ja, wenn er etwas nützt. Gemessen: erneute Aufrufe einer Ansicht ohne neue Daten auf dem Server 5- bis 10-mal schneller (Makro 1,05 → 0,21 s); umgesetzt als Lesepuffer im Web-Prozess | Gilt je Datenstand: größte rowid der nur anfügbaren Tabelle `observation` und `computed_at` des Scoring-Laufs; jede neue Beobachtung und jeder Scoring-Lauf verwirft den ganzen Puffer. Erster Aufruf nach neuen Daten und das Zeichnen im Browser werden dadurch nicht schneller. Rund 60 MB mehr Speicher. Ausnahme in `CLAUDE.md` eingetragen |
+| 28.09.2026 | E-79 | O-7: Antwort der St. Louis Fed | Zustimmung erhalten (Nutzer) | O-7 und W-11 erledigt. Reihen Dritter über FRED (ICE, S&P, Nasdaq, Moody's) bleiben wie bisher private Nutzung ohne Weitergabe (E-69) |
+| 29.09.2026 | E-80 | Sahm-Regel und Rezessions-Vorwarnung (Entscheidungsrunde F1, F2) | Sahm-Regel (SAHMREALTIME) ab 0,5 → mindestens Orange (am selben Tag durch E-91 ersetzt: Gelb, Orange nur im Abwärtstrend); SOS-Indikator der Richmond Fed (26-Wochen-Schnitt der versicherten Arbeitslosenquote FRED `IURSA` minus Minimum dieses Schnitts in den 52 Wochen davor) über 0,2 → mindestens Gelb. Beide Regeln lesen den Wert, gelten solange er die Schwelle erfüllt, ohne Hysterese; das Sahm-Perzentil bleibt im Makro-Block | Neue Reihe `iursa` (wöchentlich, Verzug 12 Tage), neuer Indikator `sos` mit Block `rule` (nur Ampelregel: in keinem Block, nicht in Konfidenz und Diffusion, kein `v_score`). Parameter `yellow_sos`, `sos_average_window`, `sos_low_window` in `scoring.toml` (für die Sahm-Regel seit E-91 `yellow_sahm`). SOS gerundet auf 10 Stellen, damit Rechenrauschen nie über die Schwelle entscheidet. Wirkung: Abschnitt 4, „Entscheidungsrunde 29.09.2026“ |
+| 29.09.2026 | E-81 | Kennzeichnung der Rolle (F3) | Farbige Marke mit Text neben dem Namen: Blau „Stress · Bereich“, Violett „Fallhöhe“, Grau „nur Anzeige“, umrandet „Ampelregel“; ein Wert mit zwei Rollen trägt beide Marken; auch in Heatmap (farbige Quadrate, Rolle im Hover) und Sparklines | `texts.roles`, `components.role_marks`; Violett steht damit auch für die Fallhöhe (in Charts weiter für markierte Phasen) |
+| 29.09.2026 | E-82 | Mindesthistorie (F4) | 3 Jahre statt 5 (Empfehlung war 5) | `min_history_years = 3`; Prüfung erlaubt jetzt `display_window_years <= min_history_years`. HY-OAS erreicht die drei Jahre ab 29.09.2026; Perzentile vieler Indikatoren beginnen zwei Jahre früher |
+| 29.09.2026 | E-83 | Kursquelle für VRP und Aktien-Anleihen-Korrelation (F5) | Cboe-CSV des S&P 500 (`SPX`, ab 1975, Format wie VVIX) statt FRED `SP500` (zehn Jahre) | Neue Reihe `spx`; beide Indikatoren haben Historie ab 1990 und ändern sich rückwirkend. FRED `SP500` liest kein Indikator mehr (aus dem Katalog genommen, E-92) |
+| 29.09.2026 | E-84 | Zinskurve 10J−3M (F6) | Bleibt Anzeige; Datum des letzten Re-Steepening als Hinweis in Ansicht Makro und auf der Erklärseite | `views.resteepening`: erster Wert ab null nach dem letzten Tag unter null; keine neuen Parameter, keine Wirkung auf die Ampel |
+| 29.09.2026 | E-85 | Kreditspread-Niveau in der Fallhöhe (F7) | `BAA10Y`-Niveau umgedreht als Fallhöhe-Komponente (Bericht 4.3, Schritt 4), V = 3; später HY-OAS | Neuer Indikator `credit_spread_tight`; derselbe Wert zählt im Kreditblock als Stress (zwei Marken, E-81) |
+| 29.09.2026 | E-86 | Investiertes und investierbares Geld (F8) | Aktienquote der Anleger (Livermore 2013, Fed Z.1) als Fallhöhe-Komponente, V = 1; dazu als Anzeige Geldmarktfonds in Prozent der Aktien | Acht neue Z.1-Reihen über FRED (Verzug wie Margin Debt, 175 Tage), Transformation `equity_share`, Indikator `equity_allocation`, Anzeige `money_market` |
+| 29.09.2026 | E-87 | Aktien-Anleihen-Korrelation (F9) | Bleibt Stress im Makro-Block (wie Bericht) | Befund im Erklärtext: Seit 2022 fast durchgehend hoch, zeigt eher das Zinsregime; hebt Makro-Block und Diffusion |
+| 29.09.2026 | E-88 | y-Achse beim Zoomen (F10) | Alle Zeitreihen passen die y-Achse an den sichtbaren Ausschnitt an (5 % Rand); feste Skalen (Perzentil, Stress, Fallhöhe, Ampelstufe) bleiben | Erste Ansicht auf dem Server (`figures.fitted_range`), danach `assets/autoscale.js` nach Zoom, Zeitraum-Knopf, Doppelklick und Aktualisierung; von Hand gezogene y-Bereiche bleiben bis zur nächsten x-Änderung |
+| 29.09.2026 | E-89 | Validierung (F11) | Validierung nach Bericht 4.3, Schritt 7 (Walk-forward, Treffer und Fehlalarme je Stufe, Vergleich mit reinem VIX-Filter) als nächster Meilenstein M10, vorgezogen aus Phase 2; Aggregation Stufe 2 erst danach und nur, wenn sie dort besser abschneidet | `CLAUDE.md`, Phasen angepasst; Umfang von M10 vor Beginn planen und freigeben lassen |
+| 29.09.2026 | E-91 | Sahm-Regel begrenzen (Vorher/Nachher: Orange bis weit in Erholungen, 2024 ohne Rezession) | Sahm-Regel ab 0,5 → mindestens Gelb; Orange nur, solange zugleich der S&P 500 (Cboe) unter seiner 200-Tage-Linie liegt (Growth-Trend-Regel nach Livermore 2016; Faber 2007). Ohne gültigen Trendwert bleibt es Gelb. Varianten zur Wahl: Orange 12 bzw. 6 Monate nach dem Auslösen, unverändert | Neuer Indikator `spx_trend` (Transformation `trend_gap`, Block `rule`), Parameter `trend_window = 200`, Regeln `orange_sahm_trend` und `yellow_sahm` (schließen sich aus). Tage, an denen allein die Sahm-Regel Orange auslöst: 1.216 → 262; Rundung auf 10 Stellen wie beim SOS-Indikator. Rund um die Linie wechselt Orange/Gelb öfter (Abschnitt 4) |
+| 29.09.2026 | E-92 | FRED `SP500` ohne Verwendung seit E-83 | Aus dem Katalog genommen (Empfehlung) | Kein Abruf mehr; die gespeicherten Beobachtungen und Rohdateien bleiben, nichts wird gelöscht. 81 Reihen |
+| 29.09.2026 | E-90 | HY-OAS nach E-82 (Nachfrage) | HY-OAS-Niveau zusätzlich im Kreditblock, V = 3; Anstieg über 20 Tage und Rot-Regel bleiben auf `BAA10Y`, CCC − BB bleibt Anzeige | Indikator `hy_oas` statt Anzeige; das Perzentil misst sich vorerst nur an den Jahren seit 2023 (sichtbarer Hinweis in der Übersicht) |
 
 ---
 
@@ -695,7 +714,7 @@ Für jeden Meilenstein gilt die Definition of Done:
   - Seiten: Übersicht (Ampel mit zutreffenden Regeln, Stress, Fallhöhe, Konfidenz, Verlauf Stress/Fallhöhe, sichtbare Platzhalter O-1, O-5, Phase 2), Datenstand (Worker, je Quelle, je Reihe mit „veraltet“ nach E-10), Erklärungen, Erklärseite `/kennzahl/<id>`
   - Texte für `traffic_light`, `stress`, `vulnerability`, `confidence`, `percentile`, `staleness` (inhaltliche Prüfung durch den Nutzer wie in M8); Indikatoren ohne Text werden nicht angezeigt
   - `assets/`: `base.css` (Farben hell/dunkel aus der Referenzpalette), `tooltip.css`, `print.css`, `theme.js` (Systemwechsel, vor dem Druck hell), `fullscreen.js`
-  - Dienst `web` in `compose.dockge.yaml` (gunicorn, 1 Prozess mit 4 Threads, Port `0.0.0.0:${FEVER_WEB_PORT}`, Healthcheck über `/health` mit der Standardbibliothek); das Dockerfile kopiert `assets/`
+  - Dienst `web` in `compose.dockge.yaml` (gunicorn, 1 Prozess mit 4 Threads, seit E-77 mit 1 Thread, Port `0.0.0.0:${FEVER_WEB_PORT}`, Healthcheck über `/health` mit der Standardbibliothek); das Dockerfile kopiert `assets/`
   - Veraltungsregel (E-10) als `is_stale` in `fever/release.py`, gemeinsam für Scoring und Oberfläche
 - **Belege:**
   - `pytest -q`: 359 passed (18 neu in `tests/test_web.py` und `tests/test_compose.py`): Smoke-Test (`/`, Seiten, `/_dash-layout`, `/_dash-dependencies`, `/health`), `/health` 503 ohne Datenbank, keine externe URL im HTML, `query_only`, kein `dangerously_allow_html`, Chart-Standard, Textregeln, jede angezeigte Kennzahl hat einen Text, Formate
@@ -772,7 +791,7 @@ Laut Bericht 6.3, soweit Daten vorhanden:
   - Migration: Probe an einer Backup-Kopie mit dem neu gebauten Image als 568:568 (0002 → 0003, `alembic current` 0003 (head)); Scoring danach 11,8 s statt 5,6 s, Werte unverändert (Stress 37,8, Fallhöhe 79,9, Ampel Grün, Konfidenz 90,0 %); alle gültigen Indikatoren haben Bänder
   - Build-Probe (Dockerfile unverändert; `config/episodes.toml` und die Migration sind im Image)
   - Browser (Chromium, 1440 px hell, 390 px dunkel): keine Konsolenfehler; Seitenaufruf 1,9 MB, Wechsel auf das Tagesraster 0,2 MB; der Schalter bleibt nach einer simulierten Aktualisierung auf „täglich“
-- **Nicht geprüft:** TrueNAS; echte Geräte; Druck. Die Server-Zeit der Sparklines liegt bei rund 2 s, die der Ansicht Makro bei rund 3 s (gemessen, nicht optimiert).
+- **Nicht geprüft:** TrueNAS; echte Geräte; Druck. Die Server-Zeit der Sparklines liegt bei rund 2 s, die der Ansicht Makro bei rund 3 s (gemessen, nicht optimiert; beschleunigt am 28.09.2026, Abschnitt „Ladezeiten der Seiten“).
 - **Kleinere Schulden (behoben 28.09.2026 auf Anweisung):** Der Sofort-Abruf läuft nach einem unerwarteten Fehler einer Abrufgruppe weiter wie der Worker (Fehler im Datenstand, Exit-Code 1); `HEARTBEAT_MAX_AGE` steht in `fever/store/status.py`, das Web importiert den Worker nicht mehr; `estimated_release` wird nur noch aus `fever/release.py` importiert; Kopf von `requirements.txt` nennt linux/amd64. Offen bleibt als Schuld: Ansicht Makro rund 3 s, Sparklines rund 2 s Serverzeit (nicht optimiert, Nutzer 28.09.2026).
 - **Technische Schuld (behoben 28.09.2026 auf Anweisung):** Eine neue Programmversion des Scorings löste keine Neuberechnung aus. Seitdem gehen `fever/config.py`, `fever/release.py`, `fever/score.py` und `fever/scoring/*.py` in den Fingerabdruck ein, der sonst `scoring.toml` und `series.toml` abdeckt (`score.config_hash`).
 
@@ -855,6 +874,94 @@ Ohne freie, regelkonforme Quelle (entschieden: Top-10 aus N-PORT, E-71; 50/200-T
 - Tests: 421 grün; SEC-Parser mit gekürzten echten Meldungen, `relative_change` von Hand gerechnet, Look-ahead-Pflichttest um `breadth_equal_weight` und `top10_concentration` erweitert.
 - Sichtprüfung im Browser (Entwicklungsdatenbank): Ansicht Breite mit 10 Charts, Fallhöhe mit 5, keine Seitenfehler; `/health`, `/_dash-layout`, Erklärseiten 200.
 
+### Ladezeiten der Seiten (28.09.2026, E-77, E-78)
+
+Anlass: Nutzer, „Seiten laden sehr lange“. Gemessen in der Entwicklungsumgebung mit echten Daten (`data-dev/`, 72 Reihen, Scoring 9281 Tage, 294 230 Beobachtungen, 250 587 Indikator-Scores); TrueNAS rechnete das Scoring am 26.09.2026 etwa 15 % langsamer, die Werte sind also übertragbar. Methode: Abschnitt 10, Punkt 10.
+
+**Ursachen** (Profil der Ansicht Makro, 5,4 s Server-Zeit):
+- rund 75 %: `plotly.graph_objects` prüft und kopiert jede Figur, dazu die JSON-Umwandlung von rund 185 000 Datumsobjekten;
+- die Konfiguration wurde je Seite rund 70-mal neu eingelesen (`series.toml`, 1183 Zeilen);
+- Datenbank: Historien mit allen Spalten und Zeitstempeln, 20 ganze Reihen für die letzten Werte der Termstruktur, die Heatmap las alle 250 587 Scores;
+- 4 gunicorn-Threads: parallele Callbacks bremsten sich über den GIL gegenseitig aus (E-77);
+- 4,2 MB JSON je Aufruf der Ansicht Makro, ungepackt.
+
+**Maßnahmen** (ohne neue Abhängigkeit, ohne Migration):
+1. `fever/web/figures.py` baut einfache Dicts im plotly.js-Format; die Tests prüfen jede Figur mit `go.Figure`, und die Charts aller Seiten sind im Screenshot-Vergleich (hell/dunkel, 1280/390 px, 5 Seiten) pixelgleich mit vorher; Unterschiede nur in Uhrzeit- und Altersangaben.
+2. `fever/config.py` baut die Kataloge einmal je Dateiinhalt (liest die Datei weiter bei jedem Aufruf, sieht also jede Änderung).
+3. Schlanke Abfragen in `fever/web/db.py`: nur benötigte Spalten, `latest_pairs` ohne Zeitstempel, letzte Werte per `LIMIT 1`, Heatmap nur für die gezeigten Tage, Sparklines in einer Abfrage.
+4. gunicorn mit einem Thread (E-77, `compose.dockge.yaml`).
+5. gzip (Stufe 1) für JSON-Antworten ab 2 KB: Makro 4,2 → 1,0 MB, 32 ms.
+6. Lesepuffer je Datenstand für die langen Lesezugriffe (E-78, `per_data_version`).
+
+Scores unverändert: nach der Änderung an `fever/config.py` neu gerechnet, alle 9281 Tage und alle 250 587 Indikatorzeilen identisch (die Programmversion des Scorings ändert sich, der Worker rechnet auf TrueNAS nach dem Update einmal neu).
+
+**Server-Zeit je Seite** (Aufbau plus JSON; nachher: erster Aufruf nach neuen Daten / erneuter Aufruf aus dem Puffer):
+
+| Seite | vorher | nachher |
+|---|---|---|
+| Übersicht | 0,05 s | 0,06 / 0,004 s |
+| Signale | 2,69 s | 0,64 / 0,08 s |
+| Breite | 2,31 s | 0,55 / 0,09 s |
+| Positionierung | 0,93 s | 0,29 / 0,04 s |
+| Makro | 5,36 s | 1,15 / 0,21 s |
+| Fallhöhe | 1,11 s | 0,38 / 0,05 s |
+| Visualisierung (5 Callbacks) | 5,77 s | 0,55 / 0,10 s |
+| Kennzahl VIX | 0,61 s | 0,10 / 0,03 s |
+| Erklärungen | 0,35 s | 0,004 s |
+
+**Im Browser** (Chromium, 1280 px, bis jeder Chart gezeichnet ist; enthält rund 0,5 s Warten auf Netzruhe):
+
+| Seite | neuer Tab vorher | neuer Tab nachher | Klick in der Navigation vorher | nachher |
+|---|---|---|---|---|
+| Übersicht | 1,9 s | 1,4 s | 5,0 s | 0,3 s |
+| Signale | 4,6 s | 1,7 s | 11,5 s | 0,7 s |
+| Breite | 3,9 s | 1,8 s | 11,6 s | 0,6 s |
+| Makro | 7,6 s | 2,4 s | 7,2–33,7 s | 1,3 s (erster Aufruf 2,3 s) |
+| Visualisierung | 14,0 s | 2,2 s | 39,0 s | 1,5 s |
+| Kennzahl VIX | 2,0 s | 1,6 s | – | – |
+
+Die Navigationszeiten vorher schwanken stark, weil sich die Callbacks mehrerer Seiten über den GIL gegenseitig aufhielten. Smartphone-Näherung (CPU 4-fach gedrosselt, Navigation nachher): Makro 3,9–4,2 s (erster Aufruf 8,9 s), Signale 2,2 s, Visualisierung 4,4 s. Speicher des Web-Prozesses mit allen Ansichten im Puffer rund 230 MB (ohne Puffer rund 170 MB).
+
+**Nicht umgesetzt** (gemessenes Potenzial, bei Bedarf einzeln entscheiden):
+- Index auf `indicator_score (indicator_id, score_date)`: je Indikator 38 → 18 ms, Makro beim ersten Aufruf rund 0,2 s schneller; braucht Migration 0004.
+- Eine Abfrage je Ansicht für alle Indikatoren: Makro beim ersten Aufruf rund 0,3 s schneller; Umbau der Ansichten.
+- Zeichnen im Browser (Makro: 17 Charts mit je rund 9000 Punkten, rund 1,4 s, dazu 0,4 s für plotly.js beim ersten Chart): nur mit Änderungen an der Oberfläche zu verkürzen, etwa Charts erst beim Scrollen zeichnen (dann fehlen sie im Druck).
+- Datum als Millisekunden statt ISO-Text: kein messbarer Gewinn.
+
+### SEC-Kontakt im Container (28.09.2026)
+
+Befund (Nutzer): `FEVER_SEC_CONTACT` steht in der `.env` des Dockge-Stacks und im Projektordner, trotzdem meldete der Sofort-Abruf um 18:48 MESZ „FEVER_SEC_CONTACT fehlt oder enthält keine E-Mail-Adresse“. Der Worker-Container sah also keinen gültigen Wert. Wahrscheinlichste Ursache: Die `compose.yaml` in Dockge ist noch die alte Kopie ohne die Worker-Zeile `FEVER_SEC_CONTACT: ${FEVER_SEC_CONTACT:-}` (E-32: Kopie von Hand), oder der Stack wurde nach der Änderung nur neu gestartet statt neu bereitgestellt; die `.env` im Projektordner liest der Stack nicht. Umsetzung: Die Meldung unterscheidet jetzt „kommt nicht im Container an“ (Zeile fehlt in `compose.yaml`), „im Container leer“ (Wert fehlt in der `.env` des Stacks) und „keine E-Mail-Adresse“, ohne den Wert zu nennen; der Worker warnt schon beim Start im Log; Prüfbefehl und Schritte in `docs/einrichtung.md`, Abschnitte 9 und 11. Geprüft im gebauten Image (alle drei Fälle und gesetzter Kontakt) und im Stack aus `compose.dockge.yaml`; auf TrueNAS ⏳.
+
+### Entscheidungsrunde 29.09.2026 (E-80 bis E-92)
+
+Anlass (Nutzer, 28./29.09.2026): Sahm-Regel als Rezessionssignal mit Vorwarnung, sichtbare Rolle je Wert, kürzere Mindesthistorie, Zinskurve prüfen, investiertes und investierbares Geld, alle Berechnungen gegen die Forschung prüfen, y-Achse beim Zoomen. Recherche und elf Auswahlfragen mit Belegen (Entscheidungsseite im Chat, 29.09.2026), Antworten F1 bis F11, HY-OAS-Nachfrage und Begrenzung der Sahm-Regel, FRED SP500: Abschnitt 2, E-80 bis E-92.
+
+**Umsetzung:**
+- Quellen: `spx` (Cboe), `iursa` (FRED, wöchentlich), sieben Z.1-Reihen für die Aktienquote und `mmmffaq027s` (Geldmarktfonds), alle über die bestehenden Parser. Verzug geprüft an den Erstveröffentlichungen in ALFRED (29.09.2026): IURSA 12 Tage bei 230 von 246 Wochen, Z.1 158 bis 169 Tage, einmal 192 (Shutdown 2025), also wie Margin Debt 175. Erstabruf in `data-dev/`: 13.043, 2.907 und je 305 Zeilen, keine verworfen. FRED `SP500` verlässt den Katalog (E-92); ihre gespeicherten Werte bleiben.
+- Scoring: Transformationen `sos`, `equity_share` und `trend_gap`, Block `rule` für Indikatoren, die nur eine Ampelregel liest (`config.RULE_ONLY`), Regeln `yellow_sahm` und `orange_sahm_trend` (Sahm ≥ Schwelle, Orange nur mit S&P 500 unter der 200-Tage-Linie, E-91) und `yellow_sos` (Wert > Schwelle), alle ohne Hysterese und nur mit gültigem Wert (nicht veraltet, Mindesthistorie erfüllt). Indikatoren `sos`, `spx_trend`, `credit_spread_tight`, `equity_allocation`, `hy_oas`; VRP und Korrelation auf `spx`.
+- Oberfläche: Rollen-Marken (`texts.roles`), Heatmap mit Quadraten und Rolle im Hover, Sahm, S&P-500-Trend und SOS mit violetten Flächen für die Tage aktiver Regel (aus den gespeicherten Ampelregeln), Hinweis auf das letzte Re-Steepening, Geldmarktfonds als Anzeige, y-Achse (`figures.fitted_range`, `assets/autoscale.js`).
+- Tests: Pflichttests für die neuen Regeln genau auf der Schwelle und ohne Hysterese, Look-ahead-Test mit allen neuen Indikatoren (alle drei Wertregeln lösen dort aus), Rundung gegen Rechenrauschen, SOS, Trend und Aktienquote von Hand, Rollen, Re-Steepening, y-Bereich. 465 Tests grün.
+- Browser (Entwicklungsumgebung, 29.09.2026, 1280 px hell und 390 px dunkel): alle Ansichten und neuen Erklärseiten ohne Fehler; beim Laden kein zusätzliches Neuzeichnen (Server- und Browserrechnung stimmen überein); nach „1 J“, „6 M“, „5 J“, „Max“, waagrechtem Zoom, Doppelklick und `Plotly.react` (wie die Aktualisierung) liegt der sichtbare Bereich mit höchstens 5 % Rand in der y-Achse; Perzentil-Charts bleiben bei 0–100.
+
+**Vorher/Nachher der Ampel** (Entwicklungsdatenbank, 9.281 Handelstage 02.01.1990 bis 25.09.2026; vorher = Scores vom 28.09.2026; nachher = Stand mit E-91):
+
+| Stufe | Tage vorher | Tage nachher (E-80, Sahm → Orange) | Tage nachher (mit E-91) |
+|---|---|---|---|
+| Grün | 5.835 | 4.635 | 4.635 |
+| Gelb | 1.778 | 2.114 | 3.068 |
+| Orange | 614 | 1.659 | 705 |
+| Rot | 1.054 | 873 | 873 |
+
+- Sahm-Regel nach E-80 (Orange, solange ≥ 0,5): 10.12.1990–06.01.1993, 09.07.2001–06.12.2002, 08.05.2008–07.07.2010, 08.05.2020–07.05.2021 und 07.08.2024–06.11.2024 (ohne Rezession); Orange bis weit in die Erholung (Tage mindestens Orange 1991 2 → 252, 1992 3 → 254, 2021 0 → 87). Deshalb begrenzt (E-91). Varianten, gezählt als Tage, an denen allein die Sahm-Regel Orange auslöst: unverändert 1.216; Orange 12 Monate, dann Gelb 725 (2020–21 und 2024 bleiben Orange); 6 Monate 349 (2001–02 nur einen Monat); nur im Abwärtstrend 262 (gewählt).
+- Mit E-91 Orange über die Sahm-Regel: 10.12.1990–23.01.1991, 09.07.2001–06.12.2002 (mit kurzen Unterbrechungen), 08.05.2008–29.05.2009, 20.05.–07.07.2010, 08.–26.05.2020, dazu einzelne Tage 1991, 1992, 2009 und 2020 an der 200-Tage-Linie; sonst Gelb, 07.08.–06.11.2024 nur Gelb. Tage mindestens Orange je Jahr gegenüber vorher: 1991 2 → 35, 1992 3 → 14, 2002 168 → 234, 2009 162 → 146, 2010 20 → 33, 2020 92 → 87, 2021 0 → 0.
+- SOS mindestens Gelb: 13.09.1990–15.04.1992, 05.04.2001–24.12.2002, 24.04.2008–28.04.2010, 09.04.2020–12.05.2021; kein Signal ohne Rezession, jeweils zwei Wochen bis gut drei Monate vor der Sahm-Regel.
+- Weniger Orange 1998 (89 → 43), 1999 (94 → 0) und 2003 (77 → 0): VRP und Aktien-Anleihen-Korrelation zählen jetzt ab 1990 (E-83); Beispiel 15.10.1999: Block Volatilität 93,6 → 58,4 (VIX 93,6 und VRP 23,1).
+- Fallhöhe-Gelb 2000 252 → 0 Tage (mittlere Fallhöhe 89,6 → 73,3), 1998 234 → 184: Die Baa-Spreads waren 1998 bis 2000 schon weit, die umgedrehte Komponente (E-85) senkt die Fallhöhe dieser Jahre. Mehr Fallhöhe-Gelb 2017 (0 → 120), 2018 (66 → 177), 2022 (0 → 131), 2025 (0 → 141) und 2026 (9 → 190).
+- Heute (25.09.2026) unverändert Gelb über die Fallhöhe: Fallhöhe 80,6 → 84,8, Stress 36,6 → 36,8; Aktienquote 56,4 % (Perzentil 99), Kreditspread-Enge Perzentil 99,8, SOS −0,004, Sahm −0,07.
+- Scoring-Lauf 22 s in der Entwicklungsumgebung (32 Indikatoren).
+
+Die Nebenwirkung Sahm-Orange in Erholungen hat der Nutzer mit E-91 begrenzt; die Variante stützt sich auf eine veröffentlichte Regel (Livermore 2016) und wurde nicht an diesen Daten optimiert, die Auswertung oben ist aber dieselbe Stichprobe. Die Fallhöhe 2000 bleibt (Nutzer 29.09.2026: Begrenzung der Sahm-Regel statt Entfernen der Kreditspread-Enge). Ob die Regeln die Ampel verbessern, prüft M10 (E-89).
+
 ---
 
 ## 5. Fachliche Lücken (vor dem betroffenen Meilenstein per Auswahlfrage klären)
@@ -873,7 +980,7 @@ Nichts davon wird geraten. Die Vorschläge sind begründete Startpunkte, keine E
 | L-8 | Glättung: welcher Block ist „schnell“, in welcher Reihenfolge wird geglättet, nutzt die Ampel geglättete Werte? | Stress, Ampel | **Entschieden 26.09.2026 (E-48):** wie vorgeschlagen. Schnell = Volatilität/Optionen (HWZ 3 auf den Blockscore). Composite HWZ 10. Die Ampel nutzt den geglätteten Composite, die Einzelregeln (VIX/VIX3M, HY-OAS) Rohwerte. Folge: Bei HWZ 10 wirkt ein Sprung erst nach 10 Handelstagen zur Hälfte, der Composite-Weg zu Rot ist also träge | – |
 | L-9 | VX-COT-Perzentil über 3 Jahre (Bericht 6.3) vs. 10-Jahres-Fenster (4.3) | Positionierung | **Entschieden 26.09.2026 (E-49):** wie vorgeschlagen. Im Score das Standardfenster (4.3), in Ansicht 4 zusätzlich das 3-Jahres-Perzentil als Anzeige | – |
 | L-10 | Transformationen ohne Definition: Erstanträge „Veränderung ggü. Tief“ (welches Fenster?), USD/JPY-Vola (Fenster), Re-Steepening-Flag (Definition), Aktien-Anleihen-Korrelation (Anleiherendite aus DGS10-Änderung?), COT-Maß und Orientierung, Excess CAPE Yield (Shiller-Spalte: 1/CAPE − (GS10 − 10-Jahres-Inflation), Ergebnis M4c), Margin Debt aus Z.1 quartalsweise (E-42): ggü. Vorjahr oder relativ zur Marktkapitalisierung aus Z.1; Strukturbruch vor 2000:Q1, VIX6M (nicht in 6.1, Endpoint prüfen) | Indikatoren | **Entschieden 26.09.2026 (E-49):** siehe Entscheidung. Je Indikator beim Anlegen in `series.toml` einzeln vorschlagen und fragen. Quelle für USD/JPY: E-17 | – |
-| L-11 | Fallhöhe in Phase 1: Top-10-Konzentration (O-1), HY-OAS-Niveau (O-5) und AAII (Phase 2) fehlen | Fallhöhe | **Entschieden 26.09.2026 (E-49):** wie vorgeschlagen. Mittel der vorhandenen Komponenten (Excess CAPE Yield, Margin Debt ggü. Vorjahr, VX-COT-Short-Vol), mindestens 2; Fehlende sichtbar | – |
+| L-11 | Fallhöhe in Phase 1: Top-10-Konzentration (O-1), HY-OAS-Niveau (O-5) und AAII (Phase 2) fehlen | Fallhöhe | **Entschieden 26.09.2026 (E-49):** wie vorgeschlagen. Mittel der vorhandenen Komponenten (Excess CAPE Yield, Margin Debt ggü. Vorjahr, VX-COT-Short-Vol), mindestens 2; Fehlende sichtbar. Ergänzt: Top-10-Konzentration (E-71), Kreditspread-Enge mit BAA10Y statt HY-OAS (E-85), Aktienquote der Anleger (E-86); AAII fehlt weiter | – |
 | L-12 | Diffusionsindex: welche Einzelreihen zählen? | Ampel (Gelb) | **Entschieden 26.09.2026 (E-48):** wie vorgeschlagen. Nur Stress-Indikatoren mit gültigem, aktuellem Wert und ausreichender Historie. Fallhöhe-Indikatoren nicht, sonst ginge Fallhöhe doppelt in „Gelb“ ein | – |
 | L-13 | Krisenmarken in der Composite-Historie: genaue Zeiträume | Anzeige | **Entschieden 27.09.2026 (E-63):** Schlusskurs-Hoch bis -Tief des S&P 500 je Episode, recherchiert mit Quelle, in `config/episodes.toml` (Anzeige, kein Score) | – |
 
@@ -893,7 +1000,7 @@ Nichts davon wird geraten. Die Vorschläge sind begründete Startpunkte, keine E
 | W-8 | Bericht 6.1: VIX3M-Historie ab 04.12.2007. Die Cboe-CSV beginnt erst am 18.09.2009 (geprüft 26.09.2026) | Archiviert wird, was die CSV liefert; für das 10-Jahres-Fenster folgenlos |
 | W-9 | `CLAUDE.md` verlangt gekürzte echte Antworten als Fixtures, verbietet aber die Weitergabe lizenzierter Daten; das Repository ist öffentlich | E-27: Format echt, Werte lizenzierter Quellen synthetisch |
 | W-10 | `CLAUDE.md` verlangte FINRA Margin Debt als Download ohne Login und verbietet zugleich Scraping gegen Nutzungsbedingungen; FINRA untersagt Speichern und Datenbanken ohne schriftliche Zustimmung | E-42: Margin Debt aus Fed Z.1 über FRED; `CLAUDE.md` angepasst |
-| W-11 | FRED Terms of Use (abgerufen 28.09.2026): „You may not, without the Bank's prior written consent: … (p) Store, cache, or archive any portion of … FRED® Content; … or incorporate any FRED® Content in any database“; für die API ohne Zustimmungsvorbehalt „(l) Use the FRED® API in connection with storing, caching, or archiving …“. Die allgemeine Lizenz erlaubt dagegen, eine Kopie „solely for your personal, non-commercial use“ herunterzuladen. Der Worker speichert alle FRED-Reihen, auch das ICE-Archiv; derselbe Maßstab wie bei FINRA (W-10) trifft hier den Kern des Projekts. Ob die Klauseln bei der Prüfung in M2 schon bestanden, ließ sich nicht klären (Webarchiv: 429) | E-69: Zustimmung anfragen, O-7 |
+| W-11 | FRED Terms of Use (abgerufen 28.09.2026): „You may not, without the Bank's prior written consent: … (p) Store, cache, or archive any portion of … FRED® Content; … or incorporate any FRED® Content in any database“; für die API ohne Zustimmungsvorbehalt „(l) Use the FRED® API in connection with storing, caching, or archiving …“. Die allgemeine Lizenz erlaubt dagegen, eine Kopie „solely for your personal, non-commercial use“ herunterzuladen. Der Worker speichert alle FRED-Reihen, auch das ICE-Archiv; derselbe Maßstab wie bei FINRA (W-10) trifft hier den Kern des Projekts. Ob die Klauseln bei der Prüfung in M2 schon bestanden, ließ sich nicht klären (Webarchiv: 429) | E-69: Zustimmung anfragen, O-7; Zustimmung erhalten 28.09.2026 (E-79) |
 
 ---
 
@@ -903,7 +1010,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 ### 7.1 Chart-Standard (gilt für jeden Chart)
 
-- **Eine Fabrikfunktion** in `fever/web/figures.py` erzeugt Figure und Config. Kein Chart wird an ihr vorbei gebaut, damit Standard und Test an einer Stelle hängen.
+- **Eine Fabrikfunktion** in `fever/web/figures.py` erzeugt Figure und Config. Die Figure ist seit 28.09.2026 ein einfaches Dict im plotly.js-Format mit Datum als ISO-Text (Ladezeit, siehe „Ladezeiten der Seiten“ in Abschnitt 4); die Tests prüfen jede mit `plotly.graph_objects`. Kein Chart wird an ihr vorbei gebaut, damit Standard und Test an einer Stelle hängen.
 - **Zoom und Verschieben:** Plotly-Standard (Rahmen aufziehen, Verschieben über die Modebar, Doppelklick setzt zurück). `scrollZoom` aus, weil sonst das Scrollen der Seite auf dem Smartphone im Chart hängen bleibt.
 - **Zeitraum-Buttons (E-2):** `xaxis.rangeselector` mit „1 M“, „6 M“, „1 J“, „5 J“, „Max“. Kein Rangeslider; er kostet auf dem Smartphone zu viel Höhe.
 - **Bildexport:** Modebar-Button „Download als PNG“ über `toImageButtonOptions` (`format="png"`, `scale=2`, Dateiname `<kennzahl>_<TT-MM-JJJJ>`), `displaylogo=False`. `showSendToCloud=False`: Plotly.js 4 zeigt sonst „Share chart…“ und lädt damit Chart und Daten zu Plotly Cloud hoch. Die Bilderzeugung läuft im Browser, ohne Server-Bibliothek; geprüft am Quelltext von Dash 4.4.1 (`dcc.Graph`, Prop `config`).
@@ -944,7 +1051,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 ### 7.4 Gestaltung
 
 - **Grundsatz:** ruhig, konsistent, lesbar; Zahlen stehen im Vordergrund. Keine Animationen, keine Tachometer-Spielereien, keine 3D-Charts.
-- **Farbschema (E-5):** CSS-Variablen in `assets/base.css`, hell und dunkel über `prefers-color-scheme`. Zwei registrierte Plotly-Templates (`fever_light`, `fever_dark`). `assets/theme.js` erkennt das Schema und meldet Wechsel über `matchMedia(...).addEventListener("change", …)` an einen `dcc.Store`; die Figure-Callbacks lesen ihn.
+- **Farbschema (E-5):** CSS-Variablen in `assets/base.css`, hell und dunkel über `prefers-color-scheme`. Zwei Plotly-Templates (`fever_light`, `fever_dark`; `figures.TEMPLATES`, in jede Figur eingebettet). `assets/theme.js` erkennt das Schema und meldet Wechsel über `matchMedia(...).addEventListener("change", …)` an einen `dcc.Store`; die Figure-Callbacks lesen ihn.
 - **Semantische Farben:**
   - Ampel: vier Stufen, farbenblind-tauglich gewählt, immer mit Text („Grün“, „Gelb“, „Orange“, „Rot“)
   - Perzentilskala für Einzelkennzahlen: eine einfarbige, sequenzielle Skala, bewusst getrennt von den Ampelfarben (E-1)
@@ -963,6 +1070,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 | Dash 4 / Plotly 7 sind neuer als das Trainingswissen vieler KI-Modelle | erfundene oder veraltete Signaturen | Signaturen im installierten Paket nachsehen; bei Unsicherheit sagen |
 | Unverifizierte Endpoints (OFR, EBP, CISS, TFF-IDs, VIX6M) | Quelle fällt aus oder liefert anderes Format | real abrufen vor dem Parser (M2/M4), Fixture, sichtbarer Fehler |
 | Rechenzeit rollierender Perzentile | langsame Neuberechnung | gemessen in M5: 5,6 s je vollständigem Lauf (Entwicklungsumgebung); auf TrueNAS messen |
+| Lesepuffer im Web-Prozess (E-78) | ein Chart zeigt nach neuen Daten noch den alten Stand | Datenstand aus größter rowid von `observation` (nur Anfügen, Trigger) und `computed_at` der Scores; jede Änderung verwirft den ganzen Puffer; Tests `test_long_reads_are_kept_until_the_worker_stores_new_data` |
 | Druck von dunklen Charts | unlesbare PDFs | Prüfung in M6, Fallback `beforeprint` |
 | Kein Passwort im Heimnetz (E-3) | jedes Gerät im WLAN sieht das Dashboard | akzeptiert; die Daten sind öffentliche Marktdaten ohne Kontobezug |
 | Docker-Portfreigaben umgehen Host-Firewallregeln (E-4) | Firewall-Regeln greifen nicht für den Web-Port | in `docs/einrichtung.md` dokumentiert; keine Portweiterleitung im Router |
@@ -971,32 +1079,30 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 | Datenordner im Git-Arbeitsverzeichnis (E-28) | `git clean -fdx` löscht Datenbank und Backups zugleich | Warnung in `docs/einrichtung.md` und `CLAUDE.md`; optional TrueNAS-Snapshots des Datasets `data` |
 | Shiller-Download über wechselnden Link (E-43) | Umbau der Seite oder neuer Dateiname stoppt CAPE und Excess CAPE Yield | sichtbarer Fehler im Datenstand; Parser in `fever/sources/shiller.py` anpassen |
 | Betrieb direkt vom Entwicklungsbranch (E-30) | ein ungeprüfter Push landet beim nächsten Update im Betrieb | nur geprüften Stand pushen; Update nur auf Anweisung in `docs/einrichtung.md` |
+| Rezessionsregeln ohne Hysterese (E-80, E-91) | Sahm-Gelb hält bis weit in Erholungen an; an der 200-Tage-Linie wechselt Orange/Gelb öfter | Wirkung dokumentiert (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); Prüfung in M10 |
+| y-Achsen-Skript nutzt Plotly-Interna (`_fullLayout`, E-88) | nach einem Plotly-Update passt sich die y-Achse nicht mehr an (Daten bleiben richtig) | nach jedem Update von Dash/Plotly Zoom im Browser prüfen (Abschnitt 10) |
 
 ---
 
 ## 9. Übergabe an die nächste Sitzung
 
-- **Stand (28.09.2026):**
-  - M0 bis M2 erledigt, M3 umgesetzt: Worker mit Abrufplan (E-31), Heartbeat, täglichem Backup und Healthcheck; Compose-Dateien und Einrichtungsanleitung für TrueNAS mit Dockge.
-  - Entscheidungen bis E-75; M4 vollständig, M5 und M6 auf TrueNAS seit 26.09.2026.
-  - M7 vollständig umgesetzt: Rezessionsbalken (E-56, 61 Reihen), Übersicht nach Bericht 6.3 als Startseite und Ansichten 2–7 (E-67), Perzentilbänder mit Migration 0003. Auf TrueNAS läuft das M7-Image seit 27.09.2026 **ohne Migration 0003**: Scoring scheitert seitdem mit „table indicator_score has no column named band_p10“ (der Migrationsversuch lief mit leerem `$RUN`).
-  - Neu (E-70): Worker, `fever.score` und `fever.sources.update` starten nicht auf einer Datenbank ohne die neueste Migration; Dashboard-Banner „Migration fehlt“, `/health` 503. 399 Tests grün.
-  - O-5 entschieden und umgesetzt (E-75): BAA10Y als Kreditspread (Niveau und 20-Tage-Anstieg) und Rot-Regel aktiv; 72 Reihen, 27 Indikatoren, 424 Tests grün.
-  - O-1 entschieden und umgesetzt (E-68, E-71 bis E-74): Block Breite mit fünf Nasdaq-Verhältnissen, Top-10-Konzentration aus SEC N-PORT in der Fallhöhe, kein Anteil über der 50/200-Tage-Linie; 71 Reihen, 25 Indikatoren, 421 Tests grün. Wirkung und Befund 2022 unter „O-1: Recherche“, Umsetzung. Noch nicht auf TrueNAS. Befund W-11 zu den FRED-Bedingungen, Zustimmung wird angefragt (E-69, O-7).
+- **Stand (29.09.2026):**
+  - M0 bis M8 erledigt; Entscheidungsrunde 29.09.2026 umgesetzt und in der Entwicklungsumgebung geprüft (E-80 bis E-92; Abschnitt 4, „Entscheidungsrunde 29.09.2026“, mit Vorher/Nachher der Ampel). 465 Tests grün.
+  - Auf TrueNAS noch nicht eingespielt. Ob TrueNAS schon vom Branch `claude-raramo` läuft (E-76), ist nicht bestätigt.
+  - `data-dev/` enthält die zehn neuen Reihen und Scores nach neuem Stand (Abruf 29.09.2026).
+  - Entscheidungen bis E-92.
 - **Nächster Schritt:**
-  1. TrueNAS: `git pull`, `sudo docker compose build`, dann `docs/einrichtung.md`, Abschnitt 9 ab „Stack stoppen“ (Backup, `alembic upgrade head` auf 0003, Stack starten, `python -m fever.score`), danach Sofort-Abruf (61 Reihen).
-  2. Nutzer schickt die Anfrage an die St. Louis Fed (O-7); Entwurf im Chat vom 28.09.2026.
-  3. Nach dem Update: `FEVER_SEC_CONTACT` in die `.env` des Stacks, Compose-Kopie in Dockge aktualisieren, Sofort-Abruf (72 Reihen) und Ampel prüfen (`docs/einrichtung.md`, Abschnitt 9).
-  4. Nutzer prüft die Texte: sechs aus E-52, `recessions.md`, die 22 aus E-58 und die 9 aus M7 (M8), dazu die Krisendaten in `config/episodes.toml`.
-  5. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9; M3 selbst ☑ seit 28.09.2026).
-  6. Danach M8 (Prüfung der Texte) und M9 (Abnahme Phase 1).
+  1. TrueNAS: falls noch nicht geschehen, Update „schnellere Seiten und Branch `claude-raramo`“, dann „Entscheidungsrunde 29.09.2026“ (`docs/einrichtung.md`, Abschnitt 9): `git pull`, Build, „Deploy“, Sofort-Abruf, `fever.score`. Keine Migration.
+  2. M10 (Validierung, E-89): Plan vorlegen (Daten: Scores ab 1990 und S&P 500 von Cboe; Walk-forward, Treffer und Fehlalarme je Stufe, Vorlauf, Vergleich mit reinem VIX-Filter; Einordnung der Nebenwirkungen aus Abschnitt 4) und freigeben lassen.
+  3. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9); für `iursa` und die Z.1-Reihen neu.
+  4. M9 (Abnahme Phase 1).
 - **Hinweise:**
-  - Betrieb läuft direkt von `claude-testing` (E-30): nur geprüften Stand pushen.
+  - Betrieb läuft direkt von `claude-raramo` (E-76): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
-  - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`. Am 28.09.2026 zusätzlich erreichbar: `fred.stlouisfed.org` (CSV ohne Schlüssel), `www.ssga.com`, `www.sec.gov`, `data.sec.gov`, `indexes.nasdaq.com`; `archive.org` antwortete mit 429. Für SEC-Probeabrufe in der Cloud nur einen Platzhalterkontakt (`…@example.org`) setzen, nie die Adresse des Nutzers.
+  - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`. Am 28.09.2026 zusätzlich erreichbar: `fred.stlouisfed.org` (CSV ohne Schlüssel), `www.ssga.com`, `www.sec.gov`, `data.sec.gov`, `indexes.nasdaq.com`; `archive.org` antwortete mit 429. Für SEC-Probeabrufe in der Cloud nur einen Platzhalterkontakt (`…@example.org`) setzen, nie die Adresse des Nutzers. Am 28.09.2026 abends lief der Sofort-Abruf aller 72 Reihen in der Cloud ohne Probleme.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** O-6 (Phase 2), O-7 (Antwort der Fed abwarten).
-- **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe und Compose-Prüfung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
+- **Offene Entscheidungen des Nutzers:** O-6 (Phase 2); die Optionen unter „Nicht umgesetzt“ (Ladezeiten), falls die Seiten auf TrueNAS noch zu langsam sind.
+- **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe, Compose-Prüfung und Ladezeit-Messung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---
 
@@ -1044,3 +1150,9 @@ Stand 25.09.2026, erprobt in der Claude-Code-Cloud-Umgebung. Die Umgebung ist ei
    `requests` nutzt sonst sein eigenes Zertifikatsbündel und scheitert am Proxy. Große Antworten erst in eine Datei schreiben und nur Anfang und Ende ansehen (`CLAUDE.md`).
 8. **Nach einem Neustart der Cloud-Umgebung** sind Docker-Daemon und Hilfs-Images weg. Die Schritte 1 und 4 wiederholen. Der Daemon stoppte am 26.09.2026 auch zwischendurch ohne Neustart der Umgebung („Cannot connect to the Docker daemon“); dann nur Schritt 1.
 9. **Abhängigkeiten ändern:** im Container (linux/amd64) mit `pip install --only-binary=:all: -r <direkte Pakete>` auflösen, `pip freeze` übernehmen, direkte Pakete mit Zweckkommentar oben in `requirements.txt`, transitive darunter.
+10. **Ladezeiten messen** (28.09.2026; Skripte liegen nicht im Repository, Node gehört nicht zum Projekt):
+    - Daten: `data-dev/` wie in Punkt 7 anlegen, alle Reihen holen (`python -m fever.sources.update` mit `FEVER_SEC_CONTACT=… …@example.org`, rund 4 Minuten), dann `python -m fever.score`.
+    - Server: im Hilfs-Image `fever.web.app` importieren, dann je Seite die Funktion aus `fever/web/views.py` aufrufen und mit `dash._utils.to_json` umwandeln, jeweils zweimal (erster Aufruf, Aufruf aus dem Lesepuffer); Profil mit `cProfile`.
+    - Browser: gunicorn wie in `compose.dockge.yaml` im Hilfs-Image mit `--network host` gegen `data-dev/` starten; Playwright aus der globalen Node-Installation der Cloud-Umgebung (`require('/opt/node22/lib/node_modules/playwright')`, Chromium unter `/opt/pw-browsers`); Zeit vom Aufruf bzw. Klick in der Navigation, bis jedes `.dash-graph` ein `.main-svg` enthält. Drosselung über CDP: `Emulation.setCPUThrottlingRate` (Smartphone-Näherung 4) und `Network.emulateNetworkConditions`.
+    - Vergleich mit dem alten Stand: `git worktree add <scratch>/before <commit>` und dort einen zweiten gunicorn auf anderem Port.
+11. **y-Achse prüfen** (E-88; nach jedem Update von Dash oder Plotly, 29.09.2026 erprobt): gunicorn wie in Punkt 10, dann mit Playwright eine Ansicht laden, `Plotly.relayout` per Init-Skript zählen (erwartet 0 beim Laden), je Zeitraum-Knopf „1 J“, „6 M“, „5 J“, „Max“, waagrechtem Ziehen, Doppelklick und `Plotly.react(gd, gd.data, gd.layout)` den sichtbaren Wertebereich mit `gd._fullLayout.yaxis.range` vergleichen (enthalten, höchstens rund 5 % Rand). Das Graph-Element ist `#<id> .js-plotly-plot`, nicht das Element mit der Id selbst.

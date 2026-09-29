@@ -30,6 +30,8 @@ def test_runtime_file_guards_data_directory_user_and_health():
 def test_web_service_publishes_the_port_and_checks_health():
     assert '"0.0.0.0:${FEVER_WEB_PORT:?' in RUNTIME
     assert "fever.web.app:server" in RUNTIME and '"--workers", "1"' in RUNTIME
+    # E-77: one thread; callbacks in parallel threads slowed each other down (GIL, measured 28.09.2026)
+    assert '"--worker-class", "gthread", "--threads", "1"' in RUNTIME
     assert "http://127.0.0.1:8050/health" in RUNTIME
     assert "FRED_API_KEY" not in RUNTIME.split("  web:")[1]  # the web never needs the secret
     assert "FEVER_SEC_CONTACT" not in RUNTIME.split("  web:")[1]

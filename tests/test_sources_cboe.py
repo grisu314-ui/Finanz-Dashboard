@@ -77,3 +77,12 @@ def test_fetch_asks_the_cdn_for_the_configured_symbol():
 
 def test_source_host_is_on_the_allowlist():
     assert urlsplit(cboe.URL.format(symbol="VIX")).hostname in ALLOWED_HOSTS
+
+
+def test_spx_file_has_the_single_value_format():
+    """E-83: the S&P 500 file looks like the VVIX file (checked 29.09.2026); synthetic values (E-27)."""
+    content = b"DATE,SPX\n01/02/1975,100.000000\n01/03/1975,101.000000\n09/25/2026,102.000000\n"
+    rows = cboe.parse(content, CATALOG["spx"], LATER)
+    assert rows == [Row(date(1975, 1, 2), 100.0), Row(date(1975, 1, 3), 101.0), Row(date(2026, 9, 25), 102.0)]
+    with pytest.raises(SourceError, match="Kopfzeile"):
+        cboe.parse(b"DATE,VVIX\n01/02/1975,100.0\n", CATALOG["spx"], LATER)

@@ -15,11 +15,11 @@ In vielen Portfolios sollen Anleihen Verluste bei Aktien abfedern. Das klappt nu
 - Die Korrelation ist träge; sie ändert sich über Wochen, nicht über Tage.
 
 ## Grenzen und Fallstricke
-- Kurze Historie: Der S&P 500 kommt von FRED und reicht dort nur rund zehn Jahre zurück (offener Punkt O-1 in CLAUDE.md).
+- Regime statt akuter Stress: Nach Campbell, Pflueger und Viceira (2020) hängt das Vorzeichen am Inflations- und Zinsregime. Eigene Auswertung (29.09.2026): Seit 2022 steht die Korrelation fast durchgehend hoch, wie schon in den Jahrzehnten vor 2000, und hebt Makro-Block und Diffusionsindex damit über lange Zeit. Sie bleibt trotzdem Stress wie im Bericht, weil sie Zinsschocks anzeigt, die Kreditindikatoren übersehen (Entscheidung E-87).
 - Eine positive Korrelation ist nicht immer Stress: In einer gemeinsamen Erholung steigen beide ebenfalls zusammen (Einschätzung).
-- Die S&P-500-Daten von FRED unterliegen der Lizenz von S&P Dow Jones Indices: nur privat, keine Weitergabe.
+- Der S&P 500 kommt seit dem 29.09.2026 als Tagesschluss von Cboe mit Historie ab 1975 statt von FRED mit nur zehn Jahren (Entscheidung E-83). Die Daten unterliegen der Lizenz von Cboe und S&P Dow Jones Indices: nur privat, keine Weitergabe.
 
 ## Quellen
 - Campbell, Pflueger, Viceira: Macroeconomic Drivers of Bond and Equity Risks, Journal of Political Economy 128(8), 2020, S. 3148–3185 (Kurzfassung über NBER und RePEc, abgerufen 26.09.2026)
 - docs/recherche.md, Abschnitte 2 und 3 (Stand 25.09.2026)
-- docs/umsetzungsplan.md, Entscheidung E-49 (26.09.2026)
+- docs/umsetzungsplan.md, Entscheidungen E-49 (26.09.2026), E-83 und E-87 (29.09.2026)

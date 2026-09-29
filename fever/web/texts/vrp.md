@@ -16,11 +16,11 @@ Bollerslev, Tauchen und Zhou (2009) zeigen, dass die Differenz zwischen erwartet
 
 ## Grenzen und Fallstricke
 - Die Prämie ist verrauscht: Einzelne große Tagesbewegungen verschieben die realisierte Schwankung stark.
-- Der S&P 500 kommt von FRED und reicht dort nur rund zehn Jahre zurück (offener Punkt O-1 in CLAUDE.md); die VRP hat deshalb eine deutlich kürzere Historie als der VIX (Beginn im Steckbrief).
+- Der S&P 500 kommt seit dem 29.09.2026 als Tagesschluss von Cboe mit Historie ab 1975 (vorher FRED mit nur zehn Jahren); die VRP reicht damit so weit zurück wie der VIX (Entscheidung E-83).
 - Die Studie misst Varianzen und Renditen über Monate; dieses Dashboard nutzt nur die Richtung als Stresssignal, keine Renditeprognose.
-- Die S&P-500-Daten von FRED unterliegen der Lizenz von S&P Dow Jones Indices: nur privat, keine Weitergabe.
+- Die S&P-500-Daten unterliegen der Lizenz von Cboe und S&P Dow Jones Indices: nur privat, keine Weitergabe.
 
 ## Quellen
 - Bollerslev, Tauchen, Zhou: Expected Stock Returns and Variance Risk Premia, Review of Financial Studies 22(11), 2009, S. 4463–4492 (Angaben und Kurzfassung über RePEc, abgerufen 26.09.2026)
 - docs/recherche.md, Abschnitt 2 (Stand 25.09.2026)
-- docs/umsetzungsplan.md, Entscheidungen E-49 und E-51 (26.09.2026)
+- docs/umsetzungsplan.md, Entscheidungen E-49 und E-51 (26.09.2026), E-83 (29.09.2026)

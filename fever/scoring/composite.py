@@ -6,11 +6,13 @@ indicator counts with its newest observation published by the end of the New Yor
   missing  no observation published yet
   stale    older than frequency plus tolerance after its expected publication (E-10)
   history  shorter history than min_history_years: shown, not scored
-  ok       enters blocks, vulnerability, confidence and diffusion
+  ok       enters blocks, vulnerability, confidence and diffusion; a rule-only indicator
+           (block RULE_ONLY, E-80) enters none of them, only its traffic light rule
 Blocks: median of the ok stress indicators; the fast block is smoothed first. Composite: mean
 of the available blocks if at least min_blocks. Smoothing: EWMA over score days; a missing value
 leaves the smoothed value missing and the next one starts afresh. Traffic light: rules with
-hysteresis (a rule ends only `hysteresis` points below its threshold); the highest active wins.
+hysteresis (a rule ends only `hysteresis` points below its threshold); the rules on the Sahm,
+SOS and trend values hold while the newest ok values meet them (E-80, E-91); the highest active wins.
 """
 
 import statistics
@@ -20,17 +22,26 @@ from datetime import date, datetime, time, timedelta, timezone
 
 import numpy as np
 
-from fever.config import STRESS_BLOCKS, VULNERABILITY, Indicator, ScoringConfig
+from fever.config import RULE_ONLY, STRESS_BLOCKS, VULNERABILITY, Indicator, ScoringConfig
 from fever.release import NEW_YORK, is_stale
 
 OK, MISSING, STALE, HISTORY = "ok", "missing", "stale", "history"
 GREEN, YELLOW, ORANGE, RED = 0, 1, 2, 3
 VIX_RATIO_INDICATOR = "vix_vix3m"  # the red rule "VIX/VIX3M > 1 on 3 days in a row" reads this one
 CREDIT_CHANGE_INDICATOR = "credit_spread_change"  # the red rule on the credit spread rise reads its percentile (E-75)
+SAHM_INDICATOR = "sahm"  # yellow_sahm and orange_sahm_trend read its value (E-80, E-91)
+SOS_INDICATOR = "sos"  # yellow_sos reads its value (E-80)
+TREND_INDICATOR = "spx_trend"  # orange_sahm_trend: the S&P 500 below its 200-day line (E-91)
+# Indicators a traffic light rule reads, with the rules (texts and the role marks show them).
+RULE_INDICATORS = {
+    VIX_RATIO_INDICATOR: ("red_vix_ratio",), CREDIT_CHANGE_INDICATOR: ("red_credit_change",),
+    SAHM_INDICATOR: ("orange_sahm_trend", "yellow_sahm"), TREND_INDICATOR: ("orange_sahm_trend",),
+    SOS_INDICATOR: ("yellow_sos",),
+}
 _RULE_LEVEL = {
     "red_stress": RED, "red_vix_ratio": RED, "red_credit_change": RED,
-    "orange_stress": ORANGE, "orange_stress_vulnerability": ORANGE,
-    "yellow_vulnerability": YELLOW, "yellow_diffusion": YELLOW,
+    "orange_stress": ORANGE, "orange_stress_vulnerability": ORANGE, "orange_sahm_trend": ORANGE,
+    "yellow_vulnerability": YELLOW, "yellow_diffusion": YELLOW, "yellow_sahm": YELLOW, "yellow_sos": YELLOW,
 }
 
 
@@ -104,7 +115,7 @@ def compute(
     score_days: list[date], histories: list[IndicatorHistory], config: ScoringConfig
 ) -> tuple[list[IndicatorScore], list[CompositeScore]]:
     """Scores for every score day from the first one with an ok indicator on, in date order."""
-    total_weight = sum(history.indicator.v_score for history in histories)
+    total_weight = sum(history.indicator.v_score for history in histories if history.indicator.block != RULE_ONLY)
     blocks_of = {history.indicator.id: history.indicator.block for history in histories}
     weights = {history.indicator.id: history.indicator.v_score for history in histories}
     fast = stress = vulnerability = None
@@ -134,8 +145,9 @@ def compute(
         vulnerability_raw = statistics.fmean(components) if len(components) >= config.min_vulnerability else None
         vulnerability = _ewma(vulnerability, vulnerability_raw, config.vulnerability_half_life)
 
-        confidence = 100.0 * sum(weights[score.indicator_id] for score in ok) / total_weight
-        stress_ok = [score for score in ok if blocks_of[score.indicator_id] != VULNERABILITY]
+        scored = [score for score in ok if blocks_of[score.indicator_id] != RULE_ONLY]
+        confidence = 100.0 * sum(weights[score.indicator_id] for score in scored) / total_weight if total_weight else 0.0
+        stress_ok = [score for score in ok if blocks_of[score.indicator_id] in STRESS_BLOCKS]
         diffusion = (
             100.0 * sum(score.percentile > config.yellow_diffusion_percentile for score in stress_ok) / len(stress_ok)
             if stress_ok else None
@@ -144,7 +156,10 @@ def compute(
             (score.value for score in ok if score.indicator_id == VIX_RATIO_INDICATOR and score.obs_date == day), None
         )
         credit = next((score.percentile for score in ok if score.indicator_id == CREDIT_CHANGE_INDICATOR), None)
-        active = rules.update(stress, vulnerability, diffusion, ratio, credit)
+        sahm = next((score.value for score in ok if score.indicator_id == SAHM_INDICATOR), None)
+        sos = next((score.value for score in ok if score.indicator_id == SOS_INDICATOR), None)
+        trend = next((score.value for score in ok if score.indicator_id == TREND_INDICATOR), None)
+        active = rules.update(stress, vulnerability, diffusion, ratio, credit, sahm, sos, trend)
         level = max((_RULE_LEVEL[rule] for rule in active), default=GREEN)
         composite_rows.append(CompositeScore(
             day, blocks, fast, stress_raw, stress, vulnerability_raw, vulnerability,
@@ -161,10 +176,16 @@ class _Rules:
         self.active: dict[str, bool] = dict.fromkeys(_RULE_LEVEL, False)
         self.days_above = self.days_below = 0
 
-    def update(self, stress, vulnerability, diffusion, ratio, credit=None) -> tuple[str, ...]:
-        """`credit`: oriented percentile of the credit spread change (report 4.3 step 5, E-75)."""
+    def update(self, stress, vulnerability, diffusion, ratio, credit=None, sahm=None, sos=None, trend=None) -> tuple[str, ...]:
+        """`credit`: oriented percentile of the credit spread change (report 4.3 step 5, E-75);
+        `sahm`, `sos`: values of the Sahm rule and the SOS indicator in percentage points (E-80);
+        `trend`: distance of the S&P 500 from its 200-day line in percent, negative = below (E-91)."""
         c = self.config
         previous = self.active
+        # growth-trend rule (E-91): the Sahm signal is orange only while the market is in a downtrend;
+        # without a valid trend value it stays yellow. No hysteresis (E-80).
+        sahm_signal = sahm is not None and sahm >= c.yellow_sahm
+        downtrend = trend is not None and trend < 0
         now = {
             "red_stress": self._threshold(previous["red_stress"], stress, c.red_stress),
             "red_vix_ratio": self._vix_ratio(previous["red_vix_ratio"], ratio),
@@ -174,9 +195,12 @@ class _Rules:
                 self._threshold(previous["orange_stress_vulnerability"], stress, c.orange_stress_with_vulnerability)
                 and self._threshold(previous["orange_stress_vulnerability"], vulnerability, c.orange_vulnerability)
             ),
+            "orange_sahm_trend": sahm_signal and downtrend,
             # report: vulnerability >= 80 "at stress < 75"; at stress >= 75 the orange rule applies anyway
             "yellow_vulnerability": self._threshold(previous["yellow_vulnerability"], vulnerability, c.yellow_vulnerability),
             "yellow_diffusion": self._threshold(previous["yellow_diffusion"], diffusion, c.yellow_diffusion_share),
+            "yellow_sahm": sahm_signal and not downtrend,
+            "yellow_sos": sos is not None and sos > c.yellow_sos,  # strictly above (E-80)
         }
         self.active = now
         return tuple(rule for rule in _RULE_LEVEL if now[rule])

@@ -99,8 +99,23 @@ tolerance_days = 3
 bounds = [50, 400]
 license = "Cboe Global Markets: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
 
+# S&P 500 closes since 1975 in the format of the VVIX file (checked 29.09.2026): VRP and the
+# stock-bond correlation with a long history instead of FRED's ten years (E-83).
+
+[series.spx]
+source = "cboe"
+source_id = "SPX"
+name = "S&P 500 (Cboe)"
+unit = "Indexpunkte"
+frequency = "daily"
+release_time = "22:00"
+lag_days = 0
+tolerance_days = 3
+bounds = [10, 100000]
+license = "Cboe Global Markets, Index von S&P Dow Jones Indices: nur private, nicht kommerzielle Nutzung, keine Weitergabe"
+
 # --- FRED: ICE BofA option-adjusted spreads. FRED keeps only three years: the local archive is
-# --- irreplaceable (CLAUDE.md). Display only until O-5 is decided.
+# --- irreplaceable (CLAUDE.md). The HY-OAS level counts in the credit block (E-90), the others are display only.
 
 [series.bamlh0a0hym2]
 source = "fred"
@@ -305,8 +320,22 @@ lag_days = 5
 tolerance_days = 3
 bounds = [10000, 50000000]
 
+# Insured unemployment rate for the SOS indicator (E-80): week ending Saturday, published with the
+# claims on the Thursday twelve days later (230 of 246 first releases checked in ALFRED, 29.09.2026).
+
+[series.iursa]
+source = "fred"
+source_id = "IURSA"
+name = "Versicherte Arbeitslosenquote (USA)"
+unit = "Prozent"
+frequency = "weekly"
+release_time = "08:45"
+lag_days = 12
+tolerance_days = 3
+bounds = [0, 40]
+
 # --- FRED: Moody's Baa corporate yield minus 10-year Treasury (O-5, E-75): long credit spread in the
-# --- score and the red rule until the ICE spreads have five years. FRED updates it around 17:05
+# --- credit block, the red rule and, reversed, the vulnerability (E-85). FRED updates it around 17:05
 # --- New York on the day after the observation (checked 28.09.2026). FRED status: citation required.
 
 [series.baa10y]
@@ -321,20 +350,8 @@ tolerance_days = 3
 bounds = [-5, 25]
 license = "Moody's (Copyright, über FRED): nur private Nutzung, keine Weitergabe, Quellenangabe"
 
-# --- FRED: equity index (only ten years on FRED, S&P licence). Used for VRP and the
-# --- stock-bond correlation until O-1 is decided.
-
-[series.sp500]
-source = "fred"
-source_id = "SP500"
-name = "S&P 500"
-unit = "Indexpunkte"
-frequency = "daily"
-release_time = "20:15"
-lag_days = 0
-tolerance_days = 3
-bounds = [100, 100000]
-license = "S&P Dow Jones Indices LLC (Copyright): nur private Nutzung, keine Weitergabe"
+# FRED SP500 (ten years only) left the catalogue on 29.09.2026 (E-92): VRP and the stock-bond
+# correlation use the Cboe closes (E-83). Its stored observations stay in the database.
 
 # --- ECB Data Portal (M4a). Reuse free with the note "Source: ECB statistics." ---
 
@@ -578,6 +595,107 @@ release_time = "13:15"
 lag_days = 175
 tolerance_days = 10
 bounds = [0, 10000000]
+license = "Federal Reserve Board, Financial Accounts (Z.1): gemeinfrei, Quellenangabe erbeten"
+
+# --- Z.1 via FRED for the investors' equity allocation (E-86): market value of all corporate equities
+# --- against equities plus the debt securities and loans of all real-economy borrowers (Livermore
+# --- 2013); money market funds for the display next to it. Millions of USD; first releases
+# --- 158 to 169 days after the quarter start, 192 once (shutdown 2025), like the margin debt.
+
+[series.ncbeilq027s]
+source = "fred"
+source_id = "NCBEILQ027S"
+name = "Aktien nichtfinanzieller Unternehmen, Marktwert (Fed Z.1)"
+unit = "Mio. USD"
+frequency = "quarterly"
+release_time = "13:15"
+lag_days = 175
+tolerance_days = 10
+bounds = [0, 1000000000]
+license = "Federal Reserve Board, Financial Accounts (Z.1): gemeinfrei, Quellenangabe erbeten"
+
+[series.fbcellq027s]
+source = "fred"
+source_id = "FBCELLQ027S"
+name = "Aktien inländischer Finanzunternehmen, Marktwert (Fed Z.1)"
+unit = "Mio. USD"
+frequency = "quarterly"
+release_time = "13:15"
+lag_days = 175
+tolerance_days = 10
+bounds = [0, 1000000000]
+license = "Federal Reserve Board, Financial Accounts (Z.1): gemeinfrei, Quellenangabe erbeten"
+
+[series.fgsdodns]
+source = "fred"
+source_id = "FGSDODNS"
+name = "Schuldtitel und Kredite der US-Bundesregierung (Fed Z.1)"
+unit = "Mio. USD"
+frequency = "quarterly"
+release_time = "13:15"
+lag_days = 175
+tolerance_days = 10
+bounds = [0, 1000000000]
+license = "Federal Reserve Board, Financial Accounts (Z.1): gemeinfrei, Quellenangabe erbeten"
+
+[series.cmdebt]
+source = "fred"
+source_id = "CMDEBT"
+name = "Schuldtitel und Kredite der privaten Haushalte und Organisationen ohne Erwerbszweck (Fed Z.1)"
+unit = "Mio. USD"
+frequency = "quarterly"
+release_time = "13:15"
+lag_days = 175
+tolerance_days = 10
+bounds = [0, 1000000000]
+license = "Federal Reserve Board, Financial Accounts (Z.1): gemeinfrei, Quellenangabe erbeten"
+
+[series.bcnsdodns]
+source = "fred"
+source_id = "BCNSDODNS"
+name = "Schuldtitel und Kredite nichtfinanzieller Unternehmen (Fed Z.1)"
+unit = "Mio. USD"
+frequency = "quarterly"
+release_time = "13:15"
+lag_days = 175
+tolerance_days = 10
+bounds = [0, 1000000000]
+license = "Federal Reserve Board, Financial Accounts (Z.1): gemeinfrei, Quellenangabe erbeten"
+
+[series.dodffswcmi]
+source = "fred"
+source_id = "DODFFSWCMI"
+name = "Schuldtitel und Kredite des Auslands (Fed Z.1)"
+unit = "Mio. USD"
+frequency = "quarterly"
+release_time = "13:15"
+lag_days = 175
+tolerance_days = 10
+bounds = [0, 1000000000]
+license = "Federal Reserve Board, Financial Accounts (Z.1): gemeinfrei, Quellenangabe erbeten"
+
+[series.slgsdodns]
+source = "fred"
+source_id = "SLGSDODNS"
+name = "Schuldtitel und Kredite der Bundesstaaten und Gemeinden (Fed Z.1)"
+unit = "Mio. USD"
+frequency = "quarterly"
+release_time = "13:15"
+lag_days = 175
+tolerance_days = 10
+bounds = [0, 1000000000]
+license = "Federal Reserve Board, Financial Accounts (Z.1): gemeinfrei, Quellenangabe erbeten"
+
+[series.mmmffaq027s]
+source = "fred"
+source_id = "MMMFFAQ027S"
+name = "Geldmarktfonds: Finanzvermögen (Fed Z.1)"
+unit = "Mio. USD"
+frequency = "quarterly"
+release_time = "13:15"
+lag_days = 175
+tolerance_days = 10
+bounds = [0, 1000000000]
 license = "Federal Reserve Board, Financial Accounts (Z.1): gemeinfrei, Quellenangabe erbeten"
 
 # --- Robert J. Shiller, ie_data.xls (M4c), group shiller. Contains S&P data: no redistribution.
@@ -950,11 +1068,13 @@ license = "SEC EDGAR: öffentliche Meldung einer US-Behörde, ohne Genehmigung v
 #   name         display text
 #   series       input series ids, in the order the transformation expects
 #   transform    level | ratio | difference | vrp | stock_bond_corr | above_low | fx_change | fx_vol
-#                | yoy | cot_net_short | relative_change | change (definitions in fever/scoring/transforms.py; windows in
-#                scoring.toml [transforms])
+#                | yoy | cot_net_short | relative_change | change | sos | equity_share | trend_gap
+#                (definitions in fever/scoring/transforms.py; windows in scoring.toml [transforms])
 #   orientation  "high" or "low": which end of the indicator means more stress or vulnerability
-#   block        volatility | credit | macro | breadth | positioning (stress) or vulnerability
-#   v_score      lead-time score V from report table 2 (1-5); weight in the confidence (E-48)
+#   block        volatility | credit | macro | breadth | positioning (stress), vulnerability, or rule:
+#                only a traffic light rule reads it (E-80); not in blocks, confidence or diffusion
+#   v_score      lead-time score V from report table 2 (1-5); weight in the confidence (E-48);
+#                not allowed for block = "rule"
 #   display_window  optional, true: also store the percentile over scoring.toml display_window_years
 # All inputs of an indicator must share their frequency; its publication lag and tolerance are the
 # largest of its inputs.
@@ -986,7 +1106,7 @@ v_score = 2
 
 [indicator.vrp]
 name = "Variance Risk Premium (VIX − realisierte Vola S&P 500)"
-series = ["vix", "sp500"]
+series = ["vix", "spx"]
 transform = "vrp"
 orientation = "low"
 block = "volatility"
@@ -1040,6 +1160,17 @@ orientation = "high"
 block = "credit"
 v_score = 3
 
+# HY-OAS level in the credit block (E-90); FRED keeps only three years, the archive grows locally.
+# Its 20-day rise and the red rule stay on BAA10Y (E-75).
+
+[indicator.hy_oas]
+name = "HY-OAS (Niveau)"
+series = ["bamlh0a0hym2"]
+transform = "level"
+orientation = "high"
+block = "credit"
+v_score = 3
+
 [indicator.nfci]
 name = "NFCI"
 series = ["nfci"]
@@ -1080,9 +1211,27 @@ orientation = "high"
 block = "macro"
 v_score = 3
 
+# SOS indicator of the Richmond Fed (E-80): only the traffic light rule yellow_sos reads it.
+
+[indicator.sos]
+name = "SOS-Indikator (versicherte Arbeitslosenquote)"
+series = ["iursa"]
+transform = "sos"
+orientation = "high"
+block = "rule"
+
+# Trend of the S&P 500 (E-91): the Sahm rule turns the traffic light orange only while it is negative.
+
+[indicator.spx_trend]
+name = "S&P 500: Abstand zur 200-Tage-Linie"
+series = ["spx"]
+transform = "trend_gap"
+orientation = "low"
+block = "rule"
+
 [indicator.stock_bond_corr]
 name = "Aktien-Anleihen-Korrelation (63 Tage)"
-series = ["sp500", "dgs10"]
+series = ["spx", "dgs10"]
 transform = "stock_bond_corr"
 orientation = "high"
 block = "macro"
@@ -1119,6 +1268,28 @@ transform = "yoy"
 orientation = "high"
 block = "vulnerability"
 v_score = 2
+
+# Very tight credit spreads as complacency (report 4.3 step 4, E-85): the Baa level, reversed. The
+# same value counts as stress in the credit block (credit_spread_level).
+
+[indicator.credit_spread_tight]
+name = "Kreditspread Baa: Enge"
+series = ["baa10y"]
+transform = "level"
+orientation = "low"
+block = "vulnerability"
+v_score = 3
+
+# Investors' equity allocation (Livermore 2013, E-86): equities / (equities + debt of all real-economy
+# borrowers). Order: the two equity series, then the five debt series.
+
+[indicator.equity_allocation]
+name = "Aktienquote der Anleger (Z.1)"
+series = ["ncbeilq027s", "fbcellq027s", "fgsdodns", "cmdebt", "bcnsdodns", "dodffswcmi", "slgsdodns"]
+transform = "equity_share"
+orientation = "high"
+block = "vulnerability"
+v_score = 1
 
 [indicator.vx_cot_short]
 name = "VX-Futures: Netto-Short der Non-Commercials / Open Interest"

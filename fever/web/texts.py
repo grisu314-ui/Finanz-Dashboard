@@ -12,9 +12,11 @@ from functools import cache
 from pathlib import Path
 
 from fever.config import (
-    FREQUENCY_DAYS, STRESS_BLOCKS, VULNERABILITY, Indicator, indicator_catalog, scoring_config, series_catalog,
+    FREQUENCY_DAYS, RULE_ONLY, STRESS_BLOCKS, VULNERABILITY, Indicator, indicator_catalog, scoring_config, series_catalog,
 )
-from fever.scoring.composite import CREDIT_CHANGE_INDICATOR, VIX_RATIO_INDICATOR
+from fever.scoring.composite import (
+    CREDIT_CHANGE_INDICATOR, RULE_INDICATORS, SAHM_INDICATOR, SOS_INDICATOR, TREND_INDICATOR, VIX_RATIO_INDICATOR,
+)
 
 TEXT_DIR = Path(__file__).resolve().parent / "texts"
 HEADINGS = (
@@ -36,6 +38,7 @@ GROUPS = {
     "breadth": "Breite/Internals",
     "positioning": "Positionierung/Sentiment",
     VULNERABILITY: "Fallhöhe",
+    RULE_ONLY: "Nur Ampelregel (kein Perzentil im Score)",
     "scores": "Gesamtbild",
     "display": "Nur Anzeige (kein Score)",
     "concepts": "Begriffe",
@@ -46,18 +49,22 @@ CONCEPTS = ("percentile", "staleness", "recessions")
 DISPLAYS = {
     "vix_term": ("vix9d", "vix", "vix3m", "vix6m", *(f"cfe_vx{n}" for n in range(1, 9))),
     "skew": ("skew",),
-    "hy_oas": ("bamlh0a0hym2",),
     "ccc_bb": ("bamlh0a3hyc", "bamlh0a1hybb"),
     "anfci": ("anfci",),
     "ofr_fsi": ("ofr_fsi", "ofr_fsi_credit", "ofr_fsi_equity_valuation", "ofr_fsi_funding", "ofr_fsi_safe_assets",
                 "ofr_fsi_volatility", "ofr_fsi_united_states", "ofr_fsi_other_advanced", "ofr_fsi_emerging_markets"),
     "yield_curve": ("t10y3m", "t10y2y"),
     "cape": ("shiller_cape",),
+    "money_market": ("mmmffaq027s", "ncbeilq027s", "fbcellq027s"),  # E-86
 }
 # Areas with their indicators (E-57), in the order of view 7: the stress blocks with indicators in phase 1,
 # then the vulnerability; each with the Kennzahl that heads it. Positioning has none until phase 2.
 AREAS = {"volatility": "block_volatility", "credit": "block_credit", "macro": "block_macro", "breadth": "block_breadth",
          VULNERABILITY: VULNERABILITY}
+# Role marks next to a Kennzahl's name (E-81): blue "Stress · <area>", violet "Fallhöhe", grey
+# "nur Anzeige", neutral "Ampelregel" for the indicators a traffic light rule reads.
+AREA_SHORT = {"volatility": "Volatilität", "credit": "Kredit", "macro": "Makro", "breadth": "Breite",
+              "positioning": "Positionierung"}
 FREQUENCY_NAMES = {"daily": "täglich", "weekly": "wöchentlich", "monthly": "monatlich", "quarterly": "quartalsweise"}
 LEVEL_NAMES = ("Grün", "Gelb", "Orange", "Rot")
 
@@ -132,6 +139,25 @@ def group_of(kennzahl_id: str) -> str:
     return indicator_catalog()[kennzahl_id].block
 
 
+def roles(kennzahl_id: str) -> list[tuple[str, str]]:
+    """Role marks as (text, kind), kind "stress", "vulnerability", "rule" or "display"; none for scores.
+
+    An indicator carries the roles of every indicator with the same value (same series and
+    transformation): the Baa spread level counts as stress and, reversed, as vulnerability (E-85).
+    """
+    if kennzahl_id in DISPLAYS:
+        return [("nur Anzeige", "display")]
+    catalog = indicator_catalog()
+    if kennzahl_id not in catalog:
+        return []
+    own = catalog[kennzahl_id]
+    same = [i for i in catalog.values() if (i.series, i.transform) == (own.series, own.transform)]
+    marks = [(f"Stress · {AREA_SHORT[i.block]}", "stress") for i in same if i.block in STRESS_BLOCKS]
+    marks += [("Fallhöhe", "vulnerability") for i in same if i.block == VULNERABILITY]
+    marks += [("Ampelregel", "rule") for i in same if i.id in RULE_INDICATORS]
+    return list(dict.fromkeys(marks))
+
+
 # --- generated sections ----------------------------------------------------------------------------
 
 _TRANSFORMS = {
@@ -147,7 +173,26 @@ _TRANSFORMS = {
     "cot_net_short": lambda c: "(Short − Long) der Non-Commercials geteilt durch das Open Interest",
     "change": lambda c: f"Veränderung des Werts über {c.change_window} Beobachtungen (Handelstage), in Einheiten der Reihe",
     "relative_change": lambda c: f"relative Stärke: Logveränderung des Verhältnisses der ersten zur zweiten Reihe über {c.relative_change_window} gemeinsame Handelstage",
+    "sos": lambda c: f"Durchschnitt der letzten {c.sos_average_window} Wochenwerte minus dem niedrigsten dieser Durchschnitte in den {c.sos_low_window} Wochen davor, in Prozentpunkten",
+    "trend_gap": lambda c: f"Abstand des Werts vom Durchschnitt der letzten {c.trend_window} Beobachtungen (Handelstage), in Prozent; negativ = unter dieser Linie",
+    "equity_share": lambda c: "Marktwert aller Aktien (nichtfinanzielle und finanzielle Unternehmen) geteilt durch Aktien plus Schuldtitel und Kredite von Bundesregierung, Bundesstaaten und Gemeinden, Haushalten, nichtfinanziellen Unternehmen und Ausland, in Prozent",
 }
+
+
+def rule_line(indicator_id: str) -> str | None:
+    """The traffic light rule an indicator feeds, from scoring.toml; None if it feeds none."""
+    c = scoring_config()
+    return {
+        VIX_RATIO_INDICATOR: f"Eigene Ampelregel: Rot, wenn der Wert an {c.red_vix_ratio_days} Handelstagen in Folge über "
+                             f"{_n(c.red_vix_ratio, 2)} liegt.",
+        CREDIT_CHANGE_INDICATOR: f"Eigene Ampelregel: Rot, solange das Perzentil mindestens {_n(c.red_credit_change)} beträgt "
+                                 f"(endet {_n(c.hysteresis)} Punkte darunter).",
+        SAHM_INDICATOR: f"Eigene Ampelregel: mindestens Gelb, solange der Wert mindestens {_n(c.yellow_sahm, 2)} beträgt; "
+                        f"Orange, solange zugleich der S&P 500 unter seiner {c.trend_window}-Tage-Linie liegt (ohne Hysterese).",
+        TREND_INDICATOR: f"Eigene Ampelregel mit der Sahm-Regel: Orange, solange der Wert unter null liegt und die Sahm-Regel "
+                         f"mindestens {_n(c.yellow_sahm, 2)} beträgt; ohne Abwärtstrend gilt dort Gelb (ohne Hysterese).",
+        SOS_INDICATOR: f"Eigene Ampelregel: mindestens Gelb, solange der Wert über {_n(c.yellow_sos, 2)} liegt (ohne Hysterese).",
+    }.get(indicator_id)
 
 
 def steckbrief(kennzahl_id: str, history_from=None) -> list[tuple[str, str]]:
@@ -174,6 +219,7 @@ def steckbrief(kennzahl_id: str, history_from=None) -> list[tuple[str, str]]:
         return _score_facts(kennzahl_id, config)
     indicator: Indicator = indicator_catalog()[kennzahl_id]
     stress_or_vulnerability = "Fallhöhe" if indicator.block == VULNERABILITY else "Stress"
+    rule_only = indicator.block == RULE_ONLY
     licenses = sorted({series.license for series in indicator.series if series.license})
     facts = [
         ("Reihen", ", ".join(f"{s.name} ({s.source}: {s.source_id})" for s in indicator.series)),
@@ -184,8 +230,10 @@ def steckbrief(kennzahl_id: str, history_from=None) -> list[tuple[str, str]]:
         ("Orientierung", f"{'hoch' if indicator.orientation == 'high' else 'niedrig'} = mehr {stress_or_vulnerability}"),
         ("Block", GROUPS[indicator.block]),
         ("Transformation", _TRANSFORMS[indicator.transform](config)),
-        ("Perzentil", f"Fenster {config.window_years} Jahre über die eigenen Beobachtungen, Mindesthistorie {config.min_history_years} Jahre"),
-        ("Gewicht in der Konfidenz", f"{indicator.v_score} von 5 (Vorlauf-Bewertung, Bericht Tabelle 2)"),
+        ("Perzentil", f"Fenster {config.window_years} Jahre über die eigenen Beobachtungen, Mindesthistorie {config.min_history_years} Jahre"
+                      + ("; nur zur Anzeige, die Regel liest den Wert" if rule_only else "")),
+        ("Gewicht in der Konfidenz", "keins: zählt nur in seiner Ampelregel" if rule_only
+         else f"{indicator.v_score} von 5 (Vorlauf-Bewertung, Bericht Tabelle 2)"),
     ]
     if indicator.display_window:
         facts.append(("Zusätzliches Perzentil", f"über {config.display_window_years} Jahre, nur zur Anzeige"))
@@ -201,12 +249,21 @@ def contribution(indicator_id: str) -> list[str]:
     vulnerability = indicator.block == VULNERABILITY
     more = "mehr Fallhöhe" if vulnerability else "mehr Stress"
     direction = f"hoch = {more}" if indicator.orientation == "high" else f"umgedreht, weil ein niedriger Wert {more} bedeutet"
+    valid = (f"Gültig nur mit mindestens {c.min_history_years} Jahren Historie und solange der Wert nicht veraltet ist "
+             f"(mehr als {FREQUENCY_DAYS[indicator.frequency] + indicator.tolerance_days} Tage nach der erwarteten "
+             "Veröffentlichung); sonst zählt er nicht und wird nie durch einen Ersatzwert gefüllt.")
+    if indicator.block == RULE_ONLY:
+        return [
+            f"Umrechnung: {_TRANSFORMS[indicator.transform](c)}.",
+            f"Perzentil über die letzten {c.window_years} Jahre: nur zur Anzeige.",
+            valid,
+            "Geht in keinen Bereich ein, nicht in Stress, Fallhöhe, Konfidenz oder Diffusionsindex.",
+            rule_line(indicator_id),
+        ]
     lines = [
         f"Umrechnung: {_TRANSFORMS[indicator.transform](c)}.",
         f"Perzentil: Rang des Werts unter den eigenen Beobachtungen der letzten {c.window_years} Jahre; {direction}.",
-        f"Gültig nur mit mindestens {c.min_history_years} Jahren Historie und solange der Wert nicht veraltet ist "
-        f"(mehr als {FREQUENCY_DAYS[indicator.frequency] + indicator.tolerance_days} Tage nach der erwarteten "
-        "Veröffentlichung); sonst zählt er nicht und wird nie durch einen Ersatzwert gefüllt.",
+        valid,
     ]
     if vulnerability:
         lines += [
@@ -225,12 +282,13 @@ def contribution(indicator_id: str) -> list[str]:
             f"geglättet (Halbwertszeit {_n(c.stress_half_life)} Handelstage).",
             f"Diffusionsindex: Der Indikator zählt mit, wenn sein Perzentil über {_n(c.yellow_diffusion_percentile)} liegt.",
         ]
-    if indicator_id == VIX_RATIO_INDICATOR:
-        lines.append(f"Eigene Ampelregel: Rot, wenn der Wert an {c.red_vix_ratio_days} Handelstagen in Folge über "
-                     f"{_n(c.red_vix_ratio, 2)} liegt.")
-    if indicator_id == CREDIT_CHANGE_INDICATOR:
-        lines.append(f"Eigene Ampelregel: Rot, solange das Perzentil mindestens {_n(c.red_credit_change)} beträgt "
-                     f"(endet {_n(c.hysteresis)} Punkte darunter).")
+    if rule_line(indicator_id):
+        lines.append(rule_line(indicator_id))
+    for twin in indicator_catalog().values():  # the same value in another role (E-85)
+        if twin.id != indicator_id and (twin.series, twin.transform) == (indicator.series, indicator.transform):
+            role = "Fallhöhe" if twin.block == VULNERABILITY else "Stress"
+            lines.append(f"Derselbe Wert zählt zusätzlich im Bereich {GROUPS[twin.block]} als „{twin.name}“ "
+                         f"({'hoch' if twin.orientation == 'high' else 'niedrig'} = mehr {role}).")
     lines.append(f"Konfidenz: Gewicht {indicator.v_score} von 5 (Vorlauf laut Bericht, Tabelle 2), solange der Wert gültig ist.")
     if indicator.display_window:
         lines.append(f"Zusätzliches Perzentil über {c.display_window_years} Jahre: nur zur Anzeige, nicht im Score.")
@@ -255,7 +313,10 @@ def _score_facts(kennzahl_id: str, c) -> list[tuple[str, str]]:
     if kennzahl_id == "diffusion":
         return [("Berechnung", f"Anteil der gültigen Stress-Indikatoren mit Perzentil über {_n(c.yellow_diffusion_percentile)}, in Prozent")]
     if kennzahl_id == "traffic_light":
-        return [("Stufen", ", ".join(LEVEL_NAMES)), ("Berechnung", "Regeln auf dem geglätteten Stress, der Fallhöhe, dem Diffusionsindex und VIX/VIX3M; es gilt die höchste zutreffende Stufe")]
+        return [("Stufen", ", ".join(LEVEL_NAMES)),
+                ("Berechnung", "Regeln auf dem geglätteten Stress, der Fallhöhe, dem Diffusionsindex, VIX/VIX3M, dem Anstieg des "
+                               "Kreditspreads Baa, der Sahm-Regel mit dem Trend des S&P 500 und dem SOS-Indikator; es gilt die "
+                               "höchste zutreffende Stufe")]
     block = kennzahl_id.removeprefix("block_")
     facts = [("Berechnung", "Median der Perzentile der gültigen Indikatoren im Block; ohne gültigen Indikator fehlt der Block")]
     if block == c.fast_block:
@@ -271,8 +332,13 @@ def thresholds(kennzahl_id: str) -> list[str]:
     red = (f"Rot: Stress mindestens {_n(c.red_stress)}, oder VIX/VIX3M über {_n(c.red_vix_ratio, 2)} an {c.red_vix_ratio_days} "
            f"Handelstagen in Folge (endet nach {c.red_vix_ratio_days} Tagen in Folge darunter), oder der Anstieg des Kreditspreads Baa "
            f"über {c.change_window} Handelstage im Perzentil mindestens {_n(c.red_credit_change)}.")
-    orange = f"Orange: Stress mindestens {_n(c.orange_stress)}, oder Stress mindestens {_n(c.orange_stress_with_vulnerability)} zusammen mit Fallhöhe mindestens {_n(c.orange_vulnerability)}."
-    yellow = f"Gelb: Fallhöhe mindestens {_n(c.yellow_vulnerability)}, oder mindestens {_n(c.yellow_diffusion_share)} % der gültigen Stress-Indikatoren über Perzentil {_n(c.yellow_diffusion_percentile)}."
+    orange = (f"Orange: Stress mindestens {_n(c.orange_stress)}, oder Stress mindestens {_n(c.orange_stress_with_vulnerability)} "
+              f"zusammen mit Fallhöhe mindestens {_n(c.orange_vulnerability)}, oder die Sahm-Regel mindestens "
+              f"{_n(c.yellow_sahm, 2)}, während der S&P 500 unter seiner {c.trend_window}-Tage-Linie liegt (ohne Hysterese).")
+    yellow = (f"Gelb: Fallhöhe mindestens {_n(c.yellow_vulnerability)}, oder mindestens {_n(c.yellow_diffusion_share)} % der "
+              f"gültigen Stress-Indikatoren über Perzentil {_n(c.yellow_diffusion_percentile)}, oder die Sahm-Regel mindestens "
+              f"{_n(c.yellow_sahm, 2)} ohne diesen Abwärtstrend, oder der SOS-Indikator über {_n(c.yellow_sos, 2)} "
+              "(beide ohne Hysterese).")
     colors = "Farben: Die Ampelfarben stehen nur für die Gesamtampel und immer mit ihrem Namen."
     if kennzahl_id == "traffic_light":
         return [red, orange, yellow, "Grün: keine Regel trifft zu.", hysteresis, colors]
@@ -297,11 +363,15 @@ def thresholds(kennzahl_id: str) -> list[str]:
     if kennzahl_id.startswith("block_"):
         return ["Keine eigene Schwelle; der Block geht mit gleichem Gewicht in den Stress ein."]
     indicator = indicator_catalog()[kennzahl_id]
+    if indicator.block == RULE_ONLY:
+        return [rule_line(kennzahl_id), "Das Perzentil ist nur Anzeige (Farbskala Blau, dunkler = höher); keine weitere Schwelle."]
     lines = [f"Markierung „erhöht“: Perzentil über {_n(c.yellow_diffusion_percentile)} (Farbskala Blau, dunkler = höher; keine eigene Ampel je Kennzahl)."]
     if indicator.block == VULNERABILITY:
         lines.append("Geht als Komponente in die Fallhöhe ein.")
     else:
         lines.append(f"Zählt im Diffusionsindex: {yellow}")
+    if rule_line(kennzahl_id):
+        lines.append(rule_line(kennzahl_id))
     return lines
 
 
@@ -319,6 +389,9 @@ def rule_text(rule: str) -> str:
         "red_credit_change": f"Rot: Anstieg des Kreditspreads Baa über {c.change_window} Handelstage im Perzentil mindestens {_n(c.red_credit_change)}",
         "orange_stress": f"Orange: Stress mindestens {_n(c.orange_stress)}",
         "orange_stress_vulnerability": f"Orange: Stress mindestens {_n(c.orange_stress_with_vulnerability)} und Fallhöhe mindestens {_n(c.orange_vulnerability)}",
+        "orange_sahm_trend": f"Orange: Sahm-Regel mindestens {_n(c.yellow_sahm, 2)} und S&P 500 unter seiner {c.trend_window}-Tage-Linie",
+        "yellow_sahm": f"Gelb: Sahm-Regel mindestens {_n(c.yellow_sahm, 2)}",
+        "yellow_sos": f"Gelb: SOS-Indikator über {_n(c.yellow_sos, 2)}",
         "yellow_vulnerability": f"Gelb: Fallhöhe mindestens {_n(c.yellow_vulnerability)}",
         "yellow_diffusion": f"Gelb: mindestens {_n(c.yellow_diffusion_share)} % der Stress-Indikatoren über Perzentil {_n(c.yellow_diffusion_percentile)}",
     }.get(rule, rule)

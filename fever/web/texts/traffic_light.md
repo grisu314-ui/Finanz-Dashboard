@@ -4,15 +4,15 @@
 Gesamtlage in vier Stufen aus Stress, Fallhöhe und schnellen Warnsignalen: Grün, Gelb, Orange, Rot. Höhere Stufe = angespanntere Lage. Keine Prognose.
 
 ## Was die Kennzahl misst
-Die Ampel fasst die Lage des US- und des globalen Aktienmarkts in einer von vier Stufen zusammen. Sie folgt festen Regeln statt einer Formel: Jede Regel prüft den geglätteten Stress, die Fallhöhe, den Diffusionsindex oder das Verhältnis VIX zu VIX3M (Volatilitätserwartung für 30 Tage zu der für drei Monate). Es gilt die höchste Stufe, deren Regel zutrifft. Welche Regeln das sind und ab welchen Werten sie greifen, steht unten unter „Schwellen und Farben“; die Werte kommen direkt aus der Konfiguration.
+Die Ampel fasst die Lage des US- und des globalen Aktienmarkts in einer von vier Stufen zusammen. Sie folgt festen Regeln statt einer Formel: Jede Regel prüft den geglätteten Stress, die Fallhöhe, den Diffusionsindex, das Verhältnis VIX zu VIX3M (Volatilitätserwartung für 30 Tage zu der für drei Monate), den Anstieg des Kreditspreads Baa oder eines von zwei Rezessionssignalen vom US-Arbeitsmarkt: die Sahm-Regel, zusammen mit dem Trend des S&P 500, und den SOS-Indikator. Es gilt die höchste Stufe, deren Regel zutrifft. Welche Regeln das sind und ab welchen Werten sie greifen, steht unten unter „Schwellen und Farben“; die Werte kommen direkt aus der Konfiguration.
 
 ## Warum sie für Marktstress oder Fallhöhe zählt
 Stress und Fallhöhe beschreiben verschiedene Dinge: akute Anspannung und Verwundbarkeit. Der Bericht empfiehlt, sie nicht zu multiplizieren, sondern über Regeln zu kombinieren, weil sonst eine hohe Bewertung ohne Stress und akuter Stress bei niedriger Bewertung ununterscheidbar würden (docs/recherche.md, Abschn. 4.3, Schritte 4 und 5). Zusätzliche Einzelregeln fangen schnelle Schocks, die ein geglätteter Composite erst spät zeigt.
 
 ## So liest du sie
 - **Grün:** keine der Regeln trifft zu.
-- **Gelb:** erhöhte Verwundbarkeit ohne akuten Auslöser, oder viele Einzelwerte gleichzeitig auffällig.
-- **Orange:** deutlicher Stress, besonders zusammen mit hoher Fallhöhe.
+- **Gelb:** erhöhte Verwundbarkeit ohne akuten Auslöser, viele Einzelwerte gleichzeitig auffällig, oder ein Rezessionssignal vom Arbeitsmarkt (SOS-Indikator, Sahm-Regel bei intaktem Aufwärtstrend des S&P 500).
+- **Orange:** deutlicher Stress, besonders zusammen mit hoher Fallhöhe, oder ein ausgelöstes Rezessionssignal (Sahm-Regel), während der S&P 500 unter seiner 200-Tage-Linie liegt.
 - **Rot:** breiter akuter Stress oder ein schnelles Warnsignal wie eine invertierte Volatilitätskurve.
 
 Unter der Ampel steht, welche Regeln gerade zutreffen. Eine Stufe wird erst verlassen, wenn der Wert deutlich unter die Schwelle fällt (Hysterese); das verhindert tägliches Hin- und Herspringen (Abschn. 4.3, Schritt 5). Lies die Ampel immer zusammen mit der Konfidenz.
@@ -22,8 +22,9 @@ Unter der Ampel steht, welche Regeln gerade zutreffen. Eine Stufe wird erst verl
 - Der Composite ist geglättet und reagiert auf schnelle Schocks spät; die VIX/VIX3M-Regel gleicht das nur teilweise aus.
 - In Phase 1 fehlt der Block Positionierung, im Block Breite der Anteil über der 50/200-Tage-Linie (E-72), und die Regel über den Anstieg der Kreditspreads nutzt vorerst Moody's Baa statt des HY-OAS (E-75). Die Ampel stützt sich deshalb auf weniger oder andere Bausteine als im Bericht vorgesehen.
 - Fehlt der Stress-Composite, entscheiden die übrigen Regeln (Entscheidung E-51).
+- Die Rezessionsregeln gelten, solange ihre Werte die Schwellen erfüllen, ohne Hysterese (Entscheidungen E-80 und E-91). Beide Arbeitsmarktsignale bleiben nach dem Beginn einer Rezession oft bis weit in die Erholung hinein erhöht. Eigene Auswertung (29.09.2026): Die Sahm-Regel hielt die Ampel mindestens auf Gelb von 12/1990 bis 01/1993, 07/2001 bis 12/2002, 05/2008 bis 07/2010, 05/2020 bis 05/2021 und 08/2024 bis 11/2024 ohne Rezession; auf Orange nur, solange der S&P 500 unter seiner 200-Tage-Linie lag, vor allem 2001–02 und 2008–09. Rund um die Linie wechselt die Stufe dabei öfter zwischen Gelb und Orange.
 - Einschätzung: Die Schwellen sind Startwerte aus dem Bericht und nicht an Krisen optimiert; das ist Absicht, um Überanpassung zu vermeiden (Abschn. 4.3, Schritt 7).
 
 ## Quellen
 - docs/recherche.md, Kurzfazit und Abschnitt 4.3 (Stand 25.09.2026)
-- docs/umsetzungsplan.md, Entscheidungen E-47 bis E-51 (26.09.2026)
+- docs/umsetzungsplan.md, Entscheidungen E-47 bis E-51 (26.09.2026), E-80 und E-91 (29.09.2026)

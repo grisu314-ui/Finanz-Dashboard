@@ -13,6 +13,7 @@ Start: python -m fever.worker. Healthcheck: healthcheck() (decision E-33).
 """
 
 import logging
+import os
 import signal
 import sys
 import threading
@@ -30,6 +31,7 @@ from fever.backup import BackupError, has_backup, run_backup
 from fever.config import ConfigError, Series, group_members, series_catalog
 from fever.http import HttpClient
 from fever.release import estimated_release
+from fever.sources import sec
 from fever.sources.update import update_group
 from fever.store.db import DataDirError, data_dir, make_engine
 from fever.store.observations import latest_obs_date
@@ -216,6 +218,10 @@ def main() -> int:
         "Worker gestartet: %d Reihen in %d Abrufgruppen, Takt %d Minuten",
         len(catalog), len(group_members(catalog)), CYCLE.total_seconds() // 60,
     )
+    if any(series.source == "sec" for series in catalog.values()):
+        problem = sec.contact_problem(os.environ.get("FEVER_SEC_CONTACT"))
+        if problem:  # visible right after a deploy, not only at the next SEC fetch (18:00 New York)
+            logger.warning("%s", problem)
     serve(engine, directory, HttpClient(), catalog, stop)
     engine.dispose()
     logger.info("Worker beendet")
