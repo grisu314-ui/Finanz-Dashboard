@@ -786,10 +786,11 @@ def vis_regime(theme: str, now: datetime) -> list:
     latest = db.latest_composite()
     if latest is None:
         return [ui.note("Noch keine Scores berechnet.")]
-    history = db.composite_history("level")
-    chart = Regime("regime", "Ampelstufe je Handelstag", "eigene Berechnung (Scoring)", [r["score_date"] for r in history],
-                   [r["level"] for r in history], texts.LEVEL_NAMES, observed=latest["score_date"],
-                   retrieved=latest["computed_at"])
+    history = db.composite_history("level", "vulnerability")
+    chart = Regime("regime", "Ampelstufe und Fallhöhe je Handelstag", "eigene Berechnung (Scoring)",
+                   [r["score_date"] for r in history], [r["level"] for r in history], texts.LEVEL_NAMES,
+                   observed=latest["score_date"], retrieved=latest["computed_at"],
+                   vulnerability=[r["vulnerability"] for r in history])  # E-96
     return [ui.figure_card("vis-regime-chart", *regime(chart, theme), box="chart-box chart-box-short")]
 
 

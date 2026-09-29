@@ -444,7 +444,8 @@ def heatmap(chart: Heatmap, theme: str, today: date | None = None) -> tuple[dict
 
 @dataclass(frozen=True)
 class Regime:
-    """Traffic light level per score day as one coloured strip (report 6.3, view 7)."""
+    """Traffic light level per score day as one coloured strip (report 6.3, view 7); below it the
+    vulnerability as a second strip in the percentile colours (E-96), so the two axes stay apart."""
 
     chart_id: str
     title: str
@@ -454,28 +455,47 @@ class Regime:
     names: tuple[str, ...]  # level names, index = level
     observed: date | None = None
     retrieved: datetime | None = None
+    vulnerability: list[float | None] | None = None  # 0-100 per day; None: no second strip
 
 
 def regime(chart: Regime, theme: str, today: date | None = None) -> tuple[dict, dict]:
     mode = theme if theme in PALETTE else "light"
     n = len(STATUS)
     scale = [item for level, colour in enumerate(STATUS) for item in ([level / n, colour], [(level + 1) / n, colour])]
+    x = _iso(chart.x)
     data = [{
-        "type": "heatmap", "x": _iso(chart.x), "y": ["Ampel"], "z": [list(chart.levels)], "zmin": -0.5, "zmax": n - 0.5,
+        "type": "heatmap", "x": x, "y": ["Ampel"], "z": [list(chart.levels)], "zmin": -0.5, "zmax": n - 0.5,
         "colorscale": scale, "showscale": False, "hoverongaps": False,
         "customdata": [[chart.names[v] if v is not None else "–" for v in chart.levels]],
         "hovertemplate": "%{x|%d.%m.%Y}: %{customdata}<extra></extra>",
     }]
+    rows = ["Ampel"]
     text = stamp(chart.source, chart.observed, chart.retrieved) + "<br>Farben: " + ", ".join(chart.names)
+    if chart.vulnerability is not None:
+        # the neutral percentile colours of the heatmap: the status colours belong to the traffic light alone
+        steps = len(PERCENTILE_RAMP) - 1
+        # own y-axis: two one-row heatmaps on one category axis break plotly.js 4.1 (TypeError, 29.09.2026)
+        data.append({
+            "type": "heatmap", "x": x, "y": ["Fallhöhe"], "yaxis": "y2", "z": [list(chart.vulnerability)], "zmin": 0, "zmax": 100,
+            "colorscale": [[i / steps, colour] for i, colour in enumerate(PERCENTILE_RAMP)], "showscale": False,
+            "hoverongaps": False, "hovertemplate": "%{x|%d.%m.%Y}: Fallhöhe %{z:.0f}<extra></extra>",
+        })
+        rows.append("Fallhöhe")
+        text += "<br>Fallhöhe: hell niedrig, dunkel hoch"
     layout = {
         "template": TEMPLATES[mode], "separators": ",.", "uirevision": chart.chart_id,
         "title": {"text": chart.title, "x": 0, "xanchor": "left", "font": {"size": 15}},
-        "margin": {"l": 56, "r": 16, "t": 84, "b": 62 + 14 * 4},
+        "margin": {"l": 72 if len(rows) > 1 else 56, "r": 16, "t": 84, "b": 62 + 14 * (3 + len(rows))},
         "xaxis": {"type": "date", "tickformatstops": DATE_FORMATS, "tickangle": 0,
                   "rangeselector": {"buttons": RANGE_BUTTONS, "x": 0, "y": 1.02, "yanchor": "bottom"}},
         "yaxis": {"visible": False, "fixedrange": True},
         "annotations": [stamp_annotation(text, mode)],
     }
+    if len(rows) > 1:  # row names beside the strips, the traffic light on top
+        strip = {"fixedrange": True, "showgrid": False, "ticks": "", "tickfont": {"size": 11}}
+        layout["yaxis"] = {**strip, "domain": [0.52, 1]}
+        layout["yaxis2"] = {**strip, "domain": [0, 0.48], "anchor": "x"}
+        layout["xaxis"]["anchor"] = "y2"  # dates under the lower strip
     return {"data": data, "layout": layout}, graph_config(chart.chart_id, today)
 
 

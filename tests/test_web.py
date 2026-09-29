@@ -687,6 +687,14 @@ def test_regime_heatmap_and_sparkline_follow_the_standard():
     figure, config = regime(Regime("regime", "Ampel", "x", days, [0, 3], texts.LEVEL_NAMES), "dark")
     figure = validated(figure)
     assert config["showSendToCloud"] is False and [list(row) for row in figure.data[0].customdata] == [["Grün", "Rot"]]
+    assert len(figure.data) == 1 and figure.layout.yaxis.visible is False
+    # E-96: the vulnerability as a second strip below, in the neutral percentile colours, gaps stay empty
+    figure, _ = regime(Regime("regime", "Ampel", "x", days, [0, 3], texts.LEVEL_NAMES, vulnerability=[85.0, None]), "light")
+    figure = validated(figure)
+    strip = figure.data[1]
+    assert strip.y == ("Fallhöhe",) and [list(row) for row in strip.z] == [[85.0, None]] and (strip.zmin, strip.zmax) == (0, 100)
+    assert strip.colorscale[0][1] == "#cde2fb" and "Fallhöhe" in strip.hovertemplate
+    assert strip.yaxis == "y2" and figure.layout.yaxis2.domain == (0, 0.48) and figure.layout.yaxis.domain == (0.52, 1)
     figure, config = heatmap(Heatmap("heatmap", "H", "x", ["VIX"], days, [[10.0, None]]), "light")
     figure = validated(figure)
     assert config["showSendToCloud"] is False and figure.data[0].zmax == 100 and figure.data[0].colorscale[0][1] == "#cde2fb"
