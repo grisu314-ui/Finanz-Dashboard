@@ -350,20 +350,8 @@ tolerance_days = 3
 bounds = [-5, 25]
 license = "Moody's (Copyright, über FRED): nur private Nutzung, keine Weitergabe, Quellenangabe"
 
-# --- FRED: equity index (only ten years on FRED, S&P licence). VRP and the stock-bond correlation
-# --- use the Cboe closes since E-83; no indicator reads this series any more (docs/umsetzungsplan.md, 9).
-
-[series.sp500]
-source = "fred"
-source_id = "SP500"
-name = "S&P 500"
-unit = "Indexpunkte"
-frequency = "daily"
-release_time = "20:15"
-lag_days = 0
-tolerance_days = 3
-bounds = [100, 100000]
-license = "S&P Dow Jones Indices LLC (Copyright): nur private Nutzung, keine Weitergabe"
+# FRED SP500 (ten years only) left the catalogue on 29.09.2026 (E-92): VRP and the stock-bond
+# correlation use the Cboe closes (E-83). Its stored observations stay in the database.
 
 # --- ECB Data Portal (M4a). Reuse free with the note "Source: ECB statistics." ---
 

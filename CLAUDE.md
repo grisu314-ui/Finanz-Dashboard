@@ -53,7 +53,7 @@ Bewusste Abweichungen vom Bericht:
 - SQLite statt DuckDB: `web` und `worker` sind getrennte Prozesse, DuckDB erlaubt aber nur einen schreibenden Prozess oder mehrere nur lesende, nicht beides zugleich.
 - Kein Prefect, Grafana oder Streamlit: zu schwer oder doppelt.
 - Shiller-CAPE und Margin Debt schon in Phase 1, sonst bleibt die Fallhöhe-Achse leer. Margin Debt kommt aus der Fed-Statistik Z.1 (FRED `BOGZ1FL663067003Q`, quartalsweise), nicht von FINRA (E-42).
-- Entscheidungsrunde 29.09.2026 (E-80 bis E-91): Mindesthistorie 3 statt 5 Jahre; Sahm-Regel (Orange nur mit S&P 500 unter der 200-Tage-Linie, E-91) und SOS-Indikator als feste Ampelregeln; Aktienquote der Anleger (Z.1) und umgedrehter Kreditspread Baa in der Fallhöhe; S&P 500 für VRP und Aktien-Anleihen-Korrelation von Cboe statt FRED.
+- Entscheidungsrunde 29.09.2026 (E-80 bis E-92): Mindesthistorie 3 statt 5 Jahre; Sahm-Regel (Orange nur mit S&P 500 unter der 200-Tage-Linie, E-91) und SOS-Indikator als feste Ampelregeln; Aktienquote der Anleger (Z.1) und umgedrehter Kreditspread Baa in der Fallhöhe; S&P 500 für VRP und Aktien-Anleihen-Korrelation von Cboe statt FRED.
 
 Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `assets/`. Alternative Stacks schlägst du nicht vor.
 
