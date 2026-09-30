@@ -16,7 +16,7 @@ Die Ampel ist nur so gut wie die Daten dahinter. Der Bericht schlägt einen Konf
 
 ## Grenzen und Fallstricke
 - Die Gewichte sind Einschätzungen des Berichts, keine gemessenen Vorlaufzeiten (Abschn. 2, Hinweis unter der Tabelle).
-- Indikatoren, die es in Phase 1 noch nicht gibt (Breite, Positionierung), gehen gar nicht ein; die Konfidenz misst nur die Vollständigkeit der vorhandenen.
+- Indikatoren, die es noch nicht gibt (der Block Positionierung bis Phase 2, im Block Breite der Anteil über der 50/200-Tage-Linie, E-72), gehen gar nicht ein; die Konfidenz misst nur die Vollständigkeit der vorhandenen.
 - Eine hohe Konfidenz sagt nichts darüber, ob die Ampel richtig liegt.
 
 ## Quellen

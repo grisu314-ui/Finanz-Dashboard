@@ -1,6 +1,6 @@
 # Bedienung: das Dashboard lesen
 
-Stand: 29.09.2026 · Für: dich als Anwender · Status: ⏳ **Zielbild, teilweise umgesetzt.** Seit M6 gibt es Seitenrahmen, Übersicht (Ampel, Stress, Fallhöhe, Konfidenz), Datenstand, Erklärungen und Erklärseiten; die Themen-Ansichten folgen in M7, die übrigen Texte in M8 (`docs/umsetzungsplan.md`). Dieser Text wird bei der Abnahme (M9) gegen die fertige App geprüft und dann auf ✅ gesetzt.
+Stand: 30.09.2026 · Für: dich als Anwender · Status: ✅ **geprüft bei der Abnahme von Phase 1 (M9, 30.09.2026):** Text gegen die App abgeglichen (Entwicklungsumgebung), Sichtprüfung aller Ansichten auf Smartphone und Desktop auf TrueNAS durch den Nutzer.
 
 Die genauen Schwellenwerte stehen bewusst nicht hier, sondern in der App auf den Erklärseiten (z. B. „Ampel“). Die Seiten werden aus der Konfiguration erzeugt und sind deshalb immer aktuell.
 
@@ -30,7 +30,7 @@ Gelb gibt es außerdem bei einem Rezessionssignal vom Arbeitsmarkt ohne Abwärts
 
 - **Hysterese:** Eine Stufe wird erst verlassen, wenn der Wert klar unter die Schwelle fällt. Das verhindert tägliches Hin- und Herspringen.
 - **Konfidenz:** Anteil der Kennzahlen mit aktuellen Daten, gewichtet nach ihrem historischen Vorlauf. Niedrige Konfidenz heißt: Die Ampel steht auf dünner Datenbasis.
-- In Phase 1 fehlen einzelne Bausteine sichtbar, z. B. der Block „Positionierung/Sentiment“ (Phase 2), im Block „Breite“ der Anteil der Aktien über ihrer 50/200-Tage-Linie (E-72); die Kreditspread-Regel und die Kreditspread-Enge in der Fallhöhe nutzen vorerst Moody's Baa statt HY-OAS (E-75, E-85). Die App zeigt das an, statt Lücken zu verstecken.
+- Derzeit fehlen einzelne Bausteine sichtbar, z. B. der Block „Positionierung/Sentiment“ (AAII folgt in Phase 2), im Block „Breite“ der Anteil der Aktien über ihrer 50/200-Tage-Linie (E-72); die Kreditspread-Regel und die Kreditspread-Enge in der Fallhöhe nutzen vorerst Moody's Baa statt HY-OAS (E-75, E-85). Die App zeigt das an, statt Lücken zu verstecken.
 
 ## 3. Einzelkennzahlen lesen
 
@@ -51,7 +51,7 @@ Gelb gibt es außerdem bei einem Rezessionssignal vom Arbeitsmarkt ohne Abwärts
   - bei Indikatoren „So fließt der Wert in den Bereich ein“: welche Rolle der Wert heute spielt und wie er Schritt für Schritt in den Bereich und in Stress bzw. Fallhöhe eingeht
   - „Schwellen und Farben“: ab wann „erhöht“ bzw. welche Ampelregel gilt
   - Quellen
-- Die Seite „Erklärungen“ listet alle Kennzahlen nach Block, dazu die Konzepte Perzentil, Ampel, Konfidenz, Veraltung und Rezessionsbalken.
+- Die Seite „Erklärungen“ listet alle Kennzahlen nach Block, oben das Gesamtbild (Ampel, Stress, Fallhöhe, Konfidenz, Diffusionsindex, Blöcke), unten die Begriffe Perzentil, Veraltung, Rezessionsbalken und Validierung.
 
 ## 5. Aktualität: Wie alt ist, was ich sehe?
 

@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 30.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92); M10 Validierung in der Entwicklungsumgebung umgesetzt (E-93); Fallhöhe-Streifen in der Regime-Zeitleiste (E-96); M11 Walk-forward-Test geschätzter Gewichte in der Entwicklungsumgebung umgesetzt (E-94), gleiche Gewichte bleiben (E-97); kein Gelb allein aus der Fallhöhe (E-95); Fallhöhe durchgängig lila (E-98), auf TrueNAS eingespielt (Nutzer 30.09.2026); Sperrfehler beim Sofort-Abruf behoben (Abschnitt 4, „Datenbank gesperrt“); Phase 2 beginnt mit Alerts über ntfy.sh (E-99, E-100)** · Nächster Schritt: Update auf TrueNAS mit dieser Korrektur (ohne Migration, Abschnitt 9), danach M9 (Abnahme), dann Plan M12 (Alerts)
+Stand: 30.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92); M10 Validierung in der Entwicklungsumgebung umgesetzt (E-93); Fallhöhe-Streifen in der Regime-Zeitleiste (E-96); M11 Walk-forward-Test geschätzter Gewichte in der Entwicklungsumgebung umgesetzt (E-94), gleiche Gewichte bleiben (E-97); kein Gelb allein aus der Fallhöhe (E-95); Fallhöhe durchgängig lila (E-98), auf TrueNAS eingespielt (Nutzer 30.09.2026); Sperrfehler beim Sofort-Abruf behoben (Abschnitt 4, „Datenbank gesperrt“)**; **Phase 1 abgenommen (M9, 30.09.2026)**; Phase 2 beginnt mit Alerts über ntfy.sh (E-99, E-100) · Nächster Schritt: Plan M12 (Alerts) zur Freigabe (Abschnitt 4)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -28,8 +28,8 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | R-29.09 | Entscheidungsrunde 29.09.2026: Sahm-Regel mit Trendbedingung und SOS-Regel, Rollen-Marken, Mindesthistorie 3 Jahre, Cboe-SPX, Re-Steepening-Hinweis, Kreditspread-Enge und Aktienquote in der Fallhöhe, Geldmarktfonds, y-Achse, HY-OAS-Niveau (E-80 bis E-92) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); auf TrueNAS eingespielt (Nutzer 29.09.2026) | M8 | erteilt 29.09.2026 |
 | M10 | Validierung (Bericht 4.3, Schritt 7): Walk-forward, Treffer und Fehlalarme je Ampelstufe, Vorlauf, Vergleich mit reinem VIX-Filter; vorgezogen aus Phase 2 (E-89) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M10, „Ergebnisse“); auf TrueNAS eingespielt (Migration 0004, Nutzer 29.09.2026) | R-29.09 | erteilt 29.09.2026 (Plan ohne Rückfrage) |
 | M11 | Walk-forward-Test geschätzter Stress-Gewichte (Logit auf den Stress-Blöcken, jährlich nur mit Daten davor geschätzt; nur Auswertung, E-94) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M11, „Ergebnisse“); gleiche Gewichte bleiben (E-97); auf TrueNAS eingespielt (Nutzer 30.09.2026) | M10 | erteilt 29.09.2026 |
-| M9 | Abnahme Phase 1 | ☐ Nutzer 29.09.2026: „deutlich besser“; Abnahme nach dem Update auf E-98 und der Sichtprüfung auf Smartphone und Desktop (Auswahl „Nach dem Update“) | M0–M8, M10 | – |
-| M12 | Alerts über ntfy.sh (Phase 2, E-99, E-100) | ☐ Plan nach M9 | M9 | ausstehend |
+| M9 | Abnahme Phase 1 | ☑ 30.09.2026: Update auf TrueNAS und Sichtprüfung aller Ansichten auf Smartphone und Desktop durch den Nutzer („M9 abhaken, beides OK“); Belege im Meilenstein | M0–M8, M10 | erteilt 30.09.2026 (Nutzer) |
+| M12 | Alerts über ntfy.sh (Phase 2, E-99, E-100) | ☐ Plan zur Freigabe (Abschnitt 4, M12) | M9 | ausstehend |
 
 **Warum diese Reihenfolge:** FRED liefert die ICE-BofA-Spreads seit April 2026 nur noch für drei Jahre (Bericht, TL;DR). Jeder Tag ohne laufenden Worker verschiebt den Anfang des lokalen Archivs um einen Tag nach hinten. Deshalb geht ein minimaler Worker mit FRED und Cboe (M0–M3) in Betrieb, bevor Scoring und Oberfläche entstehen.
 
@@ -845,6 +845,14 @@ Laut Bericht 6.3, soweit Daten vorhanden:
 3. `docs/bedienung.md` und `docs/einrichtung.md` von ⏳ auf ✅, wo geprüft.
 4. README-Status aktualisieren.
 
+**Ergebnis (30.09.2026, erledigt):**
+- `pytest -q`: 492 Tests grün (Python 3.14, Entwicklungsumgebung).
+- Build-Probe: in der Cloud nicht wiederholt (vom Sicherheitsfilter der Sitzung abgelehnt); Dockerfile, `requirements.txt` und Compose-Dateien sind seit 28.09.2026 unverändert, das gebaute Image lief am 29.09.2026 in der Migrationsprobe, und der Build auf TrueNAS lief beim Nutzer.
+- Update auf TrueNAS mit allen Ständen bis zur Sperr-Korrektur und Sichtprüfung aller Ansichten auf Smartphone und Desktop: Nutzer, 30.09.2026 („M9 abhaken, beides OK“).
+- `docs/bedienung.md` gegen die App geprüft und auf ✅ gesetzt; korrigiert: Liste der Begriffe auf der Seite „Erklärungen“, „In Phase 1 fehlen“ zu „Derzeit fehlen“. `docs/einrichtung.md`: ✅ nur, wo der Nutzer es bestätigt hat; die übrigen ⏳ bleiben (etwa Backup und Wiederherstellung auf TrueNAS).
+- Erklärtext „Konfidenz“ korrigiert: Er nannte den Block Breite noch als fehlend (seit E-68 mit Daten).
+- Offen aus Phase 1, ohne die Abnahme zu hindern: Veröffentlichungszeiten aus dem Rohdatenarchiv (M3, Schritt 9), Achsentitel der VIX-Termstruktur auf dem Smartphone (ungeprüft).
+
 ### M10 – Validierung (Bericht 4.3, Schritt 7; Ansicht 8 aus 6.3; E-89, E-93)
 
 Plan vom 29.09.2026, vom Nutzer ohne Rückfrage freigegeben („Plan für M10 erstellen und ohne Freigabeaufforderung sofort ausführen“). Festlegungen, die der Bericht offenlässt, sind als eigene markiert (E-93) und stehen als Parameter in `config/scoring.toml`, `[validation]`.
@@ -1285,23 +1293,19 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 ## 9. Übergabe an die nächste Sitzung
 
 - **Stand (30.09.2026):**
-  - M0 bis M8, Entscheidungsrunde 29.09.2026 (E-80 bis E-92), M10 (Validierung, E-93) und M11 (geschätzte Gewichte, E-94) umgesetzt und in der Entwicklungsumgebung geprüft; E-95 (kein Gelb allein aus der Fallhöhe), E-96 (Fallhöhe-Streifen), E-97 (gleiche Gewichte bleiben) und E-98 (alles zur Fallhöhe in Lila) umgesetzt.
-  - TrueNAS (Nutzer): läuft vom Branch `claude-raramo` (E-76) mit Migration 0004; Update auf E-98 am 30.09.2026 eingespielt; Seiten spürbar schneller.
-  - Danach meldete der Sofort-Abruf „database is locked“: behoben mit längerer Wartezeit auf Sperren (Abschnitt 4, „Datenbank gesperrt“); in der Entwicklungsumgebung nachgestellt und geprüft, 492 Tests grün; auf TrueNAS noch nicht eingespielt.
+  - **Phase 1 abgenommen (M9)**: M0 bis M8, Entscheidungsrunde 29.09.2026 (E-80 bis E-92), M10 (Validierung) und M11 (geschätzte Gewichte) sowie E-95 bis E-98 laufen auf TrueNAS; die Sperr-Korrektur („Datenbank gesperrt“) ebenfalls. 492 Tests grün.
+  - Phase 2 beginnt mit Alerts über ntfy.sh (E-99, E-100); `CLAUDE.md` steht auf Phase 2.
   - `data-dev/` steht auf 0004, mit Scores und Validierungsbericht vom 29.09.2026.
-  - M9: Abnahme nach dem Update und der Sichtprüfung des Nutzers (seine Wahl vom 29.09.2026).
 - **Nächster Schritt:**
-  1. TrueNAS: Update mit der Korrektur (`docs/einrichtung.md`, Abschnitt 9, „Update: Wartezeit bei gesperrter Datenbank“), danach Sofort-Abruf als Probe.
-  2. M9 (Abnahme Phase 1) als erledigt eintragen, sobald der Nutzer Update und Sichtprüfung meldet; dazu `docs/bedienung.md` und `docs/einrichtung.md` von ⏳ auf ✅, wo er es bestätigt, und den README-Status.
-  3. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9); für `iursa` und die Z.1-Reihen neu.
-  4. Nach M9: Plan M12 „Alerts“ zur Freigabe vorlegen (E-99, E-100): Auslöser (Vorschlag: Wechsel der Ampelstufe, Quelle ohne Erfolg, Fehler bei Scoring oder Validierung), Wiederholschutz über Neustarts (eigene Tabelle, Migration), Secret `FEVER_NTFY_TOPIC`, Host `ntfy.sh` in der Allowlist, Test-Nachricht per Befehl, Tests ohne Netzwerk; `CLAUDE.md` auf Phase 2 umstellen.
-  5. Weitere Schritte von Phase 2 (revisionsgenaue Rückrechnung, AAII, Aggregation Stufe 2 nur mit besserem Ergebnis in der Validierung, E-89) entscheidet der Nutzer danach.
+  1. Plan M12 „Alerts“ (Abschnitt 4) freigeben lassen, dann umsetzen.
+  2. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9); für `iursa` und die Z.1-Reihen neu.
+  3. Weitere Schritte von Phase 2 (revisionsgenaue Rückrechnung, AAII, Aggregation Stufe 2 nur mit besserem Ergebnis in der Validierung, E-89) entscheidet der Nutzer nach M12.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-raramo` (E-76): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`. Am 28.09.2026 zusätzlich erreichbar: `fred.stlouisfed.org` (CSV ohne Schlüssel), `www.ssga.com`, `www.sec.gov`, `data.sec.gov`, `indexes.nasdaq.com`; `archive.org` antwortete mit 429. Für SEC-Probeabrufe in der Cloud nur einen Platzhalterkontakt (`…@example.org`) setzen, nie die Adresse des Nutzers. Am 28.09.2026 abends lief der Sofort-Abruf aller 72 Reihen in der Cloud ohne Probleme.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** keine; O-6 ist entschieden (E-100), M9 wartet nur auf die Rückmeldung nach dem Update. Die Optionen unter „Nicht umgesetzt“ (Ladezeiten) entfallen vorerst: Die Seiten sind auf TrueNAS nach Rückmeldung des Nutzers schnell genug.
+- **Offene Entscheidungen des Nutzers:** Freigabe des Plans M12. Die Optionen unter „Nicht umgesetzt“ (Ladezeiten) entfallen vorerst: Die Seiten sind auf TrueNAS nach Rückmeldung des Nutzers schnell genug.
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe, Compose-Prüfung und Ladezeit-Messung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---

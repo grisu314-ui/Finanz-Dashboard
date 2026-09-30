@@ -1,6 +1,6 @@
 # Einrichtung und Betrieb auf TrueNAS mit Dockge
 
-Stand: 30.09.2026 · Für: dich als Anwender · Status: **Worker läuft auf TrueNAS seit 26.09.2026 („healthy“).** Betrieb vom Branch `claude-raramo` (E-76), Datenbank auf Migration 0004, Stand E-98 (Rückmeldungen des Nutzers, 29. und 30.09.2026); nächstes Update ohne Migration: Abschnitt 9. Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind zusätzlich in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Die Oberfläche (Dienst `web`, seit M6) ist in der Entwicklungsumgebung geprüft und läuft auf TrueNAS (Rückmeldung des Nutzers; Einzelprüfungen in den Abschnitten).
+Stand: 30.09.2026 · Für: dich als Anwender · Status: **Worker läuft auf TrueNAS seit 26.09.2026 („healthy“).** Betrieb vom Branch `claude-raramo` (E-76), Datenbank auf Migration 0004, Stand mit der Sperr-Korrektur vom 30.09.2026; Phase 1 abgenommen (M9, Rückmeldung des Nutzers 30.09.2026). Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind zusätzlich in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Die Oberfläche (Dienst `web`, seit M6) ist in der Entwicklungsumgebung geprüft und läuft auf TrueNAS (Rückmeldung des Nutzers; Einzelprüfungen in den Abschnitten).
 
 Markierungen:
 - ✅ geprüft: ausgeführt, mit Datum und Ort
@@ -242,7 +242,7 @@ Dockge zeigt `web` nach rund einer Minute als „healthy“.
 
 ✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ✅ TrueNAS (Datenbank auf 0004, Nutzer 29.09.2026). Prüfung der Migration beim Start (E-70): ✅ Entwicklungsumgebung 28.09.2026 mit dem gebauten Image auf einer Datenbank mit Stand 0002 (Worker und `fever.score` melden „Migration fehlt“ und starten nicht, `/health` 503, Banner im Browser; `fever.backup` läuft; nach `alembic upgrade head` normaler Start); ⏳ TrueNAS.
 
-**Update: Wartezeit bei gesperrter Datenbank (30.09.2026, ohne Migration, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 30.09.2026 (Fehler nachgestellt und behoben); ⏳ TrueNAS. Behebt „database is locked“, wenn ein Einmal-Befehl (Sofort-Abruf, `fever.score`) läuft, während der Worker schreibt: Er wartet jetzt bis zu 2 Minuten, statt nach 5 s abzubrechen (`docs/umsetzungsplan.md`, Abschnitt 4, „Datenbank gesperrt“).
+**Update: Wartezeit bei gesperrter Datenbank (30.09.2026, ohne Migration, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 30.09.2026 (Fehler nachgestellt und behoben); ✅ TrueNAS 30.09.2026 (Nutzer: Update und Sichtprüfung in Ordnung). Behebt „database is locked“, wenn ein Einmal-Befehl (Sofort-Abruf, `fever.score`) läuft, während der Worker schreibt: Er wartet jetzt bis zu 2 Minuten, statt nach 5 s abzubrechen (`docs/umsetzungsplan.md`, Abschnitt 4, „Datenbank gesperrt“).
 
 ```bash
 cd /mnt/Daten-Z1/apps/feewer

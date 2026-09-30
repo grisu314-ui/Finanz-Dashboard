@@ -23,7 +23,7 @@ Zweck ist Regime- und Risikoanzeige, keine Crash-Prognose. Ziel ist genau die hi
 
 ## Phasen – gebaut wird nur die aktuelle
 
-**Aktuelle Phase: 1.** Umfang aus späteren Phasen: erst fragen.
+**Aktuelle Phase: 2** (seit 30.09.2026, Phase 1 abgenommen mit M9). Zuerst Alerts (M12, E-99); die übrigen Punkte von Phase 2 erst nach Entscheidung des Nutzers. Umfang aus späteren Phasen: erst fragen.
 
 1. MVP:
    - Worker, Speicher, Serienkatalog, Backups, Healthchecks.
