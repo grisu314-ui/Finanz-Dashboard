@@ -12,7 +12,10 @@ from sqlalchemy import URL, create_engine, event
 from sqlalchemy.engine import Engine
 
 DB_FILE = "fever.sqlite3"
-BUSY_TIMEOUT_MS = 5000
+# Writers wait for the longest write transaction instead of failing: replacing all scores holds the write
+# lock for about 8 s in the development environment (30.09.2026), longer on TrueNAS. With 5 s a one-off
+# command next to the worker (Sofort-Abruf, fever.score) failed with "database is locked".
+BUSY_TIMEOUT_MS = 120_000
 
 
 class DataDirError(RuntimeError):

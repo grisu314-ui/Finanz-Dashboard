@@ -170,7 +170,7 @@ Ein falscher Score fällt nicht auf, bis die Ampel eine falsche Lage zeigt.
 ## Datenbank und Daten
 
 - Schema nur per Alembic-Migration; kein `metadata.create_all()`, keine Migration beim Containerstart.
-- Jede Verbindung: `PRAGMA foreign_keys = ON`, WAL, `busy_timeout`.
+- Jede Verbindung: `PRAGMA foreign_keys = ON`, WAL, `busy_timeout` (120 s: Einmal-Befehle neben dem Worker warten die Score-Ersetzung ab, statt mit „database is locked“ abzubrechen).
 - Beobachtungen nur anfügen, nie überschreiben. Schlüssel: (Reihe, Beobachtungsdatum, Vintage). Ein identischer Wert erzeugt keine Zeile, ein geänderter eine neue.
 - Zeitstempel in UTC. Abrufe nach `America/New_York` planen; die Sommerzeit wechselt dort an anderen Tagen als in Berlin. Handelsfreie Tage sind kein Fehler.
 - Rohantworten gzip-komprimiert unter `raw/` im Datenordner ablegen, nur bei geändertem Inhalt.

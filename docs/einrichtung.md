@@ -1,6 +1,6 @@
 # Einrichtung und Betrieb auf TrueNAS mit Dockge
 
-Stand: 29.09.2026 · Für: dich als Anwender · Status: **Worker läuft auf TrueNAS seit 26.09.2026 („healthy“).** Betrieb vom Branch `claude-raramo` (E-76), Datenbank auf Migration 0004 (Rückmeldung des Nutzers, 29.09.2026); nächstes Update ohne Migration: Abschnitt 9. Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind zusätzlich in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Die Oberfläche (Dienst `web`, seit M6) ist in der Entwicklungsumgebung geprüft und läuft auf TrueNAS (Rückmeldung des Nutzers; Einzelprüfungen in den Abschnitten).
+Stand: 30.09.2026 · Für: dich als Anwender · Status: **Worker läuft auf TrueNAS seit 26.09.2026 („healthy“).** Betrieb vom Branch `claude-raramo` (E-76), Datenbank auf Migration 0004, Stand E-98 (Rückmeldungen des Nutzers, 29. und 30.09.2026); nächstes Update ohne Migration: Abschnitt 9. Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind zusätzlich in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Die Oberfläche (Dienst `web`, seit M6) ist in der Entwicklungsumgebung geprüft und läuft auf TrueNAS (Rückmeldung des Nutzers; Einzelprüfungen in den Abschnitten).
 
 Markierungen:
 - ✅ geprüft: ausgeführt, mit Datum und Ort
@@ -242,7 +242,28 @@ Dockge zeigt `web` nach rund einer Minute als „healthy“.
 
 ✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ✅ TrueNAS (Datenbank auf 0004, Nutzer 29.09.2026). Prüfung der Migration beim Start (E-70): ✅ Entwicklungsumgebung 28.09.2026 mit dem gebauten Image auf einer Datenbank mit Stand 0002 (Worker und `fever.score` melden „Migration fehlt“ und starten nicht, `/health` 503, Banner im Browser; `fever.backup` läuft; nach `alembic upgrade head` normaler Start); ⏳ TrueNAS.
 
-**Update auf M11, E-95 und die Farben der Fallhöhe (E-94 bis E-98, ohne Migration, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 29.09.2026 (Tests, Scoring, Validierung, Browser); ⏳ TrueNAS.
+**Update: Wartezeit bei gesperrter Datenbank (30.09.2026, ohne Migration, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 30.09.2026 (Fehler nachgestellt und behoben); ⏳ TrueNAS. Behebt „database is locked“, wenn ein Einmal-Befehl (Sofort-Abruf, `fever.score`) läuft, während der Worker schreibt: Er wartet jetzt bis zu 2 Minuten, statt nach 5 s abzubrechen (`docs/umsetzungsplan.md`, Abschnitt 4, „Datenbank gesperrt“).
+
+```bash
+cd /mnt/Daten-Z1/apps/feewer
+git pull
+git diff --stat HEAD@{1} -- compose.dockge.yaml .env.example    # erwartet: keine Ausgabe
+git diff --stat HEAD@{1} -- migrations/                          # erwartet: keine Ausgabe
+sudo docker compose build
+```
+
+In Dockge beim Stack `finanz-dashboard` „Deploy“. Danach als Probe den Sofort-Abruf; er darf auch laufen, während der Worker rechnet (dann wartet er einige Sekunden an einer Reihe):
+
+```bash
+sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update
+#   am Ende: INFO __main__: Sofort-Abruf beendet: 81 Reihen, 0 mit Problemen
+sudo docker logs finanz-dashboard-worker-1 2>&1 | grep "Scores berechnet" | tail -3
+#   erwartet: Zeilen „Scores berechnet: … (… s)“; die Dauer am Ende bitte melden (Maß für die Wartezeit)
+```
+
+Der alte Sperrfehler bleibt bei der EZB im Datenstand unter „Letzter Fehler“ stehen, bis ein neuer ihn ersetzt; maßgeblich ist, dass „Letzter Erfolg“ neuer ist. Die Werte selbst waren gespeichert.
+
+**Update auf M11, E-95 und die Farben der Fallhöhe (E-94 bis E-98, ohne Migration, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 29.09.2026 (Tests, Scoring, Validierung, Browser); ✅ TrueNAS 30.09.2026 (Nutzer: Update eingespielt; danach der Sperrfehler oben).
 
 ```bash
 cd /mnt/Daten-Z1/apps/feewer
@@ -452,6 +473,7 @@ Den Ordner `alt-…` erst löschen, wenn wieder alles korrekt läuft. Zeigt `ale
 | „FEVER_SEC_CONTACT enthält keine E-Mail-Adresse …“ | Schreibweise `FEVER_SEC_CONTACT=Vorname Nachname name@beispiel.de` |
 | Log-Zeile „Scoring fehlgeschlagen“ | Die Abrufe laufen weiter; der Fehler steht unter `scoring` im Datenstand. Mit `sudo docker exec finanz-dashboard-worker-1 python -m fever.score` wiederholen und die Ausgabe melden |
 | Log-Zeile „Validierung fehlgeschlagen“ | Abrufe und Scores laufen weiter; der Fehler steht unter „Validierung (Berechnung im Worker)“ im Datenstand. Mit `sudo docker exec finanz-dashboard-worker-1 python -m fever.validate` wiederholen und die Ausgabe melden |
+| `sqlite3.OperationalError: database is locked` im Log eines Einmal-Befehls oder des Workers | Zwei Schreiber zugleich, einer länger als die Wartezeit. Seit dem Update vom 30.09.2026 wartet jeder Schreiber bis zu 2 Minuten; tritt es danach noch auf, die Log-Zeilen melden. Werte, deren Zeile „… neue Zeilen“ im Log steht, sind gespeichert |
 | Ansicht „Validierung“: „Keine auswertbaren Tage“ | Es fehlen Schlusskurse des S&P 500 (Reihe `spx`, Cboe) oder des VIX: Datenstand prüfen, Sofort-Abruf (Schritt 7), danach `python -m fever.validate` wie oben |
 
 SEC-Kontakt prüfen, ohne den Wert anzuzeigen (✅ Entwicklungsumgebung 28.09.2026 im gebauten Image: fehlend, leer und gesetzt; ⏳ TrueNAS):

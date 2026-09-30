@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 29.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92); M10 Validierung in der Entwicklungsumgebung umgesetzt (E-93); Fallhöhe-Streifen in der Regime-Zeitleiste (E-96); M11 Walk-forward-Test geschätzter Gewichte in der Entwicklungsumgebung umgesetzt (E-94), gleiche Gewichte bleiben (E-97); kein Gelb allein aus der Fallhöhe (E-95); Fallhöhe durchgängig lila (E-98); TrueNAS läuft vom Branch `claude-raramo` mit Migration 0004 (Nutzer)** · Nächster Schritt: Update auf TrueNAS ohne Migration (Abschnitt 9), danach M9 (Abnahme)
+Stand: 30.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92); M10 Validierung in der Entwicklungsumgebung umgesetzt (E-93); Fallhöhe-Streifen in der Regime-Zeitleiste (E-96); M11 Walk-forward-Test geschätzter Gewichte in der Entwicklungsumgebung umgesetzt (E-94), gleiche Gewichte bleiben (E-97); kein Gelb allein aus der Fallhöhe (E-95); Fallhöhe durchgängig lila (E-98), auf TrueNAS eingespielt (Nutzer 30.09.2026); Sperrfehler beim Sofort-Abruf behoben (Abschnitt 4, „Datenbank gesperrt“)** · Nächster Schritt: Update auf TrueNAS mit dieser Korrektur (ohne Migration, Abschnitt 9), danach M9 (Abnahme)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -27,7 +27,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M8 | Erklärtexte je Kennzahl | ☑ 28.09.2026: alle Texte und die Krisendaten in `config/episodes.toml` vom Nutzer freigegeben | parallel zu M6/M7 | erteilt 28.09.2026 |
 | R-29.09 | Entscheidungsrunde 29.09.2026: Sahm-Regel mit Trendbedingung und SOS-Regel, Rollen-Marken, Mindesthistorie 3 Jahre, Cboe-SPX, Re-Steepening-Hinweis, Kreditspread-Enge und Aktienquote in der Fallhöhe, Geldmarktfonds, y-Achse, HY-OAS-Niveau (E-80 bis E-92) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); auf TrueNAS eingespielt (Nutzer 29.09.2026) | M8 | erteilt 29.09.2026 |
 | M10 | Validierung (Bericht 4.3, Schritt 7): Walk-forward, Treffer und Fehlalarme je Ampelstufe, Vorlauf, Vergleich mit reinem VIX-Filter; vorgezogen aus Phase 2 (E-89) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M10, „Ergebnisse“); auf TrueNAS eingespielt (Migration 0004, Nutzer 29.09.2026) | R-29.09 | erteilt 29.09.2026 (Plan ohne Rückfrage) |
-| M11 | Walk-forward-Test geschätzter Stress-Gewichte (Logit auf den Stress-Blöcken, jährlich nur mit Daten davor geschätzt; nur Auswertung, E-94) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M11, „Ergebnisse“); gleiche Gewichte bleiben (E-97); auf TrueNAS unbestätigt, spätestens mit dem nächsten Update (ohne Migration) | M10 | erteilt 29.09.2026 |
+| M11 | Walk-forward-Test geschätzter Stress-Gewichte (Logit auf den Stress-Blöcken, jährlich nur mit Daten davor geschätzt; nur Auswertung, E-94) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M11, „Ergebnisse“); gleiche Gewichte bleiben (E-97); auf TrueNAS eingespielt (Nutzer 30.09.2026) | M10 | erteilt 29.09.2026 |
 | M9 | Abnahme Phase 1 | ☐ Nutzer 29.09.2026: „deutlich besser“; Abnahme nach dem Update auf E-98 und der Sichtprüfung auf Smartphone und Desktop (Auswahl „Nach dem Update“) | M0–M8, M10 | – |
 
 **Warum diese Reihenfolge:** FRED liefert die ICE-BofA-Spreads seit April 2026 nur noch für drei Jahre (Bericht, TL;DR). Jeder Tag ohne laufenden Worker verschiebt den Anfang des lokalen Archivs um einen Tag nach hinten. Deshalb geht ein minimaler Worker mit FRED und Cboe (M0–M3) in Betrieb, bevor Scoring und Oberfläche entstehen.
@@ -263,7 +263,7 @@ Für jeden Meilenstein gilt die Definition of Done:
 - **Details, die im Plan offen waren:**
   - Datenordner über die Variable `FEVER_DATA` (Container `/data`, von Compose gesetzt), ohne Standardwert
   - Engines legen nie eine Datenbank an; das macht nur `alembic upgrade head`
-  - `busy_timeout` 5000 ms
+  - `busy_timeout` 5000 ms; seit 30.09.2026 120000 ms (Abschnitt 4, „Datenbank gesperrt“)
   - Fehlermeldungen in `source_status` werden auf 2000 Zeichen gekürzt
   - Logging über `fever/log.py`, nur stdout
 - **Geprüfte Annahmen (SQLite 3.46.1 im Image):**
@@ -1015,6 +1015,18 @@ Wunsch des Nutzers: „Alles was mit Fallhöhe zusammenhängt wird in Lilatönen
 
 **Prüfung:** 491 Tests grün, darunter `test_the_vulnerability_is_purple_everywhere`. Browser (Entwicklungsumgebung, 390 px hell und dunkel, 1280 px hell und dunkel): in der Ansicht Fallhöhe alle acht Charts lila (`rgb(123, 63, 147)` hell, `rgb(156, 86, 186)` dunkel), Namen und Titel lila, in der Übersicht nur die Karte Fallhöhe, Heatmap mit zwei Teilen, Regime-Streifen und gestrichelte ROC-Kurve lila, Sparklines der sechs Fallhöhe-Indikatoren lila, auf der Seite „Erklärungen“ Überschrift und neun Links lila, die übrigen blau; keine Konsolenfehler.
 
+### Datenbank gesperrt beim Sofort-Abruf (30.09.2026)
+
+**Befund (TrueNAS, Nutzer):** Nach dem Update auf E-98 brach der Sofort-Abruf (`python -m fever.sources.update`) bei der Abrufgruppe `ecb_ciss` ab: `sqlite3.OperationalError: database is locked` beim Eintrag des Erfolgs in `source_status`, genau 5 s nach dem Versuch (Zeitstempel im Log). Die Beobachtungen der Gruppe waren da schon gespeichert (eigene Transaktion je Reihe), nur der Status nicht; im Datenstand steht bei der EZB deshalb dieser Fehler, bis ein neuer ihn ersetzt.
+
+**Ursache:** Der Worker rechnete nach dem Update die Scores neu (neue Programmversion des Scorings). Das Ersetzen aller Scores (rund 297.000 Indikator- und 9.300 Composite-Zeilen) hält die Schreibsperre in einer Transaktion, damit das Dashboard nie halb ersetzte Scores liest. Die Wartezeit auf eine Sperre (`busy_timeout`) war 5 s; jeder zweite Schreiber (Sofort-Abruf, `fever.score` von Hand, auch der Heartbeat des Workers neben einem Einmal-Befehl) gab danach auf.
+
+**Nachgestellt** an einer Kopie der Entwicklungsdatenbank (Skript im Scratchpad: Scoring-Lauf, währenddessen ein zweiter Schreiber mit `record_success`): vorher „OperationalError after 5.0 s: database is locked“, Sperre 7,9 s gehalten; nachher „ok after 6.6 s“, Sperre 6,8 s. Auf TrueNAS dauert es länger.
+
+**Korrektur:** `BUSY_TIMEOUT_MS` in `fever/store/db.py` von 5000 auf 120000 ms: Schreiber warten die längste Schreibtransaktion ab, statt zu scheitern. Für das Dashboard ändert sich nichts (Leser im WAL-Modus warten nicht auf Schreiber). Test `test_a_second_writer_waits_for_the_first`; 492 Tests grün.
+
+**Bekannte Grenze:** Holen Worker und Sofort-Abruf dieselbe Reihe gleichzeitig, kann ein unveränderter Wert zwei Stände bekommen (Lesen und Anfügen sind zwei Schritte). Harmlos: gleicher Wert, der neuere Stand ändert nichts.
+
 ### O-1: Recherche Ausweichquellen (28.09.2026, 10:36–11:30 UTC)
 
 Anlass: Der Block „Breite“ und die Top-10-Konzentration haben keine Datenquelle. Geprüft: Indexanbieter, ETF-Emittenten, Kurs-APIs. Datenstand der FRED-Reihen: letzte Beobachtung 25.09.2026.
@@ -1262,20 +1274,22 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 | Betrieb direkt vom Entwicklungsbranch (E-30) | ein ungeprüfter Push landet beim nächsten Update im Betrieb | nur geprüften Stand pushen; Update nur auf Anweisung in `docs/einrichtung.md` |
 | Rezessionsregeln ohne Hysterese (E-80, E-91) | Sahm-Gelb hält bis weit in Erholungen an; an der 200-Tage-Linie wechselt Orange/Gelb öfter | Wirkung dokumentiert (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); M10 prüft die Ampel als Ganzes, nicht jede Regel einzeln |
 | Validierung auf derselben Stichprobe (M10, E-93) | Ergebnisse überschätzen die Güte; Versuchung, Schwellen nachzuziehen | Nur Auswertung ohne Rückwirkung; Parameter nur auf Anweisung (`CLAUDE.md`); Grenzen in der Ansicht und auf der Erklärseite |
+| Einmal-Befehle neben dem laufenden Worker (Sofort-Abruf, `fever.score`) | zwei Schreiber: Sperrfehler, wenn einer länger schreibt als die Wartezeit | `busy_timeout` 120 s, gut zehnmal die gemessene längste Schreibtransaktion (Score-Ersetzung, Abschnitt 4, „Datenbank gesperrt“); wächst das Scoring, Dauer auf TrueNAS im Worker-Log prüfen |
 | y-Achsen-Skript nutzt Plotly-Interna (`_fullLayout`, E-88) | nach einem Plotly-Update passt sich die y-Achse nicht mehr an (Daten bleiben richtig) | nach jedem Update von Dash/Plotly Zoom im Browser prüfen (Abschnitt 10) |
 
 ---
 
 ## 9. Übergabe an die nächste Sitzung
 
-- **Stand (29.09.2026):**
-  - M0 bis M8, Entscheidungsrunde 29.09.2026 (E-80 bis E-92), M10 (Validierung, E-93) und M11 (geschätzte Gewichte, E-94) umgesetzt und in der Entwicklungsumgebung geprüft; E-95 (kein Gelb allein aus der Fallhöhe), E-96 (Fallhöhe-Streifen in der Regime-Zeitleiste), E-97 (gleiche Gewichte bleiben, keine Codeänderung) und E-98 (alles zur Fallhöhe in Lila) umgesetzt. 491 Tests grün.
-  - TrueNAS (Nutzer, 29.09.2026): läuft vom Branch `claude-raramo` (E-76), Migration 0004 eingespielt, Seiten spürbar schneller, vor allem beim wiederholten Aufruf. Ob M11 und E-95 schon eingespielt sind, ist unbestätigt; E-98 noch nicht.
+- **Stand (30.09.2026):**
+  - M0 bis M8, Entscheidungsrunde 29.09.2026 (E-80 bis E-92), M10 (Validierung, E-93) und M11 (geschätzte Gewichte, E-94) umgesetzt und in der Entwicklungsumgebung geprüft; E-95 (kein Gelb allein aus der Fallhöhe), E-96 (Fallhöhe-Streifen), E-97 (gleiche Gewichte bleiben) und E-98 (alles zur Fallhöhe in Lila) umgesetzt.
+  - TrueNAS (Nutzer): läuft vom Branch `claude-raramo` (E-76) mit Migration 0004; Update auf E-98 am 30.09.2026 eingespielt; Seiten spürbar schneller.
+  - Danach meldete der Sofort-Abruf „database is locked“: behoben mit längerer Wartezeit auf Sperren (Abschnitt 4, „Datenbank gesperrt“); in der Entwicklungsumgebung nachgestellt und geprüft, 492 Tests grün; auf TrueNAS noch nicht eingespielt.
   - `data-dev/` steht auf 0004, mit Scores und Validierungsbericht vom 29.09.2026.
-  - M9: Rückmeldung des Nutzers „M9 Annahme..deutlich besser“; auf Nachfrage: Abnahme nach dem Update auf E-98 und seiner Sichtprüfung (Empfehlung).
+  - M9: Abnahme nach dem Update und der Sichtprüfung des Nutzers (seine Wahl vom 29.09.2026).
 - **Nächster Schritt:**
-  1. TrueNAS: Update ohne Migration (`docs/einrichtung.md`, Abschnitt 9, „Update auf M11, E-95 und E-98“): Pull, Build, „Deploy“; der Worker rechnet Scores und Validierung von selbst neu, sofort mit `fever.score` und `fever.validate`.
-  2. M9 (Abnahme Phase 1) als erledigt eintragen, sobald der Nutzer das Update und die Sichtprüfung meldet; dazu `docs/bedienung.md` und `docs/einrichtung.md` von ⏳ auf ✅, wo er es bestätigt, und den README-Status.
+  1. TrueNAS: Update mit der Korrektur (`docs/einrichtung.md`, Abschnitt 9, „Update: Wartezeit bei gesperrter Datenbank“), danach Sofort-Abruf als Probe.
+  2. M9 (Abnahme Phase 1) als erledigt eintragen, sobald der Nutzer Update und Sichtprüfung meldet; dazu `docs/bedienung.md` und `docs/einrichtung.md` von ⏳ auf ✅, wo er es bestätigt, und den README-Status.
   3. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9); für `iursa` und die Z.1-Reihen neu.
   4. Folgerungen aus M10 und M11 für Phase 2 (Aggregation Stufe 2 nur, wenn sie in der Validierung besser abschneidet, E-89) entscheidet der Nutzer.
 - **Hinweise:**
