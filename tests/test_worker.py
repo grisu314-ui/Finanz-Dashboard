@@ -180,6 +180,54 @@ def test_main_warns_at_start_when_the_sec_contact_is_unusable(migrated_dir, monk
     assert "Mustermann" not in caplog.text
 
 
+@pytest.mark.parametrize("topic, warned", [(None, True), ("", True), ("fever-0123456789abcdef", False)])
+def test_main_warns_and_records_when_alerts_are_off(migrated_dir, monkeypatch, caplog, topic, warned):
+    monkeypatch.setenv("FEVER_DATA", str(migrated_dir))
+    if topic is None:
+        monkeypatch.delenv("FEVER_NTFY_TOPIC", raising=False)
+    else:
+        monkeypatch.setenv("FEVER_NTFY_TOPIC", topic)
+    monkeypatch.setattr(worker.log, "setup", lambda: None)
+    monkeypatch.setattr(worker, "install_stop_handlers", lambda stop: None)
+    monkeypatch.setattr(worker, "serve", lambda *args, **kwargs: None)
+    with caplog.at_level(logging.WARNING):
+        assert worker.main() == 0
+    assert ("Alerts aus" in caplog.text) is warned
+    engine = make_engine(migrated_dir)
+    with engine.connect() as conn:
+        recorded = {row["source"]: row for row in read_status(conn)}.get("alerts")
+    engine.dispose()
+    assert (recorded is not None and recorded["last_error_message"].startswith("Alerts aus")) is warned
+
+
+def test_alerts_follow_the_scoring_only_with_a_topic(engine, migrated_dir, monkeypatch):
+    calls = []
+    monkeypatch.setattr(worker, "update_group", FakeUpdate())
+    monkeypatch.setattr(worker.alerts, "run", lambda engine, send, clock: calls.append(send) or ["Ampel Gelb (vorher Grün)"])
+    monkeypatch.delenv("FEVER_NTFY_TOPIC", raising=False)
+    cycle(engine, migrated_dir, {}, {}, Clock(WEDNESDAY))
+    assert calls == []
+    monkeypatch.setenv("FEVER_NTFY_TOPIC", "fever-0123456789abcdef")
+    cycle(engine, migrated_dir, {}, {}, Clock(WEDNESDAY + timedelta(minutes=15)))
+    assert len(calls) == 1
+
+
+def test_an_alert_error_is_logged_recorded_masked_and_the_worker_goes_on(engine, migrated_dir, monkeypatch, caplog):
+    monkeypatch.setattr(worker, "update_group", FakeUpdate())
+    monkeypatch.setenv("FEVER_NTFY_TOPIC", "fever-0123456789abcdef")
+
+    def broken(engine, send, clock):
+        raise RuntimeError("kaputt bei fever-0123456789abcdef")
+
+    monkeypatch.setattr(worker.alerts, "run", broken)
+    cycle(engine, migrated_dir, {}, {}, Clock(WEDNESDAY))
+    with engine.connect() as conn:
+        recorded = {row["source"]: row for row in read_status(conn)}["alerts"]
+        assert read_heartbeat(conn, "worker") == WEDNESDAY
+    assert recorded["last_error_message"] == "RuntimeError: kaputt bei ***"
+    assert "Alerts fehlgeschlagen" in caplog.text
+
+
 @pytest.mark.parametrize(
     "age, code, text",
     [(timedelta(minutes=1), 0, "gesund"), (timedelta(minutes=45), 0, "gesund"), (timedelta(minutes=46), 1, "ungesund")],

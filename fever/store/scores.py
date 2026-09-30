@@ -1,7 +1,7 @@
 """Score tables (M5, E-50): replaced as a whole by every scoring run, read by the interface."""
 
 from dataclasses import asdict
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import delete, func, insert, select
 from sqlalchemy.engine import Connection
@@ -29,6 +29,18 @@ def replace_scores(
     for table, rows in ((indicator_score, indicator_rows), (composite_score, composite_rows)):
         for start in range(0, len(rows), _CHUNK):
             conn.execute(insert(table), rows[start : start + _CHUNK])
+
+
+def latest_composite(conn: Connection) -> dict | None:
+    """The newest scored day: the traffic light the dashboard shows."""
+    row = conn.execute(select(composite_score).order_by(composite_score.c.score_date.desc()).limit(1)).first()
+    return None if row is None else dict(row._mapping)
+
+
+def indicator_scores_on(conn: Connection, day: date) -> dict[str, dict]:
+    """Every indicator's row of one day, by indicator id."""
+    rows = conn.execute(select(indicator_score).where(indicator_score.c.score_date == day))
+    return {row.indicator_id: dict(row._mapping) for row in rows}
 
 
 def score_state(conn: Connection) -> tuple[datetime, str] | None:

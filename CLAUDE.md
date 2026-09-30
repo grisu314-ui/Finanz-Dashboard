@@ -23,7 +23,7 @@ Zweck ist Regime- und Risikoanzeige, keine Crash-Prognose. Ziel ist genau die hi
 
 ## Phasen – gebaut wird nur die aktuelle
 
-**Aktuelle Phase: 2** (seit 30.09.2026, Phase 1 abgenommen mit M9). Zuerst Alerts (M12, E-99); die übrigen Punkte von Phase 2 erst nach Entscheidung des Nutzers. Umfang aus späteren Phasen: erst fragen.
+**Aktuelle Phase: 2** (seit 30.09.2026, Phase 1 abgenommen mit M9). Zuerst Alerts (M12, E-99; umgesetzt 30.09.2026, Einrichtung auf TrueNAS offen); die übrigen Punkte von Phase 2 erst nach Entscheidung des Nutzers. Umfang aus späteren Phasen: erst fragen.
 
 1. MVP:
    - Worker, Speicher, Serienkatalog, Backups, Healthchecks.
@@ -73,6 +73,7 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
   - Sofort-Abruf aller Reihen (unabhängig vom Abrufplan): `sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update`
   - Scores sofort neu berechnen: `sudo docker exec finanz-dashboard-worker-1 python -m fever.score`
   - Validierung sofort neu berechnen: `sudo docker exec finanz-dashboard-worker-1 python -m fever.validate`
+  - Testnachricht der Alerts (M12): `sudo docker exec finanz-dashboard-worker-1 python -m fever.alerts --test`
   - SEC-Kontakt prüfen, ohne den Wert zu zeigen: `sudo docker exec finanz-dashboard-worker-1 python -c "import os; from fever.sources.sec import contact_problem; print(contact_problem(os.environ.get('FEVER_SEC_CONTACT')) or 'SEC-Kontakt in Ordnung')"`
   - Neue Migration vorher an einer Backup-Kopie proben: `docs/einrichtung.md`, Schritt 9
 
@@ -88,6 +89,7 @@ fever/validation.py  Backtest der Ampel und Walk-forward-Logit (M10, M11; E-93, 
 fever/validate.py  Validierungslauf nach dem Scoring: Scores und Kurse lesen, Bericht in validation_report ersetzen; vom Worker und direkt aufrufbar
 fever/release.py   geschätzte Veröffentlichung einer Beobachtung (E-14), für Abruf, Worker und Scoring
 fever/backup.py    VACUUM INTO und Aufbewahrung; vom Worker und direkt aufrufbar
+fever/alerts.py    Alerts über ntfy.sh (M12, E-99, E-100): Auslöser, gemeldeter Stand in alert_state, Versand über den zentralen HTTP-Client; vom Worker nach jedem Takt, Testnachricht per --test
 fever/web/         Dash-App: Layouts, Callbacks, Health-Endpunkt
 config/series.toml   Rohreihen (Quelle, ID, Frequenz, Veröffentlichungszeit, Verzug, Toleranz,
                      Plausibilitätsgrenzen) und abgeleitete Indikatoren (Transformation,
@@ -185,7 +187,7 @@ Ein falscher Score fällt nicht auf, bis die Ampel eine falsche Lage zeigt.
 - Datenordner als Bind-Mount auf einem Dataset des TrueNAS-Hosts selbst (kein NFS/SMB, auch nicht von einem anderen Rechner eingebunden: SQLite-WAL funktioniert dort nicht), Host-Pfad aus `.env`: das Kind-Dataset `/mnt/Daten-Z1/apps/feewer/data` im Projektverzeichnis, von Git und Docker-Build ignoriert (`data*/`, E-28). Nie `git clean -x` im Projektverzeichnis. Ins Image wird nie geschrieben.
 - Logs nur auf stdout, in Compose begrenzt (`json-file` mit `max-size` und `max-file`), um das Speichermedium zu schonen.
 - Healthchecks ohne Zusatzpakete (`python -c …`): `web` per HTTP-Endpunkt, `worker` per Alter des Heartbeats.
-- Secrets nur in `.env` (wie `data*/` in `.gitignore`); im Repo liegt `.env.example`: Secrets leer, nicht geheime Werte vorbelegt (E-12). Nie loggen, nie ins Image. `.env` liest du nicht. Einziges Secret derzeit: der FRED-API-Schlüssel. In der `.env` steht außerdem `FEVER_SEC_CONTACT` (Name und E-Mail für den SEC-User-Agent, E-74): kein Secret, aber persönlich, also nie ins Repo, nie ins Log.
+- Secrets nur in `.env` (wie `data*/` in `.gitignore`); im Repo liegt `.env.example`: Secrets leer, nicht geheime Werte vorbelegt (E-12). Nie loggen, nie ins Image. `.env` liest du nicht. Secrets derzeit: der FRED-API-Schlüssel und das ntfy-Thema `FEVER_NTFY_TOPIC` (E-100; beide in `fever/log.py` maskiert). In der `.env` steht außerdem `FEVER_SEC_CONTACT` (Name und E-Mail für den SEC-User-Agent, E-74): kein Secret, aber persönlich, also nie ins Repo, nie ins Log.
 - Ausgehende Verbindungen nur über einen zentralen HTTP-Client mit Host-Allowlist, Timeouts, Backoff und eigenem User-Agent; Ratenlimits der Quellen einhalten.
 - Den Web-Port nur so veröffentlichen, wie in O-3 entschieden.
 

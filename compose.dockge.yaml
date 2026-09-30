@@ -35,6 +35,8 @@ services:
       # Contact for the SEC User-Agent (E-71, E-74). Optional: without it the SEC source reports
       # an error in the data status and everything else keeps running.
       FEVER_SEC_CONTACT: ${FEVER_SEC_CONTACT:-}
+      # Topic of the alerts on ntfy.sh (M12, E-100), a secret. Optional: without it alerts are off.
+      FEVER_NTFY_TOPIC: ${FEVER_NTFY_TOPIC:-}
     # The worker stops between two series; an interrupted write is rolled back by SQLite.
     stop_grace_period: 30s
     healthcheck:

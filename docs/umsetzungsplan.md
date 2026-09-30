@@ -1,6 +1,6 @@
 # Umsetzungsplan Phase 1 – Fieberthermometer
 
-Stand: 30.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92); M10 Validierung in der Entwicklungsumgebung umgesetzt (E-93); Fallhöhe-Streifen in der Regime-Zeitleiste (E-96); M11 Walk-forward-Test geschätzter Gewichte in der Entwicklungsumgebung umgesetzt (E-94), gleiche Gewichte bleiben (E-97); kein Gelb allein aus der Fallhöhe (E-95); Fallhöhe durchgängig lila (E-98), auf TrueNAS eingespielt (Nutzer 30.09.2026); Sperrfehler beim Sofort-Abruf behoben (Abschnitt 4, „Datenbank gesperrt“)**; **Phase 1 abgenommen (M9, 30.09.2026)**; Phase 2 beginnt mit Alerts über ntfy.sh (E-99, E-100) · Nächster Schritt: Plan M12 (Alerts) zur Freigabe (Abschnitt 4)
+Stand: 30.09.2026 · Status: **M0 bis M8 erledigt; dazu Block Breite und Top-10-Konzentration (O-1, E-68, E-71 bis E-74); Seiten beschleunigt (E-77, E-78); Entscheidungsrunde 29.09.2026 umgesetzt (E-80 bis E-92); M10 Validierung in der Entwicklungsumgebung umgesetzt (E-93); Fallhöhe-Streifen in der Regime-Zeitleiste (E-96); M11 Walk-forward-Test geschätzter Gewichte in der Entwicklungsumgebung umgesetzt (E-94), gleiche Gewichte bleiben (E-97); kein Gelb allein aus der Fallhöhe (E-95); Fallhöhe durchgängig lila (E-98), auf TrueNAS eingespielt (Nutzer 30.09.2026); Sperrfehler beim Sofort-Abruf behoben (Abschnitt 4, „Datenbank gesperrt“)**; **Phase 1 abgenommen (M9, 30.09.2026)**; Phase 2 begonnen: Alerts über ntfy.sh (M12, E-99, E-100) in der Entwicklungsumgebung umgesetzt · Nächster Schritt: Alerts auf TrueNAS einrichten (Migration 0005, `docs/einrichtung.md`, Schritt 8.1)
 
 Für wen:
 - **KI, die das Projekt fortsetzt:** Lies zuerst `CLAUDE.md`, dann Abschnitt 1–3 dieses Dokuments, dann den Meilenstein, an dem du arbeitest. Arbeite nach `CLAUDE.md` → „Arbeitsweise“ (planen, Freigabe, umsetzen, prüfen, Selbst-Review). Aktualisiere am Ende jeder Sitzung Abschnitt 1 und bei Entscheidungen Abschnitt 2.
@@ -29,7 +29,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M10 | Validierung (Bericht 4.3, Schritt 7): Walk-forward, Treffer und Fehlalarme je Ampelstufe, Vorlauf, Vergleich mit reinem VIX-Filter; vorgezogen aus Phase 2 (E-89) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M10, „Ergebnisse“); auf TrueNAS eingespielt (Migration 0004, Nutzer 29.09.2026) | R-29.09 | erteilt 29.09.2026 (Plan ohne Rückfrage) |
 | M11 | Walk-forward-Test geschätzter Stress-Gewichte (Logit auf den Stress-Blöcken, jährlich nur mit Daten davor geschätzt; nur Auswertung, E-94) | ☑ 29.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M11, „Ergebnisse“); gleiche Gewichte bleiben (E-97); auf TrueNAS eingespielt (Nutzer 30.09.2026) | M10 | erteilt 29.09.2026 |
 | M9 | Abnahme Phase 1 | ☑ 30.09.2026: Update auf TrueNAS und Sichtprüfung aller Ansichten auf Smartphone und Desktop durch den Nutzer („M9 abhaken, beides OK“); Belege im Meilenstein | M0–M8, M10 | erteilt 30.09.2026 (Nutzer) |
-| M12 | Alerts über ntfy.sh (Phase 2, E-99, E-100) | ☐ Plan zur Freigabe (Abschnitt 4, M12) | M9 | ausstehend |
+| M12 | Alerts über ntfy.sh (Phase 2, E-99, E-100) | ☑ 30.09.2026 in der Entwicklungsumgebung (Abschnitt 4, M12, „Umsetzung“); auf TrueNAS ⏳ (Migration 0005, Thema, App) | M9 | erteilt 30.09.2026 |
 
 **Warum diese Reihenfolge:** FRED liefert die ICE-BofA-Spreads seit April 2026 nur noch für drei Jahre (Bericht, TL;DR). Jeder Tag ohne laufenden Worker verschiebt den Anfang des lokalen Archivs um einen Tag nach hinten. Deshalb geht ein minimaler Worker mit FRED und Cboe (M0–M3) in Betrieb, bevor Scoring und Oberfläche entstehen.
 
@@ -1073,6 +1073,16 @@ Wunsch des Nutzers: „Alles was mit Fallhöhe zusammenhängt wird in Lilatönen
 
 **Schritte:** Freigabe → Migration und Speicher → Versand mit Tests → Auslöser und Worker mit Tests → Datenstand → Probe gegen ntfy.sh → Doku → Commit, Push → Einrichtung auf TrueNAS (Nutzer: App, Thema, `.env`, Update mit Migration, Testnachricht).
 
+**Umsetzung (30.09.2026, Plan freigegeben):**
+- Migration `0005_alert_state.py`, Tabelle `alert_state` (je Art eine Zeile: `traffic_light`, `stale`, `errors`, Zustand als JSON); `fever/store/alerts.py`. Lesefunktionen `latest_composite` und `indicator_scores_on` jetzt in `fever/store/scores.py`, vom Web mitbenutzt.
+- `HttpClient.post_json`: ein POST ohne Wiederholung und ohne Weiterleitung, nur HTTP 200 gilt; `ntfy.sh` auf der Allowlist (5 s Abstand); `FEVER_NTFY_TOPIC` in `fever/log.py` maskiert.
+- `fever/alerts.py`: die drei Prüfungen als reine Funktionen (`traffic_light`, `stale`, `errors`), `run` sendet und speichert, `--test`. Regeltexte aus `texts.rule_text`, Namen der Quellen aus `texts.SOURCE_NAMES` (dafür aus `views` nach `texts` verschoben).
+- Worker: `_alert` am Ende jedes Takts nach der Validierung, Fehler geloggt und unter „Alerts“ im Datenstand; ohne Thema beim Start eine Warnung und der Eintrag „Alerts aus“.
+- Datenstand: Karte „Alerts (ntfy.sh)“. `compose.dockge.yaml` (nur Worker) und `.env.example` mit `FEVER_NTFY_TOPIC`.
+- **Abweichungen vom Plan:** Fehlermeldungen der Quellen stehen nicht im Alert, nur Name und Zeit („Einzelheiten im Datenstand“): Plausibilitätsfehler nennen Rohwerte, auch von ICE- oder Moody's-Reihen (E-69). Die erste Meldung veralteter Indikatoren ist wie die erste Ampel-Meldung leise. Je Art höchstens eine Nachricht je Takt (neu und wieder aktuell zusammen), damit ein halb gescheiterter Versand nichts doppelt schickt.
+- **Prüfung:** 525 Tests grün, 33 davon neu (Auslöser, Prioritäten, Neustart ohne Wiederholung, Versandfehler mit neuem Versuch, Kürzung auf 4.000 Bytes, Thema nie im Log, POST ohne Wiederholung, Allowlist, Compose, Migration hin und zurück, Worker, Datenstand). Probe gegen ntfy.sh aus der Cloud: Testnachricht an ein Wegwerf-Thema mit HTTP 200 angenommen und mit Titel „Test: Alerts kommen an“, Priorität 3 und Tag zurückgelesen. Trockenlauf an einer Kopie der Entwicklungsdatenbank (Migration 0004 → 0005): erster Lauf „Alerts aktiv: Ampel Grün“ und „Veraltet: Excess Bond Premium“ (beide leise), zweiter Lauf nichts. `data-dev/` steht jetzt auf 0005. Datenstand im Browser (390 px hell, 1280 px dunkel): Karte vollständig, keine Konsolenfehler, kein waagrechtes Scrollen. Compose mit Platzhaltern gerendert: Worker mit `FEVER_NTFY_TOPIC: ""`, Web ohne.
+- Offen: Einrichtung und Probe auf TrueNAS (Nutzer).
+
 ### O-1: Recherche Ausweichquellen (28.09.2026, 10:36–11:30 UTC)
 
 Anlass: Der Block „Breite“ und die Top-10-Konzentration haben keine Datenquelle. Geprüft: Indexanbieter, ETF-Emittenten, Kurs-APIs. Datenstand der FRED-Reihen: letzte Beobachtung 25.09.2026.
@@ -1320,6 +1330,7 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 | Betrieb direkt vom Entwicklungsbranch (E-30) | ein ungeprüfter Push landet beim nächsten Update im Betrieb | nur geprüften Stand pushen; Update nur auf Anweisung in `docs/einrichtung.md` |
 | Rezessionsregeln ohne Hysterese (E-80, E-91) | Sahm-Gelb hält bis weit in Erholungen an; an der 200-Tage-Linie wechselt Orange/Gelb öfter | Wirkung dokumentiert (Abschnitt 4, „Entscheidungsrunde 29.09.2026“); M10 prüft die Ampel als Ganzes, nicht jede Regel einzeln |
 | Validierung auf derselben Stichprobe (M10, E-93) | Ergebnisse überschätzen die Güte; Versuchung, Schwellen nachzuziehen | Nur Auswertung ohne Rückwirkung; Parameter nur auf Anweisung (`CLAUDE.md`); Grenzen in der Ansicht und auf der Erklärseite |
+| Alerts über den fremden Dienst ntfy.sh (M12, E-100) | Nachrichten verspätet oder gar nicht; wer das Thema kennt, liest mit oder schickt falsche Nachrichten | Dashboard bleibt maßgeblich; Thema mit 160 Bit Zufall als Secret; nur eigene Größen und Namen in Nachrichten (E-69); Versandfehler im Datenstand |
 | Einmal-Befehle neben dem laufenden Worker (Sofort-Abruf, `fever.score`) | zwei Schreiber: Sperrfehler, wenn einer länger schreibt als die Wartezeit | `busy_timeout` 120 s, gut zehnmal die gemessene längste Schreibtransaktion (Score-Ersetzung, Abschnitt 4, „Datenbank gesperrt“); wächst das Scoring, Dauer auf TrueNAS im Worker-Log prüfen |
 | y-Achsen-Skript nutzt Plotly-Interna (`_fullLayout`, E-88) | nach einem Plotly-Update passt sich die y-Achse nicht mehr an (Daten bleiben richtig) | nach jedem Update von Dash/Plotly Zoom im Browser prüfen (Abschnitt 10) |
 
@@ -1328,19 +1339,19 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 ## 9. Übergabe an die nächste Sitzung
 
 - **Stand (30.09.2026):**
-  - **Phase 1 abgenommen (M9)**: M0 bis M8, Entscheidungsrunde 29.09.2026 (E-80 bis E-92), M10 (Validierung) und M11 (geschätzte Gewichte) sowie E-95 bis E-98 laufen auf TrueNAS; die Sperr-Korrektur („Datenbank gesperrt“) ebenfalls. 492 Tests grün.
-  - Phase 2 beginnt mit Alerts über ntfy.sh (E-99, E-100); `CLAUDE.md` steht auf Phase 2.
-  - `data-dev/` steht auf 0004, mit Scores und Validierungsbericht vom 29.09.2026.
+  - **Phase 1 abgenommen (M9)**: M0 bis M8, Entscheidungsrunde 29.09.2026 (E-80 bis E-92), M10 (Validierung) und M11 (geschätzte Gewichte) sowie E-95 bis E-98 laufen auf TrueNAS; die Sperr-Korrektur („Datenbank gesperrt“) ebenfalls.
+  - Phase 2: M12 „Alerts über ntfy.sh“ (E-99, E-100) in der Entwicklungsumgebung umgesetzt und geprüft (Abschnitt 4, M12, „Umsetzung“); 525 Tests grün. Auf TrueNAS noch nicht eingespielt.
+  - `data-dev/` steht auf 0005, mit Scores und Validierungsbericht vom 29.09.2026 und einem Alert-Zustand aus dem Trockenlauf.
 - **Nächster Schritt:**
-  1. Plan M12 „Alerts“ (Abschnitt 4) freigeben lassen, dann umsetzen.
+  1. TrueNAS: Update auf M12 mit Migration 0005 und Einrichtung der Alerts (`docs/einrichtung.md`, Abschnitt 9, „Update auf Alerts“, und Schritt 8.1); danach Abschnitt 8.1 und `docs/bedienung.md`, Abschnitt 8, auf ✅ setzen, wo der Nutzer es bestätigt.
   2. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9); für `iursa` und die Z.1-Reihen neu.
-  3. Weitere Schritte von Phase 2 (revisionsgenaue Rückrechnung, AAII, Aggregation Stufe 2 nur mit besserem Ergebnis in der Validierung, E-89) entscheidet der Nutzer nach M12.
+  3. Weitere Schritte von Phase 2 (revisionsgenaue Rückrechnung, AAII, Aggregation Stufe 2 nur mit besserem Ergebnis in der Validierung, E-89) entscheidet der Nutzer.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-raramo` (E-76): nur geprüften Stand pushen.
   - Das Repository ist öffentlich: keine Werte lizenzierter Quellen in Fixtures oder Doku (E-27).
   - **Netzwerk der Cloud-Entwicklungsumgebung** (nur KI-Sitzungen): erreichbar am 26.09.2026 waren `api.stlouisfed.org`, `cdn-api.cboe.com`, `data-api.ecb.europa.eu`, `www.financialresearch.gov`, `www.federalreserve.gov`, `publicreporting.cftc.gov`, `www.finra.org`, `shillerdata.com` (über den Proxy zeitweise abgebrochen), `img1.wsimg.com`, `www.cboe.com`, `cdn.cboe.com`; nicht erreichbar `www.econ.yale.edu`, `web.archive.org`. Am 28.09.2026 zusätzlich erreichbar: `fred.stlouisfed.org` (CSV ohne Schlüssel), `www.ssga.com`, `www.sec.gov`, `data.sec.gov`, `indexes.nasdaq.com`; `archive.org` antwortete mit 429. Für SEC-Probeabrufe in der Cloud nur einen Platzhalterkontakt (`…@example.org`) setzen, nie die Adresse des Nutzers. Am 28.09.2026 abends lief der Sofort-Abruf aller 72 Reihen in der Cloud ohne Probleme.
   - **FRED-Schlüssel:** in der Cloud-Umgebung als `FRED_API_KEY` gesetzt (26.09.2026, nur Länge geprüft). Nie im Chat und nie im Repo; die `.env` wird nie gelesen.
-- **Offene Entscheidungen des Nutzers:** Freigabe des Plans M12. Die Optionen unter „Nicht umgesetzt“ (Ladezeiten) entfallen vorerst: Die Seiten sind auf TrueNAS nach Rückmeldung des Nutzers schnell genug.
+- **Offene Entscheidungen des Nutzers:** der nächste Schritt von Phase 2 nach M12. Die Optionen unter „Nicht umgesetzt“ (Ladezeiten) entfallen vorerst: Die Seiten sind auf TrueNAS nach Rückmeldung des Nutzers schnell genug.
 - **Befehle:** `pytest -q` (Python 3.14 mit `requirements-dev.txt`), Build-Probe, Compose-Prüfung und Ladezeit-Messung siehe Abschnitt 10; Betrieb auf TrueNAS in `docs/einrichtung.md`, Abschnitt 12.
 
 ---

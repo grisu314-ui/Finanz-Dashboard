@@ -1,6 +1,6 @@
 """Worker: every 15 minutes fetch the due series, write the heartbeat, make the daily backup,
-recompute the scores after new data or a changed configuration (M5, E-50) and validate new
-scores (M10, E-93).
+recompute the scores after new data or a changed configuration (M5, E-50), validate new
+scores (M10, E-93) and send alerts about what changed (M12, E-99, E-100).
 
 Schedule (decision E-31), planned in America/New_York:
 - A series is due on New York weekdays from its release_time on, once per New York day.
@@ -27,7 +27,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
-from fever import log, score, validate
+from fever import alerts, log, score, validate
 from fever.backup import BackupError, has_backup, run_backup
 from fever.config import ConfigError, Series, group_members, series_catalog
 from fever.http import HttpClient
@@ -125,6 +125,8 @@ def run_cycle(
         _score(engine, clock)
     if not stop.is_set():
         _validate(engine, clock)
+    if not stop.is_set():
+        _alert(engine, client, clock)
 
 
 def serve(
@@ -195,6 +197,23 @@ def _validate(engine: Engine, clock) -> None:
             record_error(conn, validate.SOURCE, clock(), log.mask(f"{type(exc).__name__}: {exc}"))
 
 
+def _alert(engine: Engine, client: HttpClient, clock) -> None:
+    """Send what changed (M12); without a topic alerts are off. An error is logged and recorded, the worker
+    carries on."""
+    topic = os.environ.get(alerts.TOPIC_VARIABLE)
+    if not topic:
+        return
+    try:
+        sent = alerts.run(engine, alerts.sender(client, topic), clock=clock)
+    except Exception as exc:  # alerts only report: fetches and scores must go on regardless
+        logger.exception("Alerts fehlgeschlagen")
+        with engine.begin() as conn:
+            record_error(conn, alerts.SOURCE, clock(), log.mask(f"{type(exc).__name__}: {exc}"))
+        return
+    if sent:
+        logger.info("Alerts gesendet: %s", " · ".join(sent))
+
+
 def _heartbeat(engine: Engine, now: datetime) -> None:
     with engine.begin() as conn:
         record_heartbeat(conn, COMPONENT, now)
@@ -238,6 +257,10 @@ def main() -> int:
         problem = sec.contact_problem(os.environ.get("FEVER_SEC_CONTACT"))
         if problem:  # visible right after a deploy, not only at the next SEC fetch (18:00 New York)
             logger.warning("%s", problem)
+    if not os.environ.get(alerts.TOPIC_VARIABLE):  # visible in the log and the data status (M12)
+        logger.warning("%s", alerts.DISABLED)
+        with engine.begin() as conn:
+            record_error(conn, alerts.SOURCE, _utcnow(), alerts.DISABLED)
     serve(engine, directory, HttpClient(), catalog, stop)
     engine.dispose()
     logger.info("Worker beendet")

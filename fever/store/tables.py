@@ -118,3 +118,13 @@ validation_report = Table(
     Column("config_hash", String(64), nullable=False),
     Column("content", Text, nullable=False),
 )
+
+# Alerts (M12, decisions E-99, E-100): per kind of alert the state its last message reported, as JSON;
+# written by the worker (fever.alerts) after a successful send, so a restart repeats no message.
+alert_state = Table(
+    "alert_state",
+    metadata,
+    Column("kind", String(32), primary_key=True),  # traffic_light | stale | errors
+    Column("state", Text, nullable=False),
+    Column("updated_at", UtcDateTime, nullable=False),
+)

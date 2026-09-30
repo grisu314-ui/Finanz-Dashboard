@@ -191,3 +191,36 @@ def test_invalid_url_is_a_fetch_error_without_secret(monkeypatch):
 def test_mask_leaves_text_alone_without_secret(monkeypatch):
     monkeypatch.delenv("FRED_API_KEY", raising=False)
     assert log.mask("api_key=abc") == "api_key=abc"
+
+
+NTFY = "https://ntfy.sh/"
+TOPIC = "fever-0123456789abcdef0123456789abcdef01234567"
+
+
+def test_post_json_sends_once_with_headers_and_timeouts():
+    client, adapter, _ = client_for([(200, {}, b'{"id":"x"}')])
+    assert client.post_json(NTFY, {"topic": TOPIC, "message": "Ampel Grün"}).status == 200
+    request, kwargs = adapter.sent[0]
+    assert request.method == "POST" and request.headers["User-Agent"] == USER_AGENT
+    assert request.headers["Content-Type"] == "application/json" and "Ampel Gr\\u00fcn" in request.body.decode()
+    assert kwargs["timeout"] == TIMEOUT
+
+
+@pytest.mark.parametrize("answer", [(503, {}, b"busy"), (429, {"Retry-After": "1"}, b""), requests.ConnectionError("reset"),
+                                    (302, {"Location": "https://ntfy.sh/elsewhere"}, b"")])
+def test_post_json_is_never_retried_nor_redirected(answer):
+    client, adapter, fake = client_for([answer])
+    with pytest.raises(FetchError):
+        client.post_json(NTFY, {"topic": TOPIC})
+    assert len(adapter.sent) == 1 and fake.sleeps == []  # a repeated POST could deliver a message twice
+
+
+def test_post_json_respects_the_allowlist_and_hides_the_topic(monkeypatch):
+    monkeypatch.setenv("FEVER_NTFY_TOPIC", TOPIC)
+    client, adapter, _ = client_for([(400, {}, f'{{"error":"invalid topic {TOPIC}"}}'.encode())])
+    with pytest.raises(FetchError, match="Host nicht auf der Allowlist"):
+        client.post_json("https://example.org/", {"topic": TOPIC})
+    with pytest.raises(FetchError) as info:
+        client.post_json(NTFY, {"topic": TOPIC})
+    assert TOPIC not in str(info.value) and "***" in str(info.value) and len(adapter.sent) == 1
+

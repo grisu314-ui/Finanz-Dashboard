@@ -51,3 +51,19 @@ def test_downgrade_is_refused(alembic_config, migrated_dir):
         tables = conn.execute(text("SELECT name FROM sqlite_master WHERE type = 'table'")).scalars().all()
     engine.dispose()
     assert "observation" in tables
+
+
+def test_alert_state_can_be_dropped_and_recreated(alembic_config, migrated_dir):
+    """0005 (M12) goes back without touching the data: the next cycle reports today's state once more."""
+    def tables():
+        engine = make_engine(migrated_dir)
+        with engine.connect() as conn:
+            names = conn.execute(text("SELECT name FROM sqlite_master WHERE type = 'table'")).scalars().all()
+        engine.dispose()
+        return names
+
+    command.downgrade(alembic_config, "0004")
+    assert "alert_state" not in tables() and "observation" in tables()
+    command.upgrade(alembic_config, "head")
+    assert "alert_state" in tables()
+

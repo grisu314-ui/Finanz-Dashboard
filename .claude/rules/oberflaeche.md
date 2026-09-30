@@ -46,6 +46,7 @@ Details, Begründungen und Entscheidungsprotokoll (E-1 bis E-7): `docs/umsetzung
 - `dcc.Interval` alle 5 Minuten liest Daten und Status neu.
 - Kopfzeile: letzte Worker-Aktualisierung und letzte Seitenaktualisierung.
 - Banner bei fehlender Migration (E-70), bei überfälligem Worker-Heartbeat und bei verlorener Verbindung (clientseitig über die Browserzeit der letzten erfolgreichen Antwort).
+- Datenstand: Karte „Alerts (ntfy.sh)“ mit dem zuletzt gemeldeten Stand je Art (M12, `views._alerts_card`), bei jedem Aufruf gelesen wie die Quellen; Versand und Versandfehler stehen als Quelle „Alerts“ in `source_status`. Namen der Quellen in `texts.SOURCE_NAMES` (auch für die Alerts).
 - Jeder Wert zeigt Beobachtungsdatum, Abrufzeit (Europe/Berlin, MEZ/MESZ) und relatives Alter. „Veraltet“ wird ausgegraut, schraffiert und als Text markiert.
 
 ## Ladezeit (28.09.2026, E-77, E-78)

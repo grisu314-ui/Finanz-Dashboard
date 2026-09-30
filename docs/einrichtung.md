@@ -1,6 +1,6 @@
 # Einrichtung und Betrieb auf TrueNAS mit Dockge
 
-Stand: 30.09.2026 · Für: dich als Anwender · Status: **Worker läuft auf TrueNAS seit 26.09.2026 („healthy“).** Betrieb vom Branch `claude-raramo` (E-76), Datenbank auf Migration 0004, Stand mit der Sperr-Korrektur vom 30.09.2026; Phase 1 abgenommen (M9, Rückmeldung des Nutzers 30.09.2026). Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind zusätzlich in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Die Oberfläche (Dienst `web`, seit M6) ist in der Entwicklungsumgebung geprüft und läuft auf TrueNAS (Rückmeldung des Nutzers; Einzelprüfungen in den Abschnitten).
+Stand: 30.09.2026 · Für: dich als Anwender · Status: **Worker läuft auf TrueNAS seit 26.09.2026 („healthy“).** Betrieb vom Branch `claude-raramo` (E-76), Datenbank auf Migration 0004, Stand mit der Sperr-Korrektur vom 30.09.2026; Phase 1 abgenommen (M9, Rückmeldung des Nutzers 30.09.2026). Nächstes Update: Alerts (M12) mit Migration 0005, Abschnitt 9 und Schritt 8.1. Image, Compose-Dateien, Datenbank, Worker, Healthcheck, Backup und Wiederherstellung sind zusätzlich in der Entwicklungsumgebung geprüft (x86_64, Container als UID 568). Die Oberfläche (Dienst `web`, seit M6) ist in der Entwicklungsumgebung geprüft und läuft auf TrueNAS (Rückmeldung des Nutzers; Einzelprüfungen in den Abschnitten).
 
 Markierungen:
 - ✅ geprüft: ausgeführt, mit Datum und Ort
@@ -188,6 +188,7 @@ Ohne diesen Schritt startet der Worker nicht, sondern meldet im Log „Datenbank
 | `FEVER_UID`, `FEVER_GID` | Benutzer der Container, 568 (`apps`) | Start bricht mit „FEVER_UID fehlt in .env“ bzw. „FEVER_GID fehlt …“ ab |
 | `FEVER_WEB_PORT` | Port des Dashboards, 8003 | Start bricht mit „FEVER_WEB_PORT fehlt in .env“ ab |
 | `FEVER_SEC_CONTACT` | Name und E-Mail-Adresse für den Abruf bei der SEC (Top-10-Konzentration, E-71); kein Secret, aber persönlich | Stack startet; der Worker warnt beim Start im Log, und die Quelle SEC meldet im Datenstand, was fehlt (Abschnitt 11) |
+| `FEVER_NTFY_TOPIC` | Thema der Alerts auf ntfy.sh (M12, E-100), ein Secret; erzeugen wie in Schritt 8.1 | Stack startet; Alerts sind aus, der Worker warnt beim Start, der Datenstand zeigt „Alerts aus“ |
 
 Ein fehlender Datenordner ist ein Fehler und wird nicht stillschweigend angelegt.
 
@@ -238,9 +239,50 @@ Dockge zeigt `web` nach rund einer Minute als „healthy“.
 - Es gibt **kein Passwort**. Jedes Gerät in deinem Heimnetz kann das Dashboard öffnen. Es zeigt nur öffentliche Marktdaten, keine Kontodaten.
 - **Keine Portweiterleitung** im Router einrichten; sonst wäre das Dashboard aus dem Internet erreichbar.
 
+### 8.1 Alerts aufs Handy (M12) ⏳
+
+✅ Entwicklungsumgebung 30.09.2026: Testnachricht an ein Wegwerf-Thema auf ntfy.sh angenommen (HTTP 200) und mit Titel, Priorität und Tags zurückgelesen; ⏳ TrueNAS.
+
+Der Worker meldet über ntfy.sh, wenn die Ampel die Stufe wechselt, ein Indikator veraltet oder ein Fehler auch den nächsten Versuch übersteht (`docs/bedienung.md`, Alerts). Alle Themen auf ntfy.sh sind öffentlich; geschützt ist dein Kanal nur durch den unratbaren Namen des Themas. Die Nachrichten enthalten nur Ampel, Stress, Fallhöhe, Konfidenz, Regeln und Namen, keine Kurse oder Spreads.
+
+1. App **ntfy** installieren (Android: Google Play oder F-Droid; iPhone: App Store).
+2. Thema erzeugen, in der SSH-Shell auf TrueNAS:
+   ```bash
+   echo "fever-$(openssl rand -hex 20)"
+   #   erwartet: fever- und 40 Zeichen aus 0–9 und a–f; diese Zeile ist dein Thema, wie ein Passwort behandeln
+   ```
+3. In der App „+“ bzw. „Thema abonnieren“, das Thema einfügen, Server `ntfy.sh` (Voreinstellung) lassen.
+4. In Dockge beim Stack `finanz-dashboard` in der `.env` ergänzen: `FEVER_NTFY_TOPIC=<dein Thema>`. `compose.yaml` muss beim Worker die Zeile `FEVER_NTFY_TOPIC: ${FEVER_NTFY_TOPIC:-}` enthalten (neuer Inhalt aus `compose.dockge.yaml`, Schritt 7.2). Speichern, „Deploy“.
+5. Testnachricht:
+   ```bash
+   sudo docker exec finanz-dashboard-worker-1 python -m fever.alerts --test
+   #   erwartet: INFO __main__: Testnachricht gesendet; sie erscheint in der ntfy-App unter dem abonnierten Thema.
+   #   und auf dem Handy: „Test: Alerts kommen an“
+   ```
+6. Innerhalb von 15 Minuten kommt leise „Alerts aktiv: Ampel …“, gegebenenfalls dazu „Veraltet: …“. Danach meldet sich der Worker nur bei Änderungen. Im Datenstand zeigt die Karte „Alerts (ntfy.sh)“, was zuletzt gemeldet wurde.
+
+Wann das Handy klingelt, stellst du in der App ein (je Thema, etwa Ruhezeiten oder ab welcher Priorität). Die Prioritäten: Rot 5, Orange 4, Gelb und Probleme 3; Rückgänge, Erholungen und die erste Nachricht 2 (ohne Ton).
+
 ## 9. Update auf eine neue Version
 
 ✅ 26.09.2026, TrueNAS: Update auf M4b ohne Migration (Pull, Build, Neustart, Sofort-Abruf). Ablauf mit Migration (M5, 0001 → 0002): ✅ Entwicklungsumgebung 26.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie; ✅ TrueNAS 26.09.2026. Migration 0002 → 0003 (Perzentilbänder, M7): ✅ Entwicklungsumgebung 27.09.2026 mit dem gebauten Image als 568:568 auf einer Backup-Kopie (danach Scoring 11,8 s, Werte unverändert); ✅ TrueNAS (Datenbank auf 0004, Nutzer 29.09.2026). Prüfung der Migration beim Start (E-70): ✅ Entwicklungsumgebung 28.09.2026 mit dem gebauten Image auf einer Datenbank mit Stand 0002 (Worker und `fever.score` melden „Migration fehlt“ und starten nicht, `/health` 503, Banner im Browser; `fever.backup` läuft; nach `alembic upgrade head` normaler Start); ⏳ TrueNAS.
+
+**Update auf Alerts (M12, 30.09.2026, mit Migration 0005, `compose.dockge.yaml` und `.env.example` geändert):** ✅ Entwicklungsumgebung 30.09.2026 (Tests, Migration an einer Kopie der Entwicklungsdatenbank, Probe gegen ntfy.sh, Datenstand im Browser); ⏳ TrueNAS. Das neue Programm startet erst nach der Migration.
+
+```bash
+cd /mnt/Daten-Z1/apps/feewer
+git pull
+git diff --stat HEAD@{1} -- compose.dockge.yaml .env.example    # erwartet: beide Dateien mit neuen Zeilen (FEVER_NTFY_TOPIC)
+git diff --stat HEAD@{1} -- migrations/                          # erwartet: migrations/versions/0005_alert_state.py
+sudo docker compose build
+```
+
+1. Migration an einer Backup-Kopie proben: Block „Neue Migration zuerst an einer Kopie testen“ unten (erwartet `Running upgrade 0004 -> 0005, Alert state …`).
+2. Standardablauf unten ab „Stack stoppen“: Backup, `$RUN alembic upgrade head`, `$RUN alembic current` (erwartet `0005 (head)`).
+3. Schritt 8.1, Punkte 1 bis 4: App, Thema, `.env` und neue `compose.yaml` in Dockge, dann „Deploy“ (nicht „Neustart“).
+4. Schritt 8.1, Punkte 5 und 6: Testnachricht und erste Meldung.
+
+Ohne Thema läuft alles wie bisher; der Worker warnt beim Start, und der Datenstand zeigt bei den Quellen „Alerts aus“.
 
 **Update: Wartezeit bei gesperrter Datenbank (30.09.2026, ohne Migration, `compose.dockge.yaml` unverändert):** ✅ Entwicklungsumgebung 30.09.2026 (Fehler nachgestellt und behoben); ✅ TrueNAS 30.09.2026 (Nutzer: Update und Sichtprüfung in Ordnung). Behebt „database is locked“, wenn ein Einmal-Befehl (Sofort-Abruf, `fever.score`) läuft, während der Worker schreibt: Er wartet jetzt bis zu 2 Minuten, statt nach 5 s abzubrechen (`docs/umsetzungsplan.md`, Abschnitt 4, „Datenbank gesperrt“).
 
@@ -364,7 +406,7 @@ $RUN python -m fever.backup        # Sicherung vor der Migration
 $RUN alembic upgrade head
 #   erwartet ohne neue Migration nur zwei Zeilen "INFO [alembic.runtime.migration] …", kein "Running upgrade"
 $RUN alembic current
-#   erwartet: die neueste Nummer mit "(head)", derzeit 0004 (head)
+#   erwartet: die neueste Nummer mit "(head)", derzeit 0005 (head)
 # in Dockge: Stack "finanz-dashboard" starten
 sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update    # nur wenn neue Reihen dazukamen (Schritt 7)
 ```
@@ -381,7 +423,7 @@ sudo mkdir -p $PROBE
 sudo cp "data/backup/$(sudo ls -t data/backup | grep manual | head -1)" $PROBE/fever.sqlite3    # Kopie des Backups, nicht der laufenden Datenbank
 sudo chown -R 568:568 $PROBE
 sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v $PROBE:/data fever:local alembic upgrade head
-#   erwartet u. a. (Update auf M10): Running upgrade 0003 -> 0004, Validation report (M10, decision E-93): …
+#   erwartet u. a. (Update auf M12): Running upgrade 0004 -> 0005, Alert state (M12, decisions E-99, E-100): …
 sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v $PROBE:/data fever:local python -m fever.score
 #   erwartet: INFO __main__: Scores berechnet: … Tage ab …, zuletzt …: Stress …, Fallhöhe …, Ampel …, Konfidenz … % (… s)
 sudo docker run --rm --user 568:568 -e FEVER_DATA=/data -v $PROBE:/data fever:local python -m fever.validate
@@ -474,6 +516,10 @@ Den Ordner `alt-…` erst löschen, wenn wieder alles korrekt läuft. Zeigt `ale
 | Log-Zeile „Scoring fehlgeschlagen“ | Die Abrufe laufen weiter; der Fehler steht unter `scoring` im Datenstand. Mit `sudo docker exec finanz-dashboard-worker-1 python -m fever.score` wiederholen und die Ausgabe melden |
 | Log-Zeile „Validierung fehlgeschlagen“ | Abrufe und Scores laufen weiter; der Fehler steht unter „Validierung (Berechnung im Worker)“ im Datenstand. Mit `sudo docker exec finanz-dashboard-worker-1 python -m fever.validate` wiederholen und die Ausgabe melden |
 | `sqlite3.OperationalError: database is locked` im Log eines Einmal-Befehls oder des Workers | Zwei Schreiber zugleich, einer länger als die Wartezeit. Seit dem Update vom 30.09.2026 wartet jeder Schreiber bis zu 2 Minuten; tritt es danach noch auf, die Log-Zeilen melden. Werte, deren Zeile „… neue Zeilen“ im Log steht, sind gespeichert |
+| Datenstand bei den Quellen: „Alerts aus: FEVER_NTFY_TOPIC ist nicht gesetzt“ | Das Thema fehlt in der `.env` des Dockge-Stacks oder `compose.yaml` ist älter als `compose.dockge.yaml`: Schritt 8.1, Punkt 4 |
+| Testbefehl meldet „Testnachricht nicht gesendet: … HTTP 429“ | ntfy.sh drosselt (zu viele Anfragen); in einigen Minuten wiederholen. Andere HTTP-Fehler oder „ConnectionError“: Netzwerk von TrueNAS prüfen, Ausgabe melden |
+| Testbefehl meldet „gesendet“, aber nichts kommt an | In der App dasselbe Thema abonniert (Tippfehler?), Server `ntfy.sh`? Auf Android die Akku-Optimierung für ntfy ausschalten |
+| Datenstand bei den Quellen: „Alerts“ mit Fehler | Ein Versand scheiterte; der Worker versucht es im nächsten Takt erneut. Hält der Fehler an, Log-Zeilen „Alert nicht gesendet“ melden |
 | Ansicht „Validierung“: „Keine auswertbaren Tage“ | Es fehlen Schlusskurse des S&P 500 (Reihe `spx`, Cboe) oder des VIX: Datenstand prüfen, Sofort-Abruf (Schritt 7), danach `python -m fever.validate` wie oben |
 
 SEC-Kontakt prüfen, ohne den Wert anzuzeigen (✅ Entwicklungsumgebung 28.09.2026 im gebauten Image: fehlend, leer und gesetzt; ⏳ TrueNAS):
@@ -502,9 +548,10 @@ Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
 | Sofort-Abruf aller Reihen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.sources.update` | ✅ TrueNAS und Entwicklungsumgebung 26.09.2026 |
 | Mountpunkt und Benutzer prüfen | `sudo docker inspect finanz-dashboard-worker-1 --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{end}} user={{.Config.User}}'` (erwartet: `/mnt/Daten-Z1/apps/feewer/data -> /data user=568:568`) | ✅ TrueNAS 26.09.2026 |
 | Sofort-Backup | `sudo docker exec finanz-dashboard-worker-1 python -m fever.backup` (Stack gestoppt: `$RUN python -m fever.backup`) | ✅ Entwicklungsumgebung 25.09.2026 |
-| Migration (Ablauf) | Probe an einer Backup-Kopie (Schritt 9) → Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten | ✅ TrueNAS 26.09.2026 (0001 → 0002; Scoring danach erfolgreich), bis 0004 am 29.09.2026 (Nutzer), und Entwicklungsumgebung (mit Probe, zuletzt 0003 → 0004 am 29.09.2026) |
+| Migration (Ablauf) | Probe an einer Backup-Kopie (Schritt 9) → Stack stoppen → `$RUN python -m fever.backup` → `$RUN alembic upgrade head` → Stack starten | ✅ TrueNAS 26.09.2026 (0001 → 0002; Scoring danach erfolgreich), bis 0004 am 29.09.2026 (Nutzer), und Entwicklungsumgebung (mit Probe, 0003 → 0004 am 29.09.2026 mit dem gebauten Image; 0004 → 0005 am 30.09.2026 im Test-Image an einer Kopie der Entwicklungsdatenbank) |
 | Dashboard-Log | `sudo docker logs -f finanz-dashboard-web-1` | ✅ Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
 | Dashboard-Health | `curl -s http://127.0.0.1:8003/health` (erwartet `{"status":"ok"}`) | ✅ Entwicklungsumgebung 26.09.2026, ⏳ TrueNAS |
 | Scores sofort neu berechnen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.score` | ✅ TrueNAS und Entwicklungsumgebung 26.09.2026 |
 | Validierung sofort neu berechnen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.validate` (Stack gestoppt: `$RUN python -m fever.validate`) | ✅ Entwicklungsumgebung 29.09.2026 (gebautes Image als 568:568), ⏳ TrueNAS |
 | SEC-Kontakt prüfen | Befehl in Abschnitt 11 (erwartet `SEC-Kontakt in Ordnung`) | ✅ Entwicklungsumgebung 28.09.2026, ⏳ TrueNAS |
+| Testnachricht der Alerts | `sudo docker exec finanz-dashboard-worker-1 python -m fever.alerts --test` (Schritt 8.1) | ✅ Entwicklungsumgebung 30.09.2026 (Wegwerf-Thema auf ntfy.sh), ⏳ TrueNAS |

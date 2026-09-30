@@ -20,12 +20,6 @@ from fever.web.figures import (
     Band, Chart, Curve, CurvePoint, Heatmap, Line, Matrix, Regime, Region, curve, heatmap, matrix, regime, sparkline,
 )
 
-SOURCE_NAMES = {
-    "cboe": "Cboe (Indizes)", "cfe": "Cboe Futures Exchange (VX-Futures)", "fred": "FRED (St. Louis Fed)",
-    "ecb": "EZB", "ofr": "Office of Financial Research", "fed": "Federal Reserve Board", "cftc": "CFTC",
-    "shiller": "Robert J. Shiller", "sec": "SEC EDGAR (N-PORT)", "scoring": "Scoring (Berechnung im Worker)",
-    "validation": "Validierung (Berechnung im Worker)",
-}
 STATUS_NAMES = {
     "ok": "gültig", "stale": "veraltet", "history": "unter Mindesthistorie: angezeigt, nicht im Score",
     "missing": "noch kein veröffentlichter Wert",
@@ -136,7 +130,7 @@ def overview(theme: str, now: datetime) -> list:
 def _sources_card(now: datetime) -> html.Div:
     rows = [
         html.Tr([
-            html.Td(SOURCE_NAMES.get(row["source"], row["source"])),
+            html.Td(texts.SOURCE_NAMES.get(row["source"], row["source"])),
             html.Td(f"{fmt.berlin(row['last_success_at'])} ({fmt.age(row['last_success_at'], now)})"),
             html.Td(fmt.berlin(row["last_error_at"]) if row["last_error_at"] else "–"),
         ])
@@ -177,7 +171,7 @@ def data_status(now: datetime) -> list:
     ])
     source_rows = [
         html.Tr([
-            html.Td(SOURCE_NAMES.get(row["source"], row["source"])),
+            html.Td(texts.SOURCE_NAMES.get(row["source"], row["source"])),
             html.Td(fmt.berlin(row["last_success_at"])),
             html.Td(fmt.berlin(row["last_attempt_at"])),
             html.Td([html.Div(fmt.berlin(row["last_error_at"])), html.Div(row["last_error_message"] or "", className="error-text")]),
@@ -200,7 +194,7 @@ def data_status(now: datetime) -> list:
         observed = info["obs_date"] if info else None
         stale = observed is None or is_stale(observed, series.lag_days, series.frequency, series.tolerance_days, today)
         rows.append((not stale, series.source, series.id, [
-            html.Td(series.id), html.Td(series.name), html.Td(SOURCE_NAMES.get(series.source, series.source)),
+            html.Td(series.id), html.Td(series.name), html.Td(texts.SOURCE_NAMES.get(series.source, series.source)),
             html.Td(fmt.day(observed)),
             html.Td(f"{fmt.berlin(info['retrieved_at'])} ({fmt.age(info['retrieved_at'], now)})" if info else fmt.DASH),
             html.Td("veraltet" if stale else "aktuell", className="badge badge-stale" if stale else "badge"),
@@ -216,7 +210,33 @@ def data_status(now: datetime) -> list:
             html.Tbody([html.Tr(cells, className="is-stale" if not ok else "") for ok, _, _, cells in rows]),
         ])),
     ])
-    return [html.Div([worker], className="grid"), sources, series_table]
+    return [html.Div([worker], className="grid"), sources, _alerts_card(db.alert_states()), series_table]
+
+
+ALERT_KINDS = {"traffic_light": "Ampel", "stale": "Veraltete Indikatoren", "errors": "Anhaltende Fehler"}
+
+
+def _alerts_card(rows: list[dict]) -> html.Div:
+    """What the alerts last reported (M12); sends and send errors stand under "Alerts" among the sources."""
+    if not rows:
+        body = [ui.note("Noch keine Alerts gesendet. Ohne Thema (FEVER_NTFY_TOPIC) sind sie aus; sonst meldet "
+                        "der nächste Takt des Workers den heutigen Stand (docs/einrichtung.md, Alerts).")]
+    else:
+        items = []
+        order = list(ALERT_KINDS)
+        for row in sorted(rows, key=lambda r: order.index(r["kind"]) if r["kind"] in order else len(order)):
+            state = row["state"]
+            if row["kind"] == "traffic_light":
+                shown = f"{texts.LEVEL_NAMES[state['level']]}, Stand {fmt.day(date.fromisoformat(state['score_date']))}"
+            elif row["kind"] == "stale":
+                shown = ", ".join(texts.text(i).title if texts.has_text(i) else i for i in state["indicators"]) or "keine"
+            else:
+                shown = ", ".join(texts.SOURCE_NAMES.get(s, s) for s in state["reported"]) or "keine"
+            items.append(html.Li(f"{ALERT_KINDS.get(row['kind'], row['kind'])}: {shown} "
+                                 f"(aktualisiert {fmt.berlin(row['updated_at'])})"))
+        body = [html.Ul(items), ui.note("Zuletzt gemeldeter Stand je Art. Versand und Fehler beim Versand stehen "
+                                        "oben bei den Quellen unter „Alerts“.")]
+    return html.Div(className="card card-wide", children=[html.H2("Alerts (ntfy.sh)"), *body])
 
 
 # --- explanations ----------------------------------------------------------------------------------
@@ -313,7 +333,7 @@ def _indicator_charts(kennzahl_id, theme, row, retrieved) -> list:
     history = db.indicator_history(kennzahl_id, "status", "value", "percentile")
     shown = {"ok", "history"}
     days = [r["score_date"] for r in history]
-    source = ", ".join(sorted({SOURCE_NAMES.get(s.source, s.source) for s in indicator.series}))
+    source = ", ".join(sorted({texts.SOURCE_NAMES.get(s.source, s.source) for s in indicator.series}))
     title = texts.text(kennzahl_id).title
     recessions = db.recessions()
     shaded, shaded_label = rule_periods(kennzahl_id)
@@ -524,7 +544,7 @@ def _indicator_item(ctx: _Context, indicator_id: str, *, shaded=(), shaded_label
     indicator = indicator_catalog()[indicator_id]
     history = db.indicator_history(indicator_id, *ITEM_COLUMNS) if history is None else history
     days = [r["score_date"] for r in history]
-    source = ", ".join(sorted({SOURCE_NAMES.get(s.source, s.source) for s in indicator.series}))
+    source = ", ".join(sorted({texts.SOURCE_NAMES.get(s.source, s.source) for s in indicator.series}))
     title = texts.text(indicator_id).title
     retrieved = _retrieved(indicator_id, ctx.fresh)
     value = [r["value"] if r["status"] in ("ok", "history") else None for r in history]
@@ -832,7 +852,7 @@ def vis_bands(indicator_id: str | None, theme: str, now: datetime) -> list:
     history = db.indicator_history(indicator_id, "status", "value", "band_p10", "band_p50", "band_p90")
     days = [r["score_date"] for r in history]
     indicator = indicator_catalog()[indicator_id]
-    source = ", ".join(sorted({SOURCE_NAMES.get(s.source, s.source) for s in indicator.series}))
+    source = ", ".join(sorted({texts.SOURCE_NAMES.get(s.source, s.source) for s in indicator.series}))
     band = Band(days, [r["band_p10"] for r in history], [r["band_p50"] for r in history], [r["band_p90"] for r in history])
     chart = Chart(f"bands-{indicator_id}", f"{texts.text(indicator_id).title}: Wert und Perzentilband", source,
                   [Line("Wert", days, [r["value"] if r["status"] in ("ok", "history") else None for r in history],

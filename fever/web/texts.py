@@ -69,6 +69,13 @@ AREAS = {"volatility": "block_volatility", "credit": "block_credit", "macro": "b
 # "nur Anzeige", neutral "Ampelregel" for the indicators a traffic light rule reads.
 AREA_SHORT = {"volatility": "Volatilität", "credit": "Kredit", "macro": "Makro", "breadth": "Breite",
               "positioning": "Positionierung"}
+# Names of the sources and worker steps in source_status (data status view, alerts).
+SOURCE_NAMES = {
+    "cboe": "Cboe (Indizes)", "cfe": "Cboe Futures Exchange (VX-Futures)", "fred": "FRED (St. Louis Fed)",
+    "ecb": "EZB", "ofr": "Office of Financial Research", "fed": "Federal Reserve Board", "cftc": "CFTC",
+    "shiller": "Robert J. Shiller", "sec": "SEC EDGAR (N-PORT)", "scoring": "Scoring (Berechnung im Worker)",
+    "validation": "Validierung (Berechnung im Worker)", "alerts": "Alerts (Versand an ntfy.sh, M12)",
+}
 FREQUENCY_NAMES = {"daily": "täglich", "weekly": "wöchentlich", "monthly": "monatlich", "quarterly": "quartalsweise"}
 LEVEL_NAMES = ("Grün", "Gelb", "Orange", "Rot")
 

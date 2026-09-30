@@ -34,6 +34,7 @@ ALLOWED_HOSTS = {
     "www.cboe.com": 1.0,  # list of the VX futures contracts (CFE), from M4d; files come from cdn.cboe.com
     "data.sec.gov": 0.2,  # SEC EDGAR submissions (E-71); the SEC allows 10 requests per second
     "www.sec.gov": 0.2,  # SEC EDGAR filing documents (N-PORT XML)
+    "ntfy.sh": 5.0,  # alerts (M12, E-100); after a burst of 60 requests ntfy.sh allows one every 5 s
 }
 USER_AGENT = f"Fieberthermometer/{__version__} (private, non-commercial)"
 TIMEOUT = (10, 60)  # seconds: connect, read
@@ -96,6 +97,21 @@ class HttpClient:
                 )
                 self._sleep(wait)
         raise FetchError(f"{shown}: {error} (nach {MAX_ATTEMPTS} Versuchen)")
+
+    def post_json(self, url: str, payload: dict) -> Fetched:
+        """POST a JSON body once. No retry: a repeated POST could deliver a message twice, so the caller tries
+        again later (alerts, M12). No redirects; only HTTP 200 counts. The body never appears in an error,
+        it may hold a secret (the ntfy topic)."""
+        shown = mask(url)
+        host = _check_url(url)
+        self._throttle(host)
+        try:
+            response = self._session.post(url, json=payload, timeout=TIMEOUT, allow_redirects=False)
+        except requests.RequestException as exc:
+            raise FetchError(f"{shown}: {type(exc).__name__}: {mask(str(exc))}") from None
+        if response.status_code != 200:
+            raise FetchError(f"{shown}: HTTP {response.status_code}{_excerpt(response)}")
+        return Fetched(response.content, datetime.now(timezone.utc), 200)
 
     def _get_following_redirects(self, url: str, params: dict | None, user_agent: str | None) -> requests.Response:
         headers = {"User-Agent": user_agent} if user_agent else None

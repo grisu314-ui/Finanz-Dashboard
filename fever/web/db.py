@@ -12,7 +12,8 @@ from functools import cache, wraps
 from sqlalchemy import func, select, text
 from sqlalchemy.engine import Engine
 
-from fever.store import schema
+from fever.store import schema, scores
+from fever.store.alerts import read_alert_rows
 from fever.store.db import data_dir, make_engine
 from fever.store.observations import latest_pairs
 from fever.store.status import read_heartbeat, read_status
@@ -70,8 +71,7 @@ def validation_report() -> StoredReport | None:
 
 def latest_composite() -> dict | None:
     with engine().connect() as conn:
-        row = conn.execute(select(composite_score).order_by(composite_score.c.score_date.desc()).limit(1)).first()
-    return None if row is None else dict(row._mapping)
+        return scores.latest_composite(conn)
 
 
 @per_data_version
@@ -83,8 +83,7 @@ def composite_history(*columns: str) -> list[dict]:
 
 def indicator_scores_on(day: date) -> dict[str, dict]:
     with engine().connect() as conn:
-        rows = conn.execute(select(indicator_score).where(indicator_score.c.score_date == day))
-        return {row.indicator_id: dict(row._mapping) for row in rows}
+        return scores.indicator_scores_on(conn, day)
 
 
 @per_data_version
@@ -216,6 +215,12 @@ def _month_end(day: date) -> date:
 def sources() -> list[dict]:
     with engine().connect() as conn:
         return read_status(conn)
+
+
+def alert_states() -> list[dict]:
+    """What each kind of alert last reported (M12); read on every call like the sources, it is tiny."""
+    with engine().connect() as conn:
+        return read_alert_rows(conn)
 
 
 def heartbeat() -> datetime | None:

@@ -63,7 +63,7 @@ Gelb gibt es außerdem bei einem Rezessionssignal vom Arbeitsmarkt ohne Abwärts
   - „Migration fehlt“: Nach einem Update wurde die Datenbank nicht auf den neuen Stand gebracht; der Datenabruf ruht, bis die Migration nachgeholt ist (`docs/einrichtung.md`, Fehlersuche).
   - „Worker ohne Lebenszeichen“: Der Datenabruf auf dem Server steht, alle Werte werden nicht mehr aktualisiert.
   - „Keine Verbindung zum Server“: Die Seite erreicht den Server nicht mehr; was du siehst, ist der Stand von der angegebenen Uhrzeit.
-- Ansicht **„Datenstand“**: je Quelle letzter erfolgreicher Abruf, letzter Versuch, letzter Fehler.
+- Ansicht **„Datenstand“**: je Quelle letzter erfolgreicher Abruf, letzter Versuch, letzter Fehler; dazu die Karte „Alerts (ntfy.sh)“ mit dem zuletzt gemeldeten Stand (Abschnitt 8).
 
 ## 6. Charts bedienen
 
@@ -109,5 +109,22 @@ Das Scrollrad zoomt bewusst nicht, damit die Seite auf dem Smartphone scrollbar 
 9. **Datenstand** und **Erklärungen.**
 
 In den Ansichten starten die Verläufe mit der ganzen Historie; Grau sind US-Rezessionen. Die Marke „nur Anzeige“ steht bei Reihen, die nicht in Stress oder Fallhöhe eingehen.
+
+## 8. Alerts aufs Handy (seit M12) ⏳
+
+Einrichtung: `docs/einrichtung.md`, Schritt 8.1. Auf TrueNAS noch nicht eingerichtet; der Abschnitt wird dann gegen die App geprüft.
+
+| Nachricht | Wann | Priorität in der App |
+|---|---|---|
+| „Ampel Orange (vorher Gelb)“ | Die Ampel des neuesten Tages wechselt die Stufe, durch einen neuen Tag, nachgereichte Daten oder eine Neuberechnung. Darunter Stress, Fallhöhe, Konfidenz und die zutreffenden Regeln, wie im Dashboard | Anstieg auf Gelb: normal (3), auf Orange: hoch (4), auf Rot: maximal (5); Rückgang: leise (2) |
+| „Veraltet: …“, „Wieder aktuell: …“ | Ein Indikator fällt auf „veraltet“ und damit aus dem Score, oder er kommt zurück | normal (3), Rückkehr leise (2) |
+| „Fehler hält an: …“, „Wieder in Ordnung: …“ | Eine Quelle, das Scoring oder die Validierung scheitert auch beim nächsten Versuch; einzelne Aussetzer lösen nichts aus | normal (3), Erholung leise (2) |
+| „Alerts aktiv: Ampel …“ | einmal nach der Einrichtung, als Empfangsprobe und Ausgangspunkt | leise (2) |
+
+- Alerts melden, was das Dashboard zeigt, nicht mehr. Maßgeblich bleibt das Dashboard; eine Nachricht ist keine Handelsempfehlung.
+- An einem Tag können zwei Wechsel kommen, wenn Daten für denselben Tag nachgereicht werden: Das Dashboard zeigt dann dasselbe.
+- Fällt der Worker selbst aus, kommt kein Alert, denn er sendet sie. Das zeigen Dockge („unhealthy“) und das Banner im Dashboard.
+- Die Nachrichten laufen über den öffentlichen Dienst ntfy.sh und enthalten deshalb nur eigene Größen (Ampel, Stress, Fallhöhe, Konfidenz, Regeln) und Namen, keine Kurse oder Spreads.
+- Ruhezeiten und ab welcher Priorität es klingelt, stellst du in der ntfy-App je Thema ein.
 
 Hinweis zur Historie: Für vergangene Tage zählt je Beobachtung der neueste veröffentlichte Stand (auch nach späteren Revisionen). Die historische Kurve kann deshalb etwas anders aussehen als das, was man an dem jeweiligen Tag gesehen hätte. Die revisionsgenaue Rückrechnung ist für Phase 2 geplant. Unter jedem Verlauf steht dazu ein kurzer Hinweis.

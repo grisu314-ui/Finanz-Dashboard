@@ -42,6 +42,12 @@ def test_worker_gets_the_optional_sec_contact():
     assert "FEVER_SEC_CONTACT: ${FEVER_SEC_CONTACT:-}" in worker  # optional: the stack starts without it (E-74)
 
 
+def test_only_the_worker_gets_the_optional_alert_topic():
+    worker = RUNTIME.split("  worker:")[1].split("  web:")[0]
+    assert "FEVER_NTFY_TOPIC: ${FEVER_NTFY_TOPIC:-}" in worker  # optional: without it alerts are off (M12)
+    assert "FEVER_NTFY_TOPIC" not in RUNTIME.split("  web:")[1]
+
+
 def test_image_contains_the_assets():
     assert "COPY assets/ assets/" in (REPO / "Dockerfile").read_text(encoding="utf-8")
 
@@ -55,3 +61,4 @@ def test_every_variable_of_the_runtime_file_is_in_the_env_template():
 def test_env_template_keeps_secrets_empty():
     assert re.search(r"^FRED_API_KEY=$", ENV_EXAMPLE, flags=re.MULTILINE)
     assert re.search(r"^FEVER_SEC_CONTACT=$", ENV_EXAMPLE, flags=re.MULTILINE)  # personal: never prefilled
+    assert re.search(r"^FEVER_NTFY_TOPIC=$", ENV_EXAMPLE, flags=re.MULTILINE)  # secret (E-100)

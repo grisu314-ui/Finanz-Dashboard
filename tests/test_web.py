@@ -173,6 +173,23 @@ def test_data_status_marks_stale_series(data):
     assert "veraltet" in page and "aktuell" in page and "Cboe (Indizes)" in page
 
 
+def test_data_status_shows_what_the_alerts_reported(data):
+    page = rendered(views.data_status(NOW))
+    assert "Alerts (ntfy.sh)" in page and "Noch keine Alerts gesendet" in page
+    from fever.store.alerts import write_alert_state
+    engine = make_engine(data)
+    with engine.begin() as conn:
+        write_alert_state(conn, "traffic_light", {"level": 2, "score_date": "2026-09-25"}, NOW)
+        write_alert_state(conn, "stale", {"indicators": ["ebp"]}, NOW)
+        write_alert_state(conn, "errors", {"pending": {"ecb": NOW.isoformat()}, "reported": []}, NOW)
+        record_success(conn, "alerts", NOW)
+    engine.dispose()
+    page = rendered(views.data_status(NOW))
+    assert "Ampel: Orange, Stand 25.09.2026 (aktualisiert" in page and "Veraltete Indikatoren: Excess Bond Premium" in page
+    assert "Anhaltende Fehler: keine" in page and "Alerts (Versand an ntfy.sh, M12)" in page
+    assert page.index("Ampel: Orange") < page.index("Veraltete Indikatoren") < page.index("Anhaltende Fehler")
+
+
 # --- formats ------------------------------------------------------------------------------------------
 
 
@@ -857,7 +874,7 @@ def test_validation_frame_page_and_explanation(client, data):
     page = rendered(views.kennzahl("validation", "light", NOW))
     assert "Block-Bootstrap mit Blöcken von 126 Handelstagen und 1.000 Ziehungen" in page
     assert "/kennzahl/validation" in rendered(views.explanations())
-    assert views.SOURCE_NAMES["validation"] == "Validierung (Berechnung im Worker)"
+    assert texts.SOURCE_NAMES["validation"] == "Validierung (Berechnung im Worker)"
 
 
 def test_lead_bins_cover_the_horizon():

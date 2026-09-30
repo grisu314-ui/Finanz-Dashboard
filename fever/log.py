@@ -5,7 +5,7 @@ import os
 import sys
 
 # Environment variables whose values must never appear in logs or error messages.
-SECRET_ENV_VARS = ("FRED_API_KEY",)
+SECRET_ENV_VARS = ("FRED_API_KEY", "FEVER_NTFY_TOPIC")  # the ntfy topic is the only protection of the alerts (E-100)
 MASK = "***"
 
 
