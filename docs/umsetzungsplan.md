@@ -1038,6 +1038,41 @@ Wunsch des Nutzers: „Alles was mit Fallhöhe zusammenhängt wird in Lilatönen
 
 **Bekannte Grenze:** Holen Worker und Sofort-Abruf dieselbe Reihe gleichzeitig, kann ein unveränderter Wert zwei Stände bekommen (Lesen und Anfügen sind zwei Schritte). Harmlos: gleicher Wert, der neuere Stand ändert nichts.
 
+### M12 – Alerts über ntfy.sh (Plan vom 30.09.2026, E-99, E-100)
+
+**Ziel:** Eine Nachricht aufs Handy, wenn sich die Lage im Dashboard ändert oder seine Daten nicht mehr vollständig sind. Alerts lesen nur Scores und Status, ändern nichts daran und melden nichts, was das Dashboard nicht auch zeigt.
+
+**Auslöser (eigene Vorschläge, zur Freigabe):**
+1. **Ampelwechsel:** Die Stufe des neuesten Tages weicht von der zuletzt gemeldeten ab, durch einen neuen Tag, nachgereichte Daten oder eine Neuberechnung, so wie das Dashboard sie dann zeigt. Nachricht: neue und alte Stufe, Tag, Stress, Fallhöhe, Konfidenz und die zutreffenden Regeln in denselben Sätzen wie im Dashboard (`texts.rule_text`, ohne Dash-Abhängigkeit). Priorität nach ntfy: Anstieg auf Gelb 3 (Standard), auf Orange 4 (hoch), auf Rot 5 (max); Rückgang 2 (leise). Häufigkeit in der Entwicklungsdatenbank: 12 Wechsel in den letzten zwei Jahren, 96 seit 2016.
+2. **Indikator veraltet:** Ein Indikator des neuesten Tages wird „veraltet“ (nach derselben Regel wie die Markierung im Dashboard); er zählt dann nicht mehr zu Stress, Fallhöhe oder seiner Regel, die Konfidenz sinkt. Eine Nachricht je Takt mit allen neu veralteten Indikatoren und ihren Quellen, Priorität 3; „wieder aktuell“ mit Priorität 2. Häufigkeit in der Rückrechnung: zweimal in zwei Jahren; am 25.09.2026 veraltet: EBP.
+3. **Anhaltender Fehler:** Eine Quelle, das Scoring oder die Validierung meldet einen Fehler, und auch der nächste Versuch scheitert (beim Abruf rund eine Stunde später). Einzelne Aussetzer lösen nichts aus. Priorität 3; „wieder in Ordnung“ mit Priorität 2.
+4. **Erste Nachricht:** Im ersten Takt mit gesetztem Thema meldet der Worker den heutigen Stand (Ampel, veraltete Indikatoren) mit Priorität 2. Das zeigt, dass der Empfang funktioniert, und setzt den Ausgangspunkt.
+- **Nicht abgedeckt:** Fällt der Worker selbst aus, kommt kein Alert, denn er sendet sie. Das zeigen weiter Dockge („unhealthy“) und das Banner im Dashboard.
+
+**Inhalt und Vertraulichkeit:** Alle Themen auf ntfy.sh sind öffentlich; geschützt ist der Kanal nur durch den unratbaren Namen des Themas (160 Bit Zufall). ntfy.sh hält Nachrichten einige Stunden vor. Deshalb enthalten Alerts nur eigene Größen (Ampel, Stress, Fallhöhe, Konfidenz, Regeln mit den Schwellen aus `scoring.toml`) und Namen von Quellen und Indikatoren, nie Rohwerte lizenzierter Reihen (ICE, Moody's, S&P, Nasdaq, Cboe; E-69). Keine Handlungsempfehlung im Text.
+
+**Versand:**
+- `HttpClient.post_json`: ein POST an `https://ntfy.sh/` mit JSON (`topic`, `title`, `message`, `priority`, `tags`); laut ntfy-Doku die Form für UTF-8 ohne Umwege über Header. Über den zentralen Client: Allowlist um `ntfy.sh` ergänzt, nur HTTPS, Timeouts, eigener User-Agent.
+- Keine Wiederholung im selben Takt: Scheitert der Versand, bleibt der gespeicherte Zustand alt, und der nächste Takt (15 Minuten) sendet erneut. Doppelt kommt eine Nachricht nur an, wenn ntfy.sh sie annimmt, die Antwort aber verloren geht.
+- Grenzen von ntfy.sh (Doku vom 30.09.2026): 4.096 Bytes je Nachricht, 250 Nachrichten je Tag, 60 Anfragen auf einmal, danach eine je 5 Sekunden. Alerts bleiben weit darunter; lange Listen werden gekürzt („und 3 weitere“).
+- Secret `FEVER_NTFY_TOPIC`, nur für den Worker (`compose.dockge.yaml`: `${FEVER_NTFY_TOPIC:-}`, leer in `.env.example`), in `fever/log.py` maskiert. Fehlt es, sind Alerts aus: eine Warnung beim Start und ein Eintrag im Datenstand, sonst nichts.
+
+**Zustand und Anzeige:** Tabelle `alert_state` (Migration 0005): je Auslöser eine Zeile mit dem zuletzt gemeldeten Zustand (JSON) und der Zeit der letzten Meldung; so wiederholt ein Neustart keine Nachricht. Versand und Fehler stehen wie Scoring und Validierung als Quelle „Alerts“ im Datenstand, dazu eine Karte mit dem zuletzt Gemeldeten.
+
+**Befehl:** `python -m fever.alerts --test` sendet eine Testnachricht (Einrichtung, Fehlersuche).
+
+**Worker:** prüft die Auslöser am Ende jedes Takts nach Scoring und Validierung. Ein Fehler dort wird geloggt und im Datenstand vermerkt; Abruf und Scoring laufen weiter.
+
+**Tests** (ohne Netzwerk, Versand über eine Attrappe): Ampelwechsel auf und ab mit Prioritäten, genau eine Nachricht je Wechsel, keine Wiederholung nach einem Neustart, Versandfehler mit neuem Versuch im nächsten Takt, veraltete Indikatoren (neu und wieder aktuell), Fehler erst beim zweiten Versuch, Nachrichtentext (Dezimalkomma, TT.MM.JJJJ, höchstens 4.096 Bytes), Thema nie im Log, Host auf der Allowlist, POST ohne Wiederholung, Migration 0005 hin und zurück, Testbefehl, Datenstand.
+
+**Probe:** eine echte Testnachricht aus der Cloud-Umgebung an ein Wegwerf-Thema (Inhalt „Test“), um das Format gegen ntfy.sh zu prüfen.
+
+**Doku:** `docs/einrichtung.md` (App, Thema erzeugen mit `openssl rand -hex 20`, `.env`, Compose-Zeile, Migration 0005 mit Probe, Testnachricht), `docs/bedienung.md` (Alerts lesen, Prioritäten, Ruhezeiten in der App einstellen), `CLAUDE.md` (Secret, Befehl, Architektur), dieses Dokument.
+
+**Risiken:** ntfy.sh ist ein fremder Dienst: Fällt er aus, kommen Alerts verspätet oder gar nicht; maßgeblich bleibt das Dashboard. Wer das Thema kennt, kann mitlesen und selbst Nachrichten senden. Nachgereichte Daten können am selben Tag zwei Wechsel melden, bewusst, weil das Dashboard dasselbe zeigt. Migration nötig (Probe an einer Backup-Kopie).
+
+**Schritte:** Freigabe → Migration und Speicher → Versand mit Tests → Auslöser und Worker mit Tests → Datenstand → Probe gegen ntfy.sh → Doku → Commit, Push → Einrichtung auf TrueNAS (Nutzer: App, Thema, `.env`, Update mit Migration, Testnachricht).
+
 ### O-1: Recherche Ausweichquellen (28.09.2026, 10:36–11:30 UTC)
 
 Anlass: Der Block „Breite“ und die Top-10-Konzentration haben keine Datenquelle. Geprüft: Indexanbieter, ETF-Emittenten, Kurs-APIs. Datenstand der FRED-Reihen: letzte Beobachtung 25.09.2026.
