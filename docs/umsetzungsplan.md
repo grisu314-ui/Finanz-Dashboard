@@ -19,7 +19,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt (umgesetzt und geprüft, Bel
 | M0 | Projektgerüst, Image, Compose | ☑ 25.09.2026 | – | erteilt 25.09.2026 |
 | M1 | Speicher, Migrationen, Backup | ☑ 25.09.2026 | M0, Schema-Freigabe, W-5 | erteilt 25.09.2026 |
 | M2 | HTTP-Client, Serienkatalog (Rohreihen), Quellen Cboe und FRED | ☑ 26.09.2026 | M1, L-5, Netzfreigabe (Abschn. 9) | Teil A erteilt 25.09.2026; Teil B erteilt 26.09.2026 |
-| M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ☑ 28.09.2026: erster Werktag mit planmäßigen Abrufen ohne Fehler (Nutzer, Abruf 15:07); Schritt 9 läuft als Nachprüfung weiter (Abschnitt 9) | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
+| M3 | Worker und erste Inbetriebnahme auf TrueNAS mit Dockge (ICE-Archiv startet) | ☑ 28.09.2026: erster Werktag mit planmäßigen Abrufen ohne Fehler (Nutzer, Abruf 15:07); Schritt 9 als Nachprüfung: Prüfbefehl `fever.release_check` bereit (04.10.2026), Auswertung der Betriebsdaten offen (Abschnitt 4, M3) | M2, Angaben zu TrueNAS | erteilt 26.09.2026 |
 | M4 | Weitere Quellen: CFTC, EZB (CISS, USD/JPY-Kreuzkurs), OFR, EBP, Shiller-CAPE, Margin Debt (Z.1, E-42), VX-Futures | ☑ 26.09.2026 (M4a bis M4d, E-37) | M3 | M4a bis M4d erteilt 26.09.2026 |
 | M5 | Indikatoren (`[indicator.*]`), Scoring Schritte 1–6, Aggregation Stufe 1 | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026) | M4, L-1 bis L-12 | erteilt 26.09.2026 |
 | M6 | Web-Grundgerüst, Gestaltung, Aktualität, Datenstand | ☑ 26.09.2026 (auf TrueNAS seit 26.09.2026; Nachtrag Rezessionsbalken E-56 dort ⏳) | M1 (Lesen), M3 (Heartbeat) | erteilt 26.09.2026 |
@@ -478,6 +478,9 @@ Für jeden Meilenstein gilt die Definition of Done:
 - **Inbetriebnahme auf TrueNAS (26.09.2026, Nutzer):** Stack `finanz-dashboard`, Container `finanz-dashboard-worker-1` „Up (healthy)“, Healthcheck „gesund“. Dataset-Name `feewer` und Stack-Name bleiben (E-34). Der Klon in das schon vorhandene Dataset scheiterte an `git clone` (nicht leeres Verzeichnis); die Anleitung nutzt seitdem `git init` + `fetch` + `checkout`.
 - **Erstabruf auf TrueNAS (Samstag, 26.09.2026, 11:32 UTC, Sofort-Abruf per `docker exec`):** 23 Reihen, 101 363 Zeilen, keine verworfenen Werte, keine Fehler; Zeilenzahlen identisch mit dem Probelauf in der Entwicklungsumgebung. Das lokale ICE-Archiv beginnt mit dem Beobachtungsdatum 26.09.2023. Datenbank 14,7 MB (plus WAL 6,0 MB). Mountpunkt `/mnt/Daten-Z1/apps/feewer/data -> /data`, Benutzer 568:568, alle Dateien 568:568.
 - **Erster Werktag nach dem Abrufplan (Montag, 28.09.2026, Nutzer):** Die planmäßigen Abrufe liefen um 15:07 durch, ohne Fehler. M3 ☑ auf Anweisung des Nutzers. Schritt 9 (Veröffentlichungszeiten aus dem Rohdatenarchiv gegen `release_time`, Cboe-CSV während der Handelszeit) braucht einige Werktage und läuft als Nachprüfung weiter; Abweichungen kommen als Änderung zur Freigabe.
+- **Schritt 9, Prüfbefehl (04.10.2026):** `fever/release_check.py`, nur lesend. Statt der Zeitstempel im Rohdatenarchiv (FRED-Antworten ändern sich täglich auch ohne neuen Wert, weil sie das Abrufdatum enthalten) nimmt er für jeden Wert, dessen erste Zeile aus einem regulären Abruf stammt, die Abrufzeit und vergleicht sie mit `estimated_release` (Beobachtungsdatum + `lag_days` zu `release_time`). Maßgeblich für das Scoring ist der New Yorker Tag (E-49): Kam ein Wert erst an einem späteren Tag, ist `lag_days` zu kurz (Blick in die Zukunft in der Historie) oder der Abruf hatte eine Lücke; „früher“ zeigt eine konservative Einstellung. Dazu prüft er die Cboe-Rohdateien aus der US-Handelszeit auf eine Zeile des laufenden Tages. Er zeigt nur Zeiten und Reihennamen, keine Werte. Tests mit erfundenen Abrufzeiten (pünktlich, später, früher, Revision ausgeschlossen, Cboe-Dateien).
+- **Cboe-CSV während der Handelszeit:** In der Entwicklungsumgebung am Montag, 28.09.2026, 14:33 New York geholt: Alle sechs Index-Dateien (VIX, VIX9D, VIX3M, VIX6M, VVIX, SKEW) endeten mit Freitag, 25.09., ohne Zeile des laufenden Tages. Der Schutz gegen eine solche Zeile bleibt trotzdem aktiv; der Befehl prüft dasselbe an den Dateien auf TrueNAS.
+- **Offen:** Auswertung der Betriebsdaten auf TrueNAS (Nutzer führt den Befehl aus, `docs/einrichtung.md`, Abschnitt 12); Abweichungen kommen als Änderung von `series.toml` zur Freigabe, weil sie die Scores verschieben.
 
 ### M4 – Weitere Quellen
 
@@ -851,7 +854,7 @@ Laut Bericht 6.3, soweit Daten vorhanden:
 - Update auf TrueNAS mit allen Ständen bis zur Sperr-Korrektur und Sichtprüfung aller Ansichten auf Smartphone und Desktop: Nutzer, 30.09.2026 („M9 abhaken, beides OK“).
 - `docs/bedienung.md` gegen die App geprüft und auf ✅ gesetzt; korrigiert: Liste der Begriffe auf der Seite „Erklärungen“, „In Phase 1 fehlen“ zu „Derzeit fehlen“. `docs/einrichtung.md`: ✅ nur, wo der Nutzer es bestätigt hat; die übrigen ⏳ bleiben (etwa Backup und Wiederherstellung auf TrueNAS).
 - Erklärtext „Konfidenz“ korrigiert: Er nannte den Block Breite noch als fehlend (seit E-68 mit Daten).
-- Offen aus Phase 1, ohne die Abnahme zu hindern: Veröffentlichungszeiten aus dem Rohdatenarchiv (M3, Schritt 9), Achsentitel der VIX-Termstruktur auf dem Smartphone (ungeprüft).
+- Offen aus Phase 1, ohne die Abnahme zu hindern: Veröffentlichungszeiten aus dem Rohdatenarchiv (M3, Schritt 9; Prüfbefehl seit 04.10.2026). Achsentitel der VIX-Termstruktur auf dem Smartphone: in Ordnung (Nutzer, 04.10.2026).
 
 ### M10 – Validierung (Bericht 4.3, Schritt 7; Ansicht 8 aus 6.3; E-89, E-93)
 
@@ -1338,13 +1341,13 @@ Kurzfassung als Regel für KI-Sitzungen: `.claude/rules/oberflaeche.md`. Hier st
 
 ## 9. Übergabe an die nächste Sitzung
 
-- **Stand (30.09.2026):**
+- **Stand (04.10.2026):**
   - **Phase 1 abgenommen (M9)**: M0 bis M8, Entscheidungsrunde 29.09.2026 (E-80 bis E-92), M10 (Validierung) und M11 (geschätzte Gewichte) sowie E-95 bis E-98 laufen auf TrueNAS; die Sperr-Korrektur („Datenbank gesperrt“) ebenfalls.
   - Phase 2: M12 „Alerts über ntfy.sh“ (E-99, E-100) in der Entwicklungsumgebung umgesetzt und geprüft (Abschnitt 4, M12, „Umsetzung“); 525 Tests grün. Auf TrueNAS noch nicht eingespielt.
   - `data-dev/` steht auf 0005, mit Scores und Validierungsbericht vom 29.09.2026 und einem Alert-Zustand aus dem Trockenlauf.
 - **Nächster Schritt:**
   1. TrueNAS: Update auf M12 mit Migration 0005 und Einrichtung der Alerts (`docs/einrichtung.md`, Abschnitt 9, „Update auf Alerts“, und Schritt 8.1); danach Abschnitt 8.1 und `docs/bedienung.md`, Abschnitt 8, auf ✅ setzen, wo der Nutzer es bestätigt.
-  2. Nach einigen Werktagen: Veröffentlichungszeiten aus dem Rohdatenarchiv prüfen (M3, Schritt 9); für `iursa` und die Z.1-Reihen neu.
+  2. Veröffentlichungszeiten (M3, Schritt 9): Der Nutzer führt `fever.release_check` auf TrueNAS aus und schickt die Ausgabe; daraus Änderungen an `release_time`/`lag_days` zur Freigabe oder Abschluss ohne Änderung. Für `iursa` und die Z.1-Reihen gibt es erst nach ihren nächsten Veröffentlichungen Betriebswerte.
   3. Weitere Schritte von Phase 2 (revisionsgenaue Rückrechnung, AAII, Aggregation Stufe 2 nur mit besserem Ergebnis in der Validierung, E-89) entscheidet der Nutzer.
 - **Hinweise:**
   - Betrieb läuft direkt von `claude-raramo` (E-76): nur geprüften Stand pushen.

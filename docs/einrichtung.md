@@ -277,6 +277,8 @@ git diff --stat HEAD@{1} -- migrations/                          # erwartet: mig
 sudo docker compose build
 ```
 
+Hast du den Stand schon vorher geholt (etwa für den Prüfbefehl der Veröffentlichungszeiten), zeigen die beiden `git diff`-Zeilen nichts; die Migration 0005 trotzdem ausführen. `$RUN alembic current` zeigt, ob sie fehlt (dann `0004`).
+
 1. Migration an einer Backup-Kopie proben: Block „Neue Migration zuerst an einer Kopie testen“ unten (erwartet `Running upgrade 0004 -> 0005, Alert state …`).
 2. Standardablauf unten ab „Stack stoppen“: Backup, `$RUN alembic upgrade head`, `$RUN alembic current` (erwartet `0005 (head)`).
 3. Schritt 8.1, Punkte 1 bis 4: App, Thema, `.env` und neue `compose.yaml` in Dockge, dann „Deploy“ (nicht „Neustart“).
@@ -555,3 +557,4 @@ Logs werden in der Größe begrenzt (je Container 3 Dateien à 10 MB).
 | Validierung sofort neu berechnen | `sudo docker exec finanz-dashboard-worker-1 python -m fever.validate` (Stack gestoppt: `$RUN python -m fever.validate`) | ✅ Entwicklungsumgebung 29.09.2026 (gebautes Image als 568:568), ⏳ TrueNAS |
 | SEC-Kontakt prüfen | Befehl in Abschnitt 11 (erwartet `SEC-Kontakt in Ordnung`) | ✅ Entwicklungsumgebung 28.09.2026, ⏳ TrueNAS |
 | Testnachricht der Alerts | `sudo docker exec finanz-dashboard-worker-1 python -m fever.alerts --test` (Schritt 8.1) | ✅ Entwicklungsumgebung 30.09.2026 (Wegwerf-Thema auf ntfy.sh), ⏳ TrueNAS |
+| Veröffentlichungszeiten prüfen (M3, Schritt 9), nur lesend | ab dem Image mit M12: `sudo docker exec finanz-dashboard-worker-1 python -m fever.release_check`; vorher, nach `git pull` im Projektverzeichnis: `sudo docker exec -i finanz-dashboard-worker-1 python - < fever/release_check.py` | ✅ Entwicklungsumgebung 04.10.2026 (ohne Betriebsdaten), ⏳ TrueNAS |

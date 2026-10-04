@@ -74,6 +74,7 @@ Kein Node, kein npm, kein Build-Schritt; eigene CSS- und JS-Dateien liegen in `a
   - Scores sofort neu berechnen: `sudo docker exec finanz-dashboard-worker-1 python -m fever.score`
   - Validierung sofort neu berechnen: `sudo docker exec finanz-dashboard-worker-1 python -m fever.validate`
   - Testnachricht der Alerts (M12): `sudo docker exec finanz-dashboard-worker-1 python -m fever.alerts --test`
+  - Veröffentlichungszeiten im Betrieb prüfen (M3, Schritt 9), nur lesend: `sudo docker exec finanz-dashboard-worker-1 python -m fever.release_check`
   - SEC-Kontakt prüfen, ohne den Wert zu zeigen: `sudo docker exec finanz-dashboard-worker-1 python -c "import os; from fever.sources.sec import contact_problem; print(contact_problem(os.environ.get('FEVER_SEC_CONTACT')) or 'SEC-Kontakt in Ordnung')"`
   - Neue Migration vorher an einer Backup-Kopie proben: `docs/einrichtung.md`, Schritt 9
 
@@ -89,6 +90,7 @@ fever/validation.py  Backtest der Ampel und Walk-forward-Logit (M10, M11; E-93, 
 fever/validate.py  Validierungslauf nach dem Scoring: Scores und Kurse lesen, Bericht in validation_report ersetzen; vom Worker und direkt aufrufbar
 fever/release.py   geschätzte Veröffentlichung einer Beobachtung (E-14), für Abruf, Worker und Scoring
 fever/backup.py    VACUUM INTO und Aufbewahrung; vom Worker und direkt aufrufbar
+fever/release_check.py  Prüfbericht: erste Abrufe neuer Werte gegen release_time/lag_days, Cboe-Dateien aus der Handelszeit (M3, Schritt 9); nur lesend
 fever/alerts.py    Alerts über ntfy.sh (M12, E-99, E-100): Auslöser, gemeldeter Stand in alert_state, Versand über den zentralen HTTP-Client; vom Worker nach jedem Takt, Testnachricht per --test
 fever/web/         Dash-App: Layouts, Callbacks, Health-Endpunkt
 config/series.toml   Rohreihen (Quelle, ID, Frequenz, Veröffentlichungszeit, Verzug, Toleranz,
